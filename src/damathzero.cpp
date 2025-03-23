@@ -1,8 +1,6 @@
-module;
-
-#include <memory>
-
 export module damathzero;
+
+import std;
 
 export import :game;
 export import :mcts;

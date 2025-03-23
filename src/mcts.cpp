@@ -2,11 +2,9 @@ module;
 
 #include <torch/torch.h>
 
-#include <cassert>
-#include <memory>
-#include <ranges>
-
 export module damathzero:mcts;
+
+import std;
 
 import :game;
 import :network;

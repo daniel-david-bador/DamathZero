@@ -1,8 +1,6 @@
-module;
-
-#include <vector>
-
 export module damathzero:game;
+
+import std;
 
 namespace DamathZero {
 
@@ -32,7 +30,7 @@ export struct Game {
       -> std::vector<Action> {
     std::vector<Action> legal_actions;
 
-    for (size_t i = 0; i < board.size(); i++)
+    for (unsigned long i = 0; i < legal_actions.size(); i++)
       if (board[i] == 0)
         legal_actions.push_back(i);
 

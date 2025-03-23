@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <print>
-
+import std;
 import damathzero;
 
 using namespace DamathZero;
