@@ -5,6 +5,8 @@ import std;
 export import :game;
 export import :mcts;
 export import :network;
+export import :node;
+export import :storage;
 
 namespace DamathZero {
 
@@ -16,13 +18,15 @@ export class DamathZero {
 
     auto node = nodes->get_ref(nodes->create());
 
-    auto [value, terminal] = Game::get_value_and_terminated(node->board, node->action);
+    auto [value, terminal] =
+        Game::get_value_and_terminated(node->board, node->action);
 
     while (not terminal) {
       node = mcts.search(node.id, network);
       nodes->detach(node.id);
 
-      std::tie(value, terminal) = Game::get_value_and_terminated(node->board, node->action);
+      std::tie(value, terminal) =
+          Game::get_value_and_terminated(node->board, node->action);
     }
   }
 
