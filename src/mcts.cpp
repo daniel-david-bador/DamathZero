@@ -26,7 +26,28 @@ export struct Node {
   double visits = 0.0;
 };
 
+
 export class NodeStorage {
+  struct NodeRef {
+    NodeStorage& storage;
+    Node::ID id;
+
+    constexpr NodeRef(NodeStorage& storage, Node::ID id) : storage(storage), id(id) {}
+
+    constexpr auto operator=(Node::ID id) -> NodeRef& {
+      this->id = id;
+      return *this;
+    }
+
+    constexpr auto operator->() const -> const Node* {
+      return &storage.get(id);
+    }
+
+    constexpr auto operator->() -> Node* {
+      return &storage.get(id);
+    }
+  };
+
  public:
   template <typename... Args>
   constexpr auto create(Args&&... args) -> Node::ID {
@@ -40,6 +61,10 @@ export class NodeStorage {
     nodes_[id].children.emplace_back(child_id);
   }
 
+  constexpr auto get_ref(Node::ID id) -> NodeRef {
+    return NodeRef(*this, id);
+  }
+
   constexpr auto get(Node::ID id) -> Node& {
     assert(id >= 0 and static_cast<size_t>(id) < nodes_.size());
     return nodes_[id];
@@ -50,15 +75,6 @@ export class NodeStorage {
     return nodes_[id];
   }
 
-  constexpr auto get_board(Node::ID id) const -> Board const& {
-    assert(id >= 0 and static_cast<size_t>(id) < nodes_.size());
-    return nodes_[id].board;
-  }
-
-  constexpr auto get_action(Node::ID id) const -> Action {
-    assert(id >= 0 and static_cast<size_t>(id) < nodes_.size());
-    return nodes_[id].action;
-  }
 
   constexpr auto detach(Node::ID id) -> void {
     assert(id >= 0 and static_cast<size_t>(id) < nodes_.size());
@@ -78,28 +94,26 @@ export class MCTS {
       -> Node::ID {
     torch::NoGradGuard no_grad;
     for (auto _ : std::views::iota(0, Config::num_simulations)) {
-      auto node_id = root_id;
+      auto node  = nodes_->get_ref(root_id);
 
-      while (not is_leaf(node_id))
-        node_id = highest_child_score(node_id);
+      while (not is_leaf(node.id))
+        node = highest_child_score(node.id);
 
-      auto [value, terminal] = Game::get_value_and_terminated(
-          nodes_->get_board(node_id), nodes_->get_action(node_id));
+      auto [value, terminal] = Game::get_value_and_terminated(node->board, node->action);
       value = Game::get_opponent_value(value);
 
       if (not terminal) {
         auto [value_tensor, policy] = network->forward(
-            torch::tensor(nodes_->get_board(node_id), torch::kFloat32));
+            torch::tensor(node->board, torch::kFloat32));
         policy = torch::softmax(policy, -1);
-        policy = policy.index(
-            {torch::tensor(Game::legal_actions(nodes_->get_board(node_id)))});
+        policy = policy.index({torch::tensor(Game::legal_actions(node->board))});
         policy /= policy.sum();
 
         value = value_tensor.template item<double>();
-        expand(node_id, policy);
+        expand(node.id, policy);
       }
 
-      backpropagate(node_id, value);
+      backpropagate(node.id, value);
     }
 
     return highest_child_visits(root_id);
@@ -143,11 +157,12 @@ export class MCTS {
   };
 
   constexpr auto expand(Node::ID id, const Policy& policy) -> void {
-    auto legal_actions = Game::legal_actions(nodes_->get_board(id));
+    auto node = nodes_->get_ref(id);
+    auto legal_actions = Game::legal_actions(node->board);
     for (size_t i = 0; i < legal_actions.size(); i++) {
       auto action = legal_actions[i];
       auto prior = policy[i].item<double>();
-      auto child_board = Game::apply_action(nodes_->get_board(id), action, 1);
+      auto child_board = Game::apply_action(node->board, action, 1);
       child_board = Game::change_perpective(child_board, -1);
       nodes_->create_child(id, child_board, action, prior, id);
     }

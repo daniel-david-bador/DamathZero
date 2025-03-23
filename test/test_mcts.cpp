@@ -11,17 +11,15 @@ TEST(MCTS, Search) {
     auto network = std::make_shared<Network>();
     auto mcts = MCTS{nodes};
 
-    auto node_id = nodes->create();
+    auto node = nodes->get_ref(nodes->create());
 
-    auto [value, terminal] = Game::get_value_and_terminated(
-        nodes->get_board(node_id), nodes->get_action(node_id));
+    auto [value, terminal] = Game::get_value_and_terminated(node->board, node->action);
 
     while (not terminal) {
-      node_id = mcts.search(node_id, network);
-      nodes->detach(node_id);
+      node = mcts.search(node.id, network);
+      nodes->detach(node.id);
 
-      std::tie(value, terminal) = Game::get_value_and_terminated(
-          nodes->get_board(node_id), nodes->get_action(node_id));
+      std::tie(value, terminal) = Game::get_value_and_terminated(node->board, node->action);
     }
 
     EXPECT_TRUE(terminal);
