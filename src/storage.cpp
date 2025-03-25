@@ -46,7 +46,7 @@ export class NodeStorage {
     nodes_[id].children.emplace_back(child_id);
   }
 
-  constexpr auto get_ref(Node::ID id) -> NodeRef { return NodeRef(*this, id); }
+  constexpr auto as_ref(Node::ID id) -> NodeRef { return NodeRef(*this, id); }
 
   constexpr auto get(Node::ID id) -> Node& {
     assert(id >= 0 and id < nodes_.size());

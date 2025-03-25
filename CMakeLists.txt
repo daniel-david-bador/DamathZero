@@ -12,11 +12,13 @@ add_library(DamathZero)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/config.cpp
   src/damathzero.cpp
-  src/game.cpp  
+  src/game.cpp
+  src/memory.cpp
   src/mcts.cpp
   src/network.cpp
   src/node.cpp
-  src/storage.cpp)
+  src/storage.cpp
+)
 target_compile_options(DamathZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
 target_link_libraries(DamathZero PUBLIC torch)
@@ -24,7 +26,11 @@ target_link_libraries(DamathZero PUBLIC torch)
 enable_testing()
 
 add_executable(DamathZeroTest)
-target_sources(DamathZeroTest PRIVATE test/test_game.cpp test/test_mcts.cpp)
+target_sources(DamathZeroTest PRIVATE 
+  test/test_game.cpp 
+  test/test_mcts.cpp
+  test/test_damathzero.cpp
+)
 target_link_libraries(DamathZeroTest PRIVATE DamathZero GTest::gtest GTest::gtest_main)
 
 gtest_discover_tests(DamathZeroTest)

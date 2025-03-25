@@ -12,6 +12,7 @@ export struct Node {
   using ID = std::size_t;
 
   Board board = Game::initial_board();
+  Player player = -1;
   Action action = -1;
   double prior = 0.0;
 

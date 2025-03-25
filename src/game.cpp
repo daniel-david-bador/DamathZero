@@ -8,10 +8,6 @@ export using Player = int;
 
 export using Action = int;
 
-export using Value = float;
-
-export using Terminal = bool;
-
 export using Board = std::vector<int>;
 
 export struct Game {
@@ -54,7 +50,7 @@ export struct Game {
 
   static constexpr auto get_value_and_terminated(const Board& board,
                                                  Action action)
-      -> std::tuple<Value, Terminal> {
+      -> std::tuple<double, bool> {
     if (check_win(board, action))
       return {1.0, true};
     else if (legal_actions(board).empty())
@@ -67,7 +63,7 @@ export struct Game {
     return -player;
   }
 
-  static constexpr auto get_opponent_value(Value value) -> Value {
+  static constexpr auto get_opponent_value(double value) -> double {
     return -value;
   }
 

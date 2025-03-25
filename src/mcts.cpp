@@ -1,6 +1,7 @@
 module;
 
 #include <torch/torch.h>
+#include <assert.h>
 
 export module damathzero:mcts;
 
@@ -22,8 +23,8 @@ export class MCTS {
   constexpr auto search(Node::ID root_id, std::shared_ptr<Network> network)
       -> Node::ID {
     torch::NoGradGuard no_grad;
-    for (auto _ : std::views::iota(0, Config::num_simulations)) {
-      auto node = nodes_->get_ref(root_id);
+    for (auto _ : std::views::iota(0, Config::NumSimulations)) {
+      auto node = nodes_->as_ref(root_id);
 
       while (not is_leaf(node.id))
         node = highest_child_score(node.id);
@@ -31,7 +32,6 @@ export class MCTS {
       auto [value, terminal] =
           Game::get_value_and_terminated(node->board, node->action);
       value = Game::get_opponent_value(value);
-
       if (not terminal) {
         auto [value_tensor, policy] =
             network->forward(torch::tensor(node->board, torch::kFloat32));
@@ -47,7 +47,22 @@ export class MCTS {
       backpropagate(node.id, value);
     }
 
+    nodes_->detach(root_id);
+
     return highest_child_visits(root_id);
+  }
+
+  constexpr auto get_action_probs(Node::ID id) const -> torch::Tensor {
+    assert(not is_leaf(id));
+
+    auto child_visits = torch::zeros(9, torch::kFloat32);
+
+    for(auto child_id :nodes_->get(id).children) {
+        auto& child = nodes_->get(child_id);
+        child_visits[child.action] = child.visits;
+    }
+
+    return child_visits / child_visits.sum(0);
   }
 
  private:
@@ -65,7 +80,7 @@ export class MCTS {
     return mean + node.prior * 2 * std::sqrt(parent.visits) / (1 + node.visits);
   };
 
-  constexpr auto highest_child_score(Node::ID id) -> Node::ID {
+  constexpr auto highest_child_score(Node::ID id) const -> Node::ID {
     auto& node = nodes_->get(id);
     assert(not node.children.empty());
 
@@ -76,7 +91,7 @@ export class MCTS {
     return *std::ranges::max_element(node.children, highest_score);
   };
 
-  constexpr auto highest_child_visits(Node::ID id) -> Node::ID {
+  constexpr auto highest_child_visits(Node::ID id) const -> Node::ID {
     auto& node = nodes_->get(id);
     assert(not node.children.empty());
 
@@ -88,14 +103,14 @@ export class MCTS {
   };
 
   constexpr auto expand(Node::ID id, const Policy& policy) -> void {
-    auto node = nodes_->get_ref(id);
+    auto node = nodes_->as_ref(id);
     auto legal_actions = Game::legal_actions(node->board);
     for (size_t i = 0; i < legal_actions.size(); i++) {
       auto action = legal_actions[i];
       auto prior = policy[i].item<double>();
       auto child_board = Game::apply_action(node->board, action, 1);
       child_board = Game::change_perpective(child_board, -1);
-      nodes_->create_child(id, child_board, action, prior, id);
+      nodes_->create_child(id, child_board, -node->player, action, prior, id);
     }
   };
 

@@ -1,0 +1,57 @@
+module;
+
+#include <torch/torch.h>
+
+export module damathzero:memory;
+
+import std;
+
+import :config;
+import :network;
+
+namespace DamathZero {
+
+export class Memory {
+ public:
+  Memory(std::random_device& device) : gen_(device()) {}
+
+  constexpr auto size() -> size_t { return data_.size(); }
+
+  auto append(Feature feature, Value value, Policy policy) -> void {
+    data_.emplace_back(feature, value, policy);
+  }
+
+  auto merge(Memory&& memory) -> void {
+    data_.insert(data_.end(), memory.data_.begin(), memory.data_.end());
+  }
+
+  auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
+    auto batch =
+        std::vector<std::tuple<Feature, Value, Policy>>(Config::BatchSize);
+    std::sample(data_.begin() + start, data_.end() + start + Config::BatchSize,
+                std::back_inserter(batch), Config::BatchSize, gen_);
+
+    std::vector<Feature> features;
+    std::vector<Value> values;
+    std::vector<Policy> policies;
+
+    features.reserve(Config::BatchSize);
+    values.reserve(Config::BatchSize);
+    policies.reserve(Config::BatchSize);
+
+    for (auto [feature, value, policy] : batch) {
+      features.emplace_back(feature);
+      values.emplace_back(value);
+      policies.emplace_back(policy);
+    }
+
+    return {torch::stack(features, 0), torch::stack(values, 0),
+            torch::stack(policies, 0)};
+  }
+
+ private:
+  std::mt19937 gen_;
+  std::vector<std::tuple<Feature, Value, Policy>> data_;
+};
+
+}  // namespace DamathZero

@@ -6,6 +6,7 @@ export module damathzero:network;
 
 namespace DamathZero {
 
+export using Feature = torch::Tensor;
 export using Value = torch::Tensor;
 export using Policy = torch::Tensor;
 
@@ -18,7 +19,7 @@ export struct Network : public torch::nn::Module {
         value_head(register_module("value", torch::nn::Linear(32, 1))),
         policy_head(register_module("policy", torch::nn::Linear(32, 9))) {}
 
-  auto forward(torch::Tensor x) -> std::tuple<Value, Policy> {
+  auto forward(Feature x) -> std::tuple<Value, Policy> {
     x = torch::relu(fc1->forward(x));
     x = torch::relu(fc2->forward(x));
 
@@ -30,7 +31,7 @@ export struct Network : public torch::nn::Module {
 };
 
 export struct UniformNetwork : public torch::nn::Module {
-  auto forward(torch::Tensor x) -> std::tuple<Value, Policy> {
+  auto forward(Feature x) -> std::tuple<Value, Policy> {
     auto uniform_value = torch::tensor({0.5});
     auto uniform_policy = torch::softmax(torch::ones_like(x), -1);
     return {uniform_value, uniform_policy};
