@@ -49,17 +49,17 @@ export class NodeStorage {
   constexpr auto as_ref(Node::ID id) -> NodeRef { return NodeRef(*this, id); }
 
   constexpr auto get(Node::ID id) -> Node& {
-    assert(id >= 0 and id < nodes_.size());
+    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
     return nodes_[id];
   }
 
   constexpr auto get(Node::ID id) const -> Node const& {
-    assert(id >= 0 and id < nodes_.size());
+    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
     return nodes_[id];
   }
 
   constexpr auto detach(Node::ID id) -> void {
-    assert(id >= 0 and id < nodes_.size());
+    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
     nodes_[id].parent = -1;
   }
 

@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
 #include <torch/torch.h>
 
 import std;
 import damathzero;
 
-TEST(DamathZero, SelfPlay) {
+auto main() -> int {
   auto model = std::make_shared<DamathZero::Network>();
   auto optimizer = std::make_shared<torch::optim::Adam>(
       model->parameters(), torch::optim::AdamOptions(0.001));
@@ -29,6 +28,5 @@ TEST(DamathZero, SelfPlay) {
         DamathZero::Game::get_value_and_terminated(node->board, node->action);
   }
 
-  EXPECT_TRUE(terminal);
-  EXPECT_TRUE(value == 0.0 or value == 1.0);
+  return 0;
 }

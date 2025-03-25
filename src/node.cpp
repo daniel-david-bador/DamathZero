@@ -9,7 +9,7 @@ import :network;
 namespace DamathZero {
 
 export struct Node {
-  using ID = std::size_t;
+  using ID = int;
 
   Board board = Game::initial_board();
   Player player = -1;

@@ -51,6 +51,8 @@ class DamathZero {
       auto loss = F::mse_loss(out_value, target_value) +
                   F::cross_entropy(out_policy, target_policy);
 
+      std::println("{}", loss.template item<float>());
+
       optimizer_->zero_grad();
       loss.backward();
       optimizer_->step();
@@ -72,6 +74,8 @@ class DamathZero {
       path.push_back(node.id);
       node = mcts.search(node.id, model_);
       nodes->detach(node.id);
+
+      std::println("{}", node->board);
 
       std::tie(value, terminal) =
           Game::get_value_and_terminated(node->board, node->action);

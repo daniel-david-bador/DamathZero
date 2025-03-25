@@ -26,7 +26,7 @@ export struct Game {
       -> std::vector<Action> {
     std::vector<Action> legal_actions;
 
-    for (unsigned long i = 0; i < legal_actions.size(); i++)
+    for (std::size_t i = 0; i < board.size(); i++)
       if (board[i] == 0)
         legal_actions.push_back(i);
 

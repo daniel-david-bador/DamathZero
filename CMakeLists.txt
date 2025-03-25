@@ -23,6 +23,10 @@ target_compile_options(DamathZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
 target_link_libraries(DamathZero PUBLIC torch)
 
+
+add_executable(DamathZeroMain src/main.cpp)
+target_link_libraries(DamathZeroMain PRIVATE DamathZero)
+
 enable_testing()
 
 add_executable(DamathZeroTest)
