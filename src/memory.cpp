@@ -26,18 +26,21 @@ export class Memory {
   }
 
   auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
-    auto batch =
-        std::vector<std::tuple<Feature, Value, Policy>>(Config::BatchSize);
-    std::sample(data_.begin() + start, data_.end() + start + Config::BatchSize,
-                std::back_inserter(batch), Config::BatchSize, gen_);
+    auto size = std::min(Config::BatchSize, data_.size() - start);
+
+    auto batch = std::vector<std::tuple<Feature, Value, Policy>>{};
+    batch.reserve(size);
+
+    std::sample(data_.begin() + start, data_.begin() + start + size,
+                std::back_inserter(batch), size, gen_);
 
     std::vector<Feature> features;
     std::vector<Value> values;
     std::vector<Policy> policies;
 
-    features.reserve(Config::BatchSize);
-    values.reserve(Config::BatchSize);
-    policies.reserve(Config::BatchSize);
+    features.reserve(size);
+    values.reserve(size);
+    policies.reserve(size);
 
     for (auto [feature, value, policy] : batch) {
       features.emplace_back(feature);

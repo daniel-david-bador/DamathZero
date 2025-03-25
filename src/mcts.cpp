@@ -1,7 +1,7 @@
 module;
 
-#include <torch/torch.h>
 #include <assert.h>
+#include <torch/torch.h>
 
 export module damathzero:mcts;
 
@@ -57,9 +57,9 @@ export class MCTS {
 
     auto child_visits = torch::zeros(9, torch::kFloat32);
 
-    for(auto child_id :nodes_->get(id).children) {
-        auto& child = nodes_->get(child_id);
-        child_visits[child.action] = child.visits;
+    for (auto child_id : nodes_->get(id).children) {
+      auto& child = nodes_->get(child_id);
+      child_visits[child.action] = child.visits;
     }
 
     return child_visits / child_visits.sum(0);

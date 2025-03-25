@@ -28,14 +28,12 @@ class DamathZero {
 
     for (auto _ : std::views::iota(0, Config::NumIterations)) {
       model_->eval();
-      for (auto _ : std::views::iota(0, Config::NumSelfPlayIterations)) {
+      for (auto _ : std::views::iota(0, Config::NumSelfPlayIterations))
         memory.merge(generate_self_play_data());
-      }
 
       model_->train();
-      for (auto _ : std::views::iota(0, Config::NumTrainingEpochs)) {
+      for (auto _ : std::views::iota(0, Config::NumTrainingEpochs))
         train(memory);
-      }
 
       // torch::save(model_, std::format("models/model_{}.pt", i));
       // torch::save(optimizer_, std::format("optimizer_{}.pt", i));
@@ -46,12 +44,10 @@ class DamathZero {
     namespace F = torch::nn::functional;
     for (size_t i = 0; i < memory.size(); i += Config::BatchSize) {
       auto [feature, target_value, target_policy] = memory.sample_batch(i);
-      auto [out_policy, out_value] = model_->forward(feature);
+      auto [out_value, out_policy] = model_->forward(feature);
 
       auto loss = F::mse_loss(out_value, target_value) +
                   F::cross_entropy(out_policy, target_policy);
-
-      std::println("{}", loss.template item<float>());
 
       optimizer_->zero_grad();
       loss.backward();
@@ -75,11 +71,10 @@ class DamathZero {
       node = mcts.search(node.id, model_);
       nodes->detach(node.id);
 
-      std::println("{}", node->board);
-
       std::tie(value, terminal) =
           Game::get_value_and_terminated(node->board, node->action);
     }
+    path.pop_back();
 
     auto memory = Memory{rd_};
 
@@ -87,7 +82,7 @@ class DamathZero {
       auto current_node = nodes->as_ref(node_id);
       auto target_feature = torch::tensor(current_node->board, torch::kFloat32);
       auto target_value =
-          torch::tensor(current_node->player == node->player ? value : -value,
+          torch::tensor({current_node->player == node->player ? value : -value},
                         torch::kFloat32);
       auto target_policy = mcts.get_action_probs(node_id);
       memory.append(target_feature, target_value, target_policy);
