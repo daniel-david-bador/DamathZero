@@ -17,14 +17,16 @@ namespace DamathZero {
 
 export class MCTS {
  public:
+  MCTS(Config config) : config_(config) {}
+
   template <typename Network>
   constexpr auto search(Board board, std::shared_ptr<Network> network)
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
-    auto root_id = nodes_.create(board, Player{1});
+    auto root_id = nodes_.create(board);
 
-    for (auto _ : std::views::iota(0, Config::NumSimulations)) {
+    for (auto _ : std::views::iota(0, config_.NumSimulations)) {
       auto node = nodes_.as_ref(root_id);
 
       while (not is_leaf(node.id))
@@ -33,10 +35,11 @@ export class MCTS {
       auto [value, terminal] =
           Game::get_value_and_terminated(node->board, node->action);
       value = Game::get_opponent_value(value);
+
       if (not terminal) {
-        auto [value_tensor, policy] =
-            network->forward(torch::tensor(node->board, torch::kFloat32));
-        policy = torch::softmax(policy, -1);
+        auto [value_tensor, policy] = network->forward(
+            torch::unsqueeze(torch::tensor(node->board, torch::kFloat32), 0));
+        policy = torch::softmax(torch::squeeze(policy, 0), -1);
         policy =
             policy.index({torch::tensor(Game::legal_actions(node->board))});
         policy /= policy.sum();
@@ -65,12 +68,14 @@ export class MCTS {
   };
 
   constexpr auto score(Node::ID id) const -> double {
-    auto& node = nodes_.get(id);
-    auto& parent = nodes_.get(node.parent);
+    auto& child = nodes_.get(id);
+    auto& parent = nodes_.get(child.parent);
 
-    auto mean =
-        node.visits > 0.0 ? 1 - ((node.value / node.visits) + 1) / 2.0 : 0.0;
-    return mean + node.prior * 2 * std::sqrt(parent.visits) / (1 + node.visits);
+    auto mean = child.visits > 0.0
+                    ? 1.0 - ((child.value / child.visits) + 1) / 2.0
+                    : 0.0;
+    return mean + child.prior * config_.C *
+                      (std::sqrt(parent.visits) / (1 + child.visits));
   };
 
   constexpr auto highest_child_score(Node::ID id) const -> Node::ID {
@@ -97,13 +102,16 @@ export class MCTS {
 
   constexpr auto expand(Node::ID parent_id, const Policy& policy) -> void {
     auto parent = nodes_.as_ref(parent_id);
+    auto contiguous_policy = policy.contiguous();
+    auto priors = std::vector<double>(
+        contiguous_policy.data_ptr<float>(),
+        contiguous_policy.data_ptr<float>() + contiguous_policy.numel());
     auto legal_actions = Game::legal_actions(parent->board);
-    for (size_t i = 0; i < legal_actions.size(); i++) {
-      auto action = legal_actions[i];
-      auto prior = policy[i].item<double>();
-      auto [child_board, player] = Game::apply_action(parent->board, action, parent->player);
-      child_board = Game::change_perspective(child_board, player);
-      parent.create_child(child_board, player, action, prior);
+    assert(priors.size() == legal_actions.size());
+    for (auto [prior, action] : std::views::zip(priors, legal_actions)) {
+      auto [child_board, _] = Game::apply_action(parent->board, action, 1);
+      child_board = Game::change_perspective(child_board, -1);
+      parent.create_child(child_board, action, prior);
     }
   };
 
@@ -119,6 +127,7 @@ export class MCTS {
   };
 
   NodeStorage nodes_;
+  Config config_;
 };
 
 }  // namespace DamathZero

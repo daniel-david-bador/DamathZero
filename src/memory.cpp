@@ -13,9 +13,12 @@ namespace DamathZero {
 
 export class Memory {
  public:
-  Memory(std::random_device& device) : gen_(device()) {}
+  Memory(Config config, std::random_device& device)
+      : config_{config}, gen_(device()) {}
 
   constexpr auto size() -> size_t { return data_.size(); }
+
+  constexpr auto shuffle() -> void { std::ranges::shuffle(data_, gen_); }
 
   auto append(Feature feature, Value value, Policy policy) -> void {
     data_.emplace_back(feature, value, policy);
@@ -26,13 +29,9 @@ export class Memory {
   }
 
   auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
-    auto size = std::min(Config::BatchSize, data_.size() - start);
+    auto size = std::min(config_.BatchSize, data_.size() - start);
 
-    auto batch = std::vector<std::tuple<Feature, Value, Policy>>{};
-    batch.reserve(size);
-
-    std::sample(data_.begin() + start, data_.begin() + start + size,
-                std::back_inserter(batch), size, gen_);
+    auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
 
     std::vector<Feature> features;
     std::vector<Value> values;
@@ -53,6 +52,7 @@ export class Memory {
   }
 
  private:
+  Config config_;
   std::mt19937 gen_;
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };

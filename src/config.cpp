@@ -5,14 +5,14 @@ import std;
 namespace DamathZero {
 
 export struct Config {
-  static constexpr int NumIterations = 10;
-  static constexpr int NumSelfPlayIterations = 10;
-  static constexpr int NumTrainingEpochs = 10;
-  static constexpr int NumSimulations = 10;
+  int NumSelfPlayIterations = 500;
+  int NumSimulations = 60;
+  int NumIterations = 3;
+  int NumTrainingEpochs = 4;
 
-  static constexpr std::size_t BatchSize = 64;
+  std::size_t BatchSize = 64;
 
-  static constexpr double C = 2.0;
+  double C = 2.0;
 };
 
 }  // namespace DamathZero
