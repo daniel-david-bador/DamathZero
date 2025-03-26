@@ -54,7 +54,7 @@ export class MCTS {
     auto child_visits = torch::zeros(9, torch::kFloat32);
     for (auto child_id : nodes_.get(root_id).children) {
       auto& child = nodes_.get(child_id);
-      child_visits[child.action] = child.visits;
+      child_visits[child.action] = auto(child.visits);
     }
 
     nodes_.clear();

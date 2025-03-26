@@ -48,24 +48,20 @@ auto main() -> int {
       auto neutral_state = DamathZero::Game::change_perspective(board, player);
       auto probs = mcts.search(neutral_state, model);
 
+      action = torch::argmax(probs).item<int>();
+
       auto [value, policy] = model->forward(
           torch::unsqueeze(torch::tensor(neutral_state, torch::kFloat32), 0));
-      policy = torch::squeeze(policy, 0);
+      policy = torch::softmax(torch::squeeze(policy, 0), -1);
       policy = policy.index(
           {torch::tensor(DamathZero::Game::legal_actions(neutral_state))});
       policy /= policy.sum();
 
+      probs = probs.index(
+          {torch::tensor(DamathZero::Game::legal_actions(neutral_state))});
       std::cout << "Policy: " << policy << "\n";
       std::cout << "MCTS: " << probs << "\n";
       std::cout << "Value: " << value << "\n";
-
-      action = torch::argmax(policy).item<int>();
-
-      while (not std::ranges::contains(DamathZero::Game::legal_actions(board),
-                                       action)) {
-        policy[action] = 0;
-        action = torch::argmax(policy).item<int>();
-      }
     }
 
     auto [new_board, new_player] =
