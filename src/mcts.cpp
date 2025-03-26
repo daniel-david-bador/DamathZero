@@ -17,14 +17,15 @@ namespace DamathZero {
 
 export class MCTS {
  public:
-  MCTS(std::shared_ptr<NodeStorage> nodes) : nodes_(nodes) {};
-
   template <typename Network>
-  constexpr auto search(Node::ID root_id, std::shared_ptr<Network> network)
-      -> Node::ID {
+  constexpr auto search(Board board, std::shared_ptr<Network> network)
+      -> torch::Tensor {
     torch::NoGradGuard no_grad;
+
+    auto root_id = nodes_.create(board, Player{1});
+
     for (auto _ : std::views::iota(0, Config::NumSimulations)) {
-      auto node = nodes_->as_ref(root_id);
+      auto node = nodes_.as_ref(root_id);
 
       while (not is_leaf(node.id))
         node = highest_child_score(node.id);
@@ -47,33 +48,25 @@ export class MCTS {
       backpropagate(node.id, value);
     }
 
-    nodes_->detach(root_id);
-
-    return highest_child_visits(root_id);
-  }
-
-  constexpr auto get_action_probs(Node::ID id) const -> torch::Tensor {
-    assert(not is_leaf(id));
-
     auto child_visits = torch::zeros(9, torch::kFloat32);
-
-    for (auto child_id : nodes_->get(id).children) {
-      auto& child = nodes_->get(child_id);
+    for (auto child_id : nodes_.get(root_id).children) {
+      auto& child = nodes_.get(child_id);
       child_visits[child.action] = child.visits;
     }
+
+    nodes_.clear();
 
     return child_visits / child_visits.sum(0);
   }
 
- private:
   constexpr auto is_leaf(Node::ID id) const -> bool {
-    auto& node = nodes_->get(id);
+    auto& node = nodes_.get(id);
     return node.children.empty();
   };
 
   constexpr auto score(Node::ID id) const -> double {
-    auto& node = nodes_->get(id);
-    auto& parent = nodes_->get(node.parent);
+    auto& node = nodes_.get(id);
+    auto& parent = nodes_.get(node.parent);
 
     auto mean =
         node.visits > 0.0 ? 1 - ((node.value / node.visits) + 1) / 2.0 : 0.0;
@@ -81,7 +74,7 @@ export class MCTS {
   };
 
   constexpr auto highest_child_score(Node::ID id) const -> Node::ID {
-    auto& node = nodes_->get(id);
+    auto& node = nodes_.get(id);
     assert(not node.children.empty());
 
     auto highest_score = [this](Node::ID a, Node::ID b) {
@@ -92,30 +85,30 @@ export class MCTS {
   };
 
   constexpr auto highest_child_visits(Node::ID id) const -> Node::ID {
-    auto& node = nodes_->get(id);
+    auto& node = nodes_.get(id);
     assert(not node.children.empty());
 
     auto highest_visits = [this](Node::ID a, Node::ID b) {
-      return nodes_->get(a).visits < nodes_->get(b).visits;
+      return nodes_.get(a).visits < nodes_.get(b).visits;
     };
 
     return *std::ranges::max_element(node.children, highest_visits);
   };
 
-  constexpr auto expand(Node::ID id, const Policy& policy) -> void {
-    auto node = nodes_->as_ref(id);
-    auto legal_actions = Game::legal_actions(node->board);
+  constexpr auto expand(Node::ID parent_id, const Policy& policy) -> void {
+    auto parent = nodes_.as_ref(parent_id);
+    auto legal_actions = Game::legal_actions(parent->board);
     for (size_t i = 0; i < legal_actions.size(); i++) {
       auto action = legal_actions[i];
       auto prior = policy[i].item<double>();
-      auto child_board = Game::apply_action(node->board, action, 1);
-      child_board = Game::change_perpective(child_board, -1);
-      nodes_->create_child(id, child_board, -node->player, action, prior, id);
+      auto [child_board, player] = Game::apply_action(parent->board, action, parent->player);
+      child_board = Game::change_perspective(child_board, player);
+      parent.create_child(child_board, player, action, prior);
     }
   };
 
   constexpr auto backpropagate(Node::ID id, double value) -> void {
-    auto& node = nodes_->get(id);
+    auto& node = nodes_.get(id);
 
     node.visits += 1;
     node.value += value;
@@ -125,7 +118,7 @@ export class MCTS {
       backpropagate(node.parent, value);
   };
 
-  std::shared_ptr<NodeStorage> nodes_;
+  NodeStorage nodes_;
 };
 
 }  // namespace DamathZero

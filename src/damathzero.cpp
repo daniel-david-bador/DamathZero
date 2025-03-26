@@ -56,39 +56,35 @@ class DamathZero {
   }
 
   auto generate_self_play_data() -> Memory {
-    auto nodes = std::make_shared<NodeStorage>();
-    auto mcts = MCTS{nodes};
+      auto statistics = std::vector<std::tuple<Board, torch::Tensor, Player>>();
+      auto player = Player{1};
+      auto board = Game::initial_board();
+      auto network = std::make_shared<Network>();
+      auto mcts = MCTS{};
 
-    auto node = nodes->as_ref(nodes->create());
+      while (true) {
+          auto neutral_state = Game::change_perspective(board, player);
+          auto action_probs = mcts.search(neutral_state, network);
 
-    auto [value, terminal] =
-        Game::get_value_and_terminated(node->board, node->action);
+          statistics.emplace_back(neutral_state, action_probs, player);
 
-    auto path = std::vector<Node::ID>{};
+          auto action = torch::multinomial(action_probs, 1).template item<Action>();
 
-    while (not terminal) {
-      path.push_back(node.id);
-      node = mcts.search(node.id, model_);
-      nodes->detach(node.id);
+          auto [new_board, new_player] = Game::apply_action(board, action, player);
+          auto [value, is_terminal] = Game::get_value_and_terminated(new_board, action);
 
-      std::tie(value, terminal) =
-          Game::get_value_and_terminated(node->board, node->action);
-    }
-    path.pop_back();
+          if (is_terminal) {
+              auto memory = Memory{rd_};
+              for (auto [hist_board, hist_probs, hist_player] : statistics) {
+                  auto terminal_value = hist_player == player ? value : -value;
+                  memory.append(torch::tensor(hist_board, torch::kFloat32),  torch::tensor({terminal_value}, torch::kFloat32), hist_probs);
+              }
+              return memory;
+          }
 
-    auto memory = Memory{rd_};
-
-    for (auto node_id : path) {
-      auto current_node = nodes->as_ref(node_id);
-      auto target_feature = torch::tensor(current_node->board, torch::kFloat32);
-      auto target_value =
-          torch::tensor({current_node->player == node->player ? value : -value},
-                        torch::kFloat32);
-      auto target_policy = mcts.get_action_probs(node_id);
-      memory.append(target_feature, target_value, target_policy);
-    }
-
-    return memory;
+          board = new_board;
+          player = new_player;
+      }
   }
 
  private:

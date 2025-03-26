@@ -16,10 +16,10 @@ export struct Game {
   }
 
   static constexpr auto apply_action(const Board& board, Action action,
-                                     Player player) -> Board {
+                                     Player player) -> std::tuple<Board, Player> {
     auto new_board = board;
     new_board[action] = player;
-    return new_board;
+    return {new_board, -player};
   }
 
   static constexpr auto legal_actions(const Board& board)
@@ -67,7 +67,7 @@ export struct Game {
     return -value;
   }
 
-  static constexpr auto change_perpective(const Board& board, Player player)
+  static constexpr auto change_perspective(const Board& board, Player player)
       -> Board {
     auto new_board = board;
     for (auto& cell : new_board)

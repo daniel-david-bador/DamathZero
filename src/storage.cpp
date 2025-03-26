@@ -31,6 +31,13 @@ export class NodeStorage {
     }
 
     constexpr auto operator->() -> Node* { return &storage.get(id); }
+
+    template <typename... Args>
+    constexpr auto create_child(Args&&... args) -> void {
+        auto child_id = storage.create(std::forward<Args>(args)...);
+        storage.get(id).children.emplace_back(child_id);
+        storage.get(child_id).parent = id;
+    }
   };
 
  public:
@@ -40,11 +47,8 @@ export class NodeStorage {
     return nodes_.size() - 1;
   }
 
-  template <typename... Args>
-  constexpr auto create_child(Node::ID id, Args&&... args) -> Node::ID {
-    auto child_id = create(std::forward<Args>(args)...);
-    nodes_[id].children.emplace_back(child_id);
-    return child_id;
+  constexpr auto clear() -> void {
+      nodes_.clear();
   }
 
   constexpr auto as_ref(Node::ID id) -> NodeRef { return NodeRef(*this, id); }

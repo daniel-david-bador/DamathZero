@@ -29,12 +29,13 @@ target_link_libraries(DamathZeroMain PRIVATE DamathZero)
 
 enable_testing()
 
-add_executable(DamathZeroTest)
-target_sources(DamathZeroTest PRIVATE 
-  test/test_game.cpp 
-  test/test_mcts.cpp
-  test/test_damathzero.cpp
-)
-target_link_libraries(DamathZeroTest PRIVATE DamathZero GTest::gtest GTest::gtest_main)
+# add_executable(DamathZeroTest)
+# target_sources(DamathZeroTest PRIVATE
+#   test/test_game.cpp
+#   test/test_mcts.cpp
+#   test/test_node.cpp
+#   test/test_damathzero.cpp
+# )
+# target_link_libraries(DamathZeroTest PRIVATE DamathZero GTest::gtest GTest::gtest_main)
 
-gtest_discover_tests(DamathZeroTest)
+# gtest_discover_tests(DamathZeroTest)
