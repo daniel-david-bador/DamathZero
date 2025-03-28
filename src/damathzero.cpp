@@ -29,7 +29,9 @@ class DamathZero {
         mcts_{config} {}
 
   auto learn() -> void {
-    for (auto _ : std::views::iota(0, config_.NumIterations)) {
+    auto best_model_index = 0;
+    for (auto i : std::views::iota(0, config_.NumIterations)) {
+      std::println("Iteration: {}", i);
       auto memory = Memory{config_, rd_};
 
       model_->eval();
@@ -40,8 +42,22 @@ class DamathZero {
       for (auto _ : std::views::iota(0, config_.NumTrainingEpochs))
         train(memory);
 
-      // torch::save(model_, std::format("models/model_{}.pt", i));
-      // torch::save(optimizer_, std::format("optimizer_{}.pt", i));
+      torch::serialize::OutputArchive output_model_archive;
+      model_->to(torch::kCPU);
+      model_->save(output_model_archive);
+      output_model_archive.save_to(std::format("models/model_{}.pt", i));
+
+      torch::serialize::InputArchive input_archive;
+      input_archive.load_from(
+          std::format("models/model_{}.pt", best_model_index));
+      auto best_model = std::make_shared<Network>();
+      best_model->load(input_archive);
+      best_model->to(torch::kCPU);
+
+      model_->eval();
+      best_model->eval();
+      if (compete(best_model))
+        best_model_index = i;
     }
   }
 
@@ -92,6 +108,63 @@ class DamathZero {
       board = new_board;
       player = new_player;
     }
+  }
+
+  auto compete(std::shared_ptr<Network> best_model) -> bool {
+    double wins = 0.0;
+    double draws = 0.0;
+    double loss = 0.0;
+
+    for (auto _ : std::views::iota(0, config_.NumModelEvaluationIterations)) {
+      auto player = Player{1};
+      auto board = Game::initial_board();
+
+      double value = 0.0;
+      bool is_terminal = false;
+
+      while (not is_terminal) {
+        auto neutral_state = Game::change_perspective(board, player);
+        torch::Tensor action_probs;
+        if (player == 1)
+          action_probs = mcts_.search(neutral_state, model_);
+        else
+          action_probs = mcts_.search(neutral_state, best_model);
+
+        auto action = torch::argmax(action_probs).template item<Action>();
+
+        auto [new_board, new_player] =
+            Game::apply_action(board, action, player);
+        std::tie(value, is_terminal) =
+            Game::get_value_and_terminated(new_board, action);
+
+        if (is_terminal) {
+          if (player == 1) {
+            if (value == 0)
+              draws += 1;
+            else
+              wins += 1;
+          } else {
+            loss += 1;
+          }
+        }
+
+        board = new_board;
+        player = new_player;
+      }
+    }
+
+    auto win = wins + draws >
+               0.7 * static_cast<double>(config_.NumModelEvaluationIterations);
+    if (win) {
+      // model_.swap(pretrained_model);
+      std::println("Trained model won against the best model {}:{}:{}!", wins,
+                   draws, loss);
+    } else {
+      std::println(
+          "Trained model did not win against the best model {}:{}:{}...", wins,
+          draws, loss);
+    }
+    return win;
   }
 
  private:

@@ -57,8 +57,6 @@ export class MCTS {
       child_visits[child.action] = auto(child.visits);
     }
 
-    nodes_.clear();
-
     return child_visits / child_visits.sum(0);
   }
 
