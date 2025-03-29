@@ -7,7 +7,6 @@ project(DamathZero LANGUAGES CXX)
 
 find_package(GTest REQUIRED)
 find_package(Torch REQUIRED)
-find_package(LATEX REQUIRED)
 
 add_library(DamathZero)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
@@ -36,22 +35,12 @@ else()
 endif()
 
 add_custom_command(
-  OUTPUT ${PROJECT_BINARY_DIR}/DamathZero.dvi
+  OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src/docs
-  COMMAND ${LATEX_COMPILER} --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex
+  COMMAND latexmk -pdf -bibtex --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex
 )
 
-add_custom_command(
-  OUTPUT ${PROJECT_BINARY_DIR}/DamathZero.pdf
-  DEPENDS ${PROJECT_BINARY_DIR}/DamathZero.dvi
-  COMMAND ${DVIPDF_CONVERTER} ${PROJECT_BINARY_DIR}/DamathZero.dvi
-)
-
-add_custom_target(DamathZeroPaper
-  ALL
-    DEPENDS
-      ${PROJECT_BINARY_DIR}/DamathZero.pdf
-)
+add_custom_target(DamathZeroPaper ALL DEPENDS ${PROJECT_BINARY_DIR}/thesis.pdf)
 
 # enable_testing()
 
