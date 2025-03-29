@@ -36,7 +36,7 @@ endif()
 
 add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src/docs
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs
   COMMAND latexmk -pdf -bibtex --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex
 )
 
