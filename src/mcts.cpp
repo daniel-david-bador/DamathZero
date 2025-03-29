@@ -51,6 +51,8 @@ class MCTS {
       child_visits[child.action] = auto(child.visits);
     }
 
+    nodes_.clear();
+
     return child_visits / child_visits.sum(0);
   }
 
@@ -113,15 +115,16 @@ class MCTS {
 
     auto parent = nodes_.as_ref(parent_id);
     assert(parent->player == state.player);
-    for (auto i : std::views::iota(0, Game::ActionSize)) {
-      if (legal_actions[i].template item<double>() != 0.0) {
-        auto action = i;
-        auto prior = policy[i].template item<double>();
-        auto new_state = Game::apply_action(state, action);
-        assert(new_state.player != state.player);
-        parent.create_child(new_state.player, action, prior);
-      }
+
+    auto actions = legal_actions.nonzero();
+    for (auto i = 0; i < actions.size(0); i++) {
+      auto action = actions[i].template item<Action>();
+      auto prior = policy[action].template item<double>();
+      auto new_state = Game::apply_action(state, action);
+      assert(new_state.player != state.player);
+      parent.create_child(new_state.player, action, prior);
     }
+
     return value.template item<double>();
   };
 

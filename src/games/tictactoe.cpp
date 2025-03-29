@@ -41,14 +41,14 @@ struct TicTacToe {
   };
 
   static constexpr auto initial_state() -> State {
-    return State(std::vector<int>(9, 0), Player(1));
+    return State(std::vector<int>(9, 0), Player::First);
   }
 
   static constexpr auto apply_action(const State& state, Action action)
       -> State {
     auto new_state = state;
-    new_state.data[action] = state.player;
-    new_state.player = -state.player;
+    new_state.data[action] = state.player.is_first() ? 1 : -1;
+    new_state.player = state.player.next();
     return new_state;
   }
 
@@ -66,23 +66,24 @@ struct TicTacToe {
     if (action < 0)
       return false;
 
-    auto player = board.data[action];
-    return (board.data[0] == player and board.data[1] == player and
-            board.data[2] == player) or
-           (board.data[3] == player and board.data[4] == player and
-            board.data[5] == player) or
-           (board.data[6] == player and board.data[7] == player and
-            board.data[8] == player) or
-           (board.data[0] == player and board.data[3] == player and
-            board.data[6] == player) or
-           (board.data[1] == player and board.data[4] == player and
-            board.data[7] == player) or
-           (board.data[2] == player and board.data[5] == player and
-            board.data[8] == player) or
-           (board.data[0] == player and board.data[4] == player and
-            board.data[8] == player) or
-           (board.data[2] == player and board.data[4] == player and
-            board.data[6] == player);
+    auto piece = board.data[action];
+
+    return (board.data[0] == piece and board.data[1] == piece and
+            board.data[2] == piece) or
+           (board.data[3] == piece and board.data[4] == piece and
+            board.data[5] == piece) or
+           (board.data[6] == piece and board.data[7] == piece and
+            board.data[8] == piece) or
+           (board.data[0] == piece and board.data[3] == piece and
+            board.data[6] == piece) or
+           (board.data[1] == piece and board.data[4] == piece and
+            board.data[7] == piece) or
+           (board.data[2] == piece and board.data[5] == piece and
+            board.data[8] == piece) or
+           (board.data[0] == piece and board.data[4] == piece and
+            board.data[8] == piece) or
+           (board.data[2] == piece and board.data[4] == piece and
+            board.data[6] == piece);
   }
 
   static constexpr auto terminal_value(const State& state, Action action)
@@ -97,8 +98,9 @@ struct TicTacToe {
 
   static constexpr auto encode_state(const State& state) -> torch::Tensor {
     auto encoded_state = torch::zeros(ActionSize, torch::kFloat32);
+    auto flip = state.player.is_first() ? 1 : -1;
     for (std::size_t i = 0; i < state.data.size(); i++)
-      encoded_state[i] = state.data[i] * state.player;
+      encoded_state[i] = state.data[i] * flip;
 
     return encoded_state;
   }
@@ -108,33 +110,37 @@ static_assert(DamathZero::Concepts::Game<TicTacToe>);
 
 auto print_board(const TicTacToe::State& state) {
   auto& [board, player] = state;
+  auto flip = player.is_first() ? 1 : -1;
   for (int i = 0; i < 9; i++) {
     if (i % 3 == 0) {
       std::cout << "\n";
     }
-    std::cout << player * board[i] << " ";
+    std::cout << board[i] * flip << " ";
   }
   std::cout << "\n";
 }
 
 auto main() -> int {
+  std::println("{}", torch::mps::is_available());
+
   auto model = std::make_shared<Network>();
   auto optimizer = std::make_shared<torch::optim::Adam>(
       model->parameters(), torch::optim::AdamOptions(0.001));
 
   auto random_device = std::random_device{};
 
-  auto alpha_zero =
-      DamathZero::AlphaZero<TicTacToe>{{}, model, optimizer, random_device};
+  auto alpha_zero = DamathZero::AlphaZero<TicTacToe>{
+      {.NumIterations = 3}, model, optimizer, random_device};
   alpha_zero.learn();
 
-  auto mcts = DamathZero::MCTS<TicTacToe>{{.NumSimulations = 2000}};
+  auto mcts = DamathZero::MCTS<TicTacToe>{{.NumSimulations = 100}};
   auto state = TicTacToe::initial_state();
+  auto human_player = DamathZero::Player::First;
 
   auto action = -1;
 
   while (true) {
-    if (state.player == 1) {
+    if (state.player == human_player) {
       print_board(state);
 
       std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
@@ -168,11 +174,16 @@ auto main() -> int {
 
     if (terminal_value.has_value()) {
       auto value = *terminal_value;
+      value = state.player == human_player ? value : -value;
 
-      print_board(state);
-      if (value * state.player == 1) {
+      // Flip the end state from the perspective of the human player before
+      // printing it.
+      new_state.player = human_player;
+      print_board(new_state);
+
+      if (value == 1) {
         std::println("You won!");
-      } else if (value * state.player == -1) {
+      } else if (value == -1) {
         std::println("You lost!");
       } else {
         std::println("Draw!");

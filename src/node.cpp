@@ -10,7 +10,7 @@ namespace DamathZero {
 export struct Node {
   using ID = int;
 
-  Player player = 1;
+  Player player = Player::First;
   Action action = -1;
   double prior = 0.0;
 

@@ -28,7 +28,7 @@ set(_availableGames tictactoe)
 set(game tictactoe CACHE STRING "Game to compile: ${_availableGames}")
 set_property(CACHE game PROPERTY STRINGS ${_availableGames})
 
-if(game IN_LIST _availableGames)
+if(${game} IN_LIST _availableGames)
     add_executable(${game} "src/games/${game}.cpp")
     target_link_libraries(${game} PRIVATE DamathZero)
 else()

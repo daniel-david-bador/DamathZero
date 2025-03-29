@@ -33,6 +33,10 @@ export class Memory {
 
     auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
 
+    // // TODO: investigate why this invariant is invalidated sometimes which
+    // causes the batch norm to throw an exception.
+    // assert(size > 1);
+
     std::vector<Feature> features;
     std::vector<Value> values;
     std::vector<Policy> policies;

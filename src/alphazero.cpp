@@ -111,8 +111,7 @@ class AlphaZero {
   }
 
   auto compete(std::shared_ptr<Network> best_model) -> bool {
-    // Player 1 plays using the trained model
-    // Player 2 plays using the best model so far
+    auto trained_model_player = Player::First;
 
     double wins = 0.0;
     double draws = 0.0;
@@ -122,11 +121,10 @@ class AlphaZero {
       auto state = Game::initial_state();
 
       double value = 0.0;
-      bool is_terminal = false;
 
-      while (not is_terminal) {
+      while (true) {
         torch::Tensor action_probs;
-        if (state.player == 1)
+        if (state.player == trained_model_player)
           action_probs = mcts_.search(state, model_);
         else
           action_probs = mcts_.search(state, best_model);
@@ -140,21 +138,22 @@ class AlphaZero {
           if (value == 0) {
             draws += 1;
           } else {
-            if (state.player == 1)
+            if (state.player == trained_model_player)
               wins += 1;
             else
               loss += 1;
           }
-          is_terminal = true;
+          break;
         }
 
         state = new_state;
       }
     }
 
-    auto win = wins + draws >
-               0.7 * static_cast<double>(config_.NumModelEvaluationIterations);
-    if (win) {
+    auto did_win =
+        wins + draws >
+        0.7 * static_cast<double>(config_.NumModelEvaluationIterations);
+    if (did_win) {
       std::println(
           "Trained model won against the best model with {} wins, {} draws, "
           "and {} losses.",
@@ -165,7 +164,7 @@ class AlphaZero {
           "draws, and {} losses.",
           wins, draws, loss);
     }
-    return win;
+    return did_win;
   }
 
  private:

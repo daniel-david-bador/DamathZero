@@ -9,13 +9,14 @@ import std;
 namespace DamathZero {
 
 export using Action = int;
-export using Player = int;
 
 export using Feature = torch::Tensor;
 export using Policy = torch::Tensor;
 export using Value = torch::Tensor;
 
 namespace Concepts {
+
+class Player;
 
 export template <typename G>
 concept Game = requires(const G::State& state, Action action) {
@@ -39,5 +40,26 @@ concept Game = requires(const G::State& state, Action action) {
 };
 
 }  // namespace Concepts
+
+export class Player {
+ public:
+  static const Player First;
+  static const Player Second;
+
+  constexpr auto next() const -> Player { return is_first_ ? Second : First; }
+  constexpr auto operator==(const Player other) const -> bool {
+    return other.is_first_ == is_first_;
+  }
+
+  constexpr auto is_first() const -> bool { return is_first_; }
+  constexpr auto is_second() const -> bool { return not is_first_; }
+
+ private:
+  constexpr explicit Player(bool is_first) : is_first_(is_first) {}
+  bool is_first_;
+};
+
+inline constexpr auto Player::First = Player(true);
+inline constexpr auto Player::Second = Player(false);
 
 }  // namespace DamathZero
