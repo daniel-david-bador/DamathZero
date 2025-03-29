@@ -36,11 +36,17 @@ else()
 endif()
 
 add_custom_command(
-  OUTPUT  ${PROJECT_BINARY_DIR}/DamathZero.pdf
-  DEPENDS ${PROJECT_SOURCE_DIR}/src/docs/thesis.tex
-  COMMAND ${LATEX_COMPILER} ${PROJECT_SOURCE_DIR}/src/docs/thesis.tex
+  OUTPUT ${PROJECT_BINARY_DIR}/DamathZero.dvi
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src/docs
+  COMMAND ${LATEX_COMPILER} --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex
+)
+
+add_custom_command(
+  OUTPUT ${PROJECT_BINARY_DIR}/DamathZero.pdf
+  DEPENDS ${PROJECT_BINARY_DIR}/DamathZero.dvi
   COMMAND ${DVIPDF_CONVERTER} ${PROJECT_BINARY_DIR}/DamathZero.dvi
 )
+
 add_custom_target(DamathZeroPaper
   ALL
     DEPENDS
