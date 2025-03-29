@@ -3,7 +3,6 @@ export module damathzero:node;
 import std;
 
 import :config;
-import :network;
 import :game;
 
 namespace DamathZero {
@@ -11,9 +10,9 @@ namespace DamathZero {
 export struct Node {
   using ID = int;
 
+  Player player = 1;
   Action action = -1;
   double prior = 0.0;
-  Player player = -1;
 
   Node::ID parent_id = -1;
   std::vector<Node::ID> children = {};

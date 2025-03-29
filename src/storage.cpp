@@ -8,7 +8,6 @@ import std;
 
 import :config;
 import :game;
-import :network;
 import :node;
 
 namespace DamathZero {
@@ -60,7 +59,6 @@ export class NodeStorage {
     assert(id >= 0 and id < static_cast<int>(nodes_.size()));
     return nodes_[id];
   }
-
 
  private:
   std::vector<Node> nodes_;

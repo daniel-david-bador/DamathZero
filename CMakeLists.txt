@@ -8,6 +8,8 @@ project(DamathZero LANGUAGES CXX)
 find_package(GTest REQUIRED)
 find_package(Torch REQUIRED)
 
+include(cmake/indicators.cmake)
+
 add_library(DamathZero)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/config.cpp
@@ -15,13 +17,12 @@ target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/game.cpp
   src/memory.cpp
   src/mcts.cpp
-  src/network.cpp
   src/node.cpp
   src/storage.cpp
 )
 target_compile_options(DamathZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
-target_link_libraries(DamathZero PUBLIC torch)
+target_link_libraries(DamathZero PUBLIC torch indicators::indicators)
 
 set(_availableGames tictactoe)
 set(game tictactoe CACHE STRING "Game to compile: ${_availableGames}")
@@ -41,16 +42,3 @@ add_custom_command(
 )
 
 add_custom_target(DamathZeroPaper ALL DEPENDS ${PROJECT_BINARY_DIR}/thesis.pdf)
-
-# enable_testing()
-
-# add_executable(DamathZeroTest)
-# target_sources(DamathZeroTest PRIVATE
-#   test/test_game.cpp
-#   test/test_mcts.cpp
-#   test/test_node.cpp
-#   test/test_damathzero.cpp
-# )
-# target_link_libraries(DamathZeroTest PRIVATE DamathZero GTest::gtest GTest::gtest_main)
-
-# gtest_discover_tests(DamathZeroTest)

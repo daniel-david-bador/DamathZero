@@ -10,7 +10,6 @@ export import :config;
 export import :game;
 export import :memory;
 export import :mcts;
-export import :network;
 export import :node;
 export import :storage;
 
@@ -99,8 +98,7 @@ class AlphaZero {
         auto memory = Memory{config_, rd_};
         auto value = *terminal_value;
         for (auto [hist_state, hist_probs] : statistics) {
-          auto hist_value =
-              hist_state.player == new_state.player ? value : -value;
+          auto hist_value = hist_state.player == state.player ? value : -value;
           memory.append(Game::encode_state(hist_state),
                         torch::tensor({hist_value}, torch::kFloat32),
                         hist_probs);
@@ -157,13 +155,15 @@ class AlphaZero {
     auto win = wins + draws >
                0.7 * static_cast<double>(config_.NumModelEvaluationIterations);
     if (win) {
-      // model_.swap(pretrained_model);
-      std::println("Trained model won against the best model {}:{}:{}!", wins,
-                   draws, loss);
+      std::println(
+          "Trained model won against the best model with {} wins, {} draws, "
+          "and {} losses.",
+          wins, draws, loss);
     } else {
       std::println(
-          "Trained model did not win against the best model {}:{}:{}...", wins,
-          draws, loss);
+          "Trained model did not win against the best model with {} wins, {} "
+          "draws, and {} losses.",
+          wins, draws, loss);
     }
     return win;
   }

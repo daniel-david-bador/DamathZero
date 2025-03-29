@@ -128,7 +128,7 @@ auto main() -> int {
       DamathZero::AlphaZero<TicTacToe>{{}, model, optimizer, random_device};
   alpha_zero.learn();
 
-  auto mcts = DamathZero::MCTS<TicTacToe>{{.NumSimulations = 1000}};
+  auto mcts = DamathZero::MCTS<TicTacToe>{{.NumSimulations = 2000}};
   auto state = TicTacToe::initial_state();
 
   auto action = -1;
@@ -137,7 +137,7 @@ auto main() -> int {
     if (state.player == 1) {
       print_board(state);
 
-      std::cout << TicTacToe::legal_actions(state) << '\n';
+      std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
 
       int input = 0;
       std::cout << "Enter action: ";
@@ -169,7 +169,7 @@ auto main() -> int {
     if (terminal_value.has_value()) {
       auto value = *terminal_value;
 
-      print_board(new_state);
+      print_board(state);
       if (value * state.player == 1) {
         std::println("You won!");
       } else if (value * state.player == -1) {

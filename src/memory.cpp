@@ -7,7 +7,7 @@ export module damathzero:memory;
 import std;
 
 import :config;
-import :network;
+import :game;
 
 namespace DamathZero {
 

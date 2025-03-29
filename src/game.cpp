@@ -11,6 +11,10 @@ namespace DamathZero {
 export using Action = int;
 export using Player = int;
 
+export using Feature = torch::Tensor;
+export using Policy = torch::Tensor;
+export using Value = torch::Tensor;
+
 namespace Concepts {
 
 export template <typename G>

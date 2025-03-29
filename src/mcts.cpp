@@ -7,7 +7,6 @@ export module damathzero:mcts;
 
 import std;
 
-import :network;
 import :config;
 import :node;
 import :storage;
@@ -25,7 +24,7 @@ class MCTS {
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
-    auto root_id = nodes_.create();
+    auto root_id = nodes_.create(original_state.player);
 
     for (auto _ : std::views::iota(0, config_.NumSimulations)) {
       auto node = nodes_.as_ref(root_id);
@@ -38,7 +37,8 @@ class MCTS {
 
       if (auto terminal_value = Game::terminal_value(state, node->action);
           terminal_value.has_value()) {
-        backpropagate(node.id, *terminal_value, state.player);
+        auto& parent = nodes_.get(node->parent_id);
+        backpropagate(node.id, *terminal_value, parent.player);
       } else {
         auto value = expand(node.id, state, model);
         backpropagate(node.id, value, state.player);
@@ -63,13 +63,19 @@ class MCTS {
     auto& child = nodes_.get(id);
     auto& parent = nodes_.get(child.parent_id);
 
-    auto mean =
-        child.visits > 0.0 ? ((child.value / child.visits) + 1) / 2.0 : 0.0;
-    if (parent.player != child.player)
+    assert(child.player != parent.player);
+
+    auto exploration = child.prior * config_.C *
+                       (std::sqrt(parent.visits) / (1 + child.visits));
+
+    if (child.visits == 0)
+      return exploration;
+
+    auto mean = ((child.value / child.visits) + 1) / 2.0;
+    if (child.player != parent.player)
       mean = 1 - mean;
 
-    return mean + child.prior * config_.C *
-                      (std::sqrt(parent.visits) / (1 + child.visits));
+    return mean + exploration;
   };
 
   constexpr auto highest_child_score(Node::ID id) const -> Node::ID {
@@ -106,11 +112,14 @@ class MCTS {
     policy /= policy.sum();
 
     auto parent = nodes_.as_ref(parent_id);
+    assert(parent->player == state.player);
     for (auto i : std::views::iota(0, Game::ActionSize)) {
       if (legal_actions[i].template item<double>() != 0.0) {
         auto action = i;
         auto prior = policy[i].template item<double>();
-        parent.create_child(action, prior, state.player);
+        auto new_state = Game::apply_action(state, action);
+        assert(new_state.player != state.player);
+        parent.create_child(new_state.player, action, prior);
       }
     }
     return value.template item<double>();
