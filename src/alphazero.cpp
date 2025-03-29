@@ -139,13 +139,13 @@ class AlphaZero {
         auto terminal_value = Game::terminal_value(new_state, action);
 
         if (terminal_value.has_value()) {
-          if (new_state.player == 1) {
-            if (value == 0)
-              draws += 1;
-            else
-              wins += 1;
+          if (value == 0) {
+            draws += 1;
           } else {
-            loss += 1;
+            if (state.player == 1)
+              wins += 1;
+            else
+              loss += 1;
           }
           is_terminal = true;
         }

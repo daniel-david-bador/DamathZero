@@ -63,9 +63,11 @@ class MCTS {
     auto& child = nodes_.get(id);
     auto& parent = nodes_.get(child.parent_id);
 
-    auto mean = child.visits > 0.0
-                    ? 1.0 - ((child.value / child.visits) + 1) / 2.0
-                    : 0.0;
+    auto mean =
+        child.visits > 0.0 ? ((child.value / child.visits) + 1) / 2.0 : 0.0;
+    if (parent.player != child.player)
+      mean = 1 - mean;
+
     return mean + child.prior * config_.C *
                       (std::sqrt(parent.visits) / (1 + child.visits));
   };

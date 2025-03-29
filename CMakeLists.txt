@@ -7,6 +7,7 @@ project(DamathZero LANGUAGES CXX)
 
 find_package(GTest REQUIRED)
 find_package(Torch REQUIRED)
+find_package(LATEX REQUIRED)
 
 add_library(DamathZero)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
@@ -34,7 +35,19 @@ else()
     message(FATAL_ERROR "game must be one of ${_availableGames}")
 endif()
 
-enable_testing()
+add_custom_command(
+  OUTPUT  ${PROJECT_BINARY_DIR}/DamathZero.pdf
+  DEPENDS ${PROJECT_SOURCE_DIR}/src/docs/thesis.tex
+  COMMAND ${LATEX_COMPILER} ${PROJECT_SOURCE_DIR}/src/docs/thesis.tex
+  COMMAND ${DVIPDF_CONVERTER} ${PROJECT_BINARY_DIR}/DamathZero.dvi
+)
+add_custom_target(DamathZeroPaper
+  ALL
+    DEPENDS
+      ${PROJECT_BINARY_DIR}/DamathZero.pdf
+)
+
+# enable_testing()
 
 # add_executable(DamathZeroTest)
 # target_sources(DamathZeroTest PRIVATE
