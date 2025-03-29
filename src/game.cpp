@@ -1,80 +1,39 @@
+module;
+
+#include <torch/torch.h>
+
 export module damathzero:game;
 
 import std;
 
 namespace DamathZero {
 
+export using Action = int;
 export using Player = int;
 
-export using Action = int;
+namespace Concepts {
 
-export using Board = std::vector<int>;
+export template <typename G>
+concept Game = requires(const G::State& state, Action action) {
+  typename G::State;
+  typename G::Network;
 
-export struct Game {
-  static constexpr auto initial_board() -> Board {
-    return std::vector<int>(9, 0);
-  }
+  std::is_base_of_v<torch::nn::Module, typename G::Network>;
+  std::same_as<decltype(state.player), Player>;
+  std::same_as<decltype(G::ActionSize), int>;
 
-  static constexpr auto apply_action(const Board& board, Action action,
-                                     Player player)
-      -> std::tuple<Board, Player> {
-    auto new_board = board;
-    new_board[action] = player;
-    return {new_board, -player};
-  }
+  { G::initial_state() } -> std::same_as<typename G::State>;
 
-  static constexpr auto legal_actions(const Board& board)
-      -> std::vector<Action> {
-    std::vector<Action> legal_actions;
+  { G::apply_action(state, action) } -> std::same_as<typename G::State>;
 
-    for (std::size_t i = 0; i < board.size(); i++)
-      if (board[i] == 0)
-        legal_actions.push_back(i);
+  { G::terminal_value(state, action) } -> std::same_as<std::optional<double>>;
+  { G::legal_actions(state) } -> std::same_as<torch::Tensor>;
 
-    return legal_actions;
-  }
-
-  static constexpr auto check_win(const Board& board, Action action) -> bool {
-    if (action < 0)
-      return false;
-
-    auto player = board[action];
-    return (board[0] == player and board[1] == player and board[2] == player) or
-           (board[3] == player and board[4] == player and board[5] == player) or
-           (board[6] == player and board[7] == player and board[8] == player) or
-           (board[0] == player and board[3] == player and board[6] == player) or
-           (board[1] == player and board[4] == player and board[7] == player) or
-           (board[2] == player and board[5] == player and board[8] == player) or
-           (board[0] == player and board[4] == player and board[8] == player) or
-           (board[2] == player and board[4] == player and board[6] == player);
-  }
-
-  static constexpr auto get_value_and_terminated(const Board& board,
-                                                 Action action)
-      -> std::tuple<double, bool> {
-    if (check_win(board, action))
-      return {1.0, true};
-    else if (legal_actions(board).empty())
-      return {0.0, true};
-    else
-      return {0.0, false};
-  }
-
-  static constexpr auto get_opponent(Player player) -> Player {
-    return -player;
-  }
-
-  static constexpr auto get_opponent_value(double value) -> double {
-    return -value;
-  }
-
-  static constexpr auto change_perspective(const Board& board, Player player)
-      -> Board {
-    Board new_board = board;
-    for (auto& cell : new_board)
-      cell *= player;
-    return new_board;
-  }
+  // IMPORTANT: The encoded state should always be from the perspective of
+  // `state.player`.
+  { G::encode_state(state) } -> std::same_as<torch::Tensor>;
 };
+
+}  // namespace Concepts
 
 }  // namespace DamathZero

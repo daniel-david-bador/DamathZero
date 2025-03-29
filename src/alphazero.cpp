@@ -16,12 +16,15 @@ export import :storage;
 
 namespace DamathZero {
 
-export template <typename Network>
-class DamathZero {
+export template <Concepts::Game Game>
+class AlphaZero {
+  using Network = Game::Network;
+  using State = Game::State;
+
  public:
-  DamathZero(Config config, std::shared_ptr<Network> model,
-             std::shared_ptr<torch::optim::Optimizer> optimizer,
-             std::random_device& rd)
+  AlphaZero(Config config, std::shared_ptr<Network> model,
+            std::shared_ptr<torch::optim::Optimizer> optimizer,
+            std::random_device& rd)
       : config_(config),
         model_(model),
         optimizer_(optimizer),
@@ -35,8 +38,9 @@ class DamathZero {
       auto memory = Memory{config_, rd_};
 
       model_->eval();
-      for (auto _ : std::views::iota(0, config_.NumSelfPlayIterations))
+      for (auto _ : std::views::iota(0, config_.NumSelfPlayIterations)) {
         memory.merge(generate_self_play_data());
+      }
 
       model_->train();
       for (auto _ : std::views::iota(0, config_.NumTrainingEpochs))
@@ -78,67 +82,64 @@ class DamathZero {
   }
 
   auto generate_self_play_data() -> Memory {
-    auto statistics = std::vector<std::tuple<Board, torch::Tensor, Player>>();
-    auto player = Player{1};
-    auto board = Game::initial_board();
+    auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
+    auto state = Game::initial_state();
 
     while (true) {
-      auto neutral_state = Game::change_perspective(board, player);
-      auto action_probs = mcts_.search(neutral_state, model_);
+      auto action_probs = mcts_.search(state, model_);
 
-      statistics.emplace_back(neutral_state, action_probs, player);
+      statistics.emplace_back(state, action_probs);
 
       auto action = torch::multinomial(action_probs, 1).template item<Action>();
 
-      auto [new_board, new_player] = Game::apply_action(board, action, player);
-      auto [value, is_terminal] =
-          Game::get_value_and_terminated(new_board, action);
+      auto new_state = Game::apply_action(state, action);
+      auto terminal_value = Game::terminal_value(new_state, action);
 
-      if (is_terminal) {
+      if (terminal_value.has_value()) {
         auto memory = Memory{config_, rd_};
-        for (auto [hist_board, hist_probs, hist_player] : statistics) {
-          auto hist_value = hist_player == player ? value : -value;
-          memory.append(torch::tensor(hist_board, torch::kFloat32),
+        auto value = *terminal_value;
+        for (auto [hist_state, hist_probs] : statistics) {
+          auto hist_value =
+              hist_state.player == new_state.player ? value : -value;
+          memory.append(Game::encode_state(hist_state),
                         torch::tensor({hist_value}, torch::kFloat32),
                         hist_probs);
         }
         return memory;
       }
 
-      board = new_board;
-      player = new_player;
+      state = new_state;
     }
   }
 
   auto compete(std::shared_ptr<Network> best_model) -> bool {
+    // Player 1 plays using the trained model
+    // Player 2 plays using the best model so far
+
     double wins = 0.0;
     double draws = 0.0;
     double loss = 0.0;
 
     for (auto _ : std::views::iota(0, config_.NumModelEvaluationIterations)) {
-      auto player = Player{1};
-      auto board = Game::initial_board();
+      auto state = Game::initial_state();
 
       double value = 0.0;
       bool is_terminal = false;
 
       while (not is_terminal) {
-        auto neutral_state = Game::change_perspective(board, player);
         torch::Tensor action_probs;
-        if (player == 1)
-          action_probs = mcts_.search(neutral_state, model_);
+        if (state.player == 1)
+          action_probs = mcts_.search(state, model_);
         else
-          action_probs = mcts_.search(neutral_state, best_model);
+          action_probs = mcts_.search(state, best_model);
 
         auto action = torch::argmax(action_probs).template item<Action>();
 
-        auto [new_board, new_player] =
-            Game::apply_action(board, action, player);
-        std::tie(value, is_terminal) =
-            Game::get_value_and_terminated(new_board, action);
+        auto new_state = Game::apply_action(state, action);
+        auto terminal_value = Game::terminal_value(new_state, action);
 
-        if (is_terminal) {
-          if (player == 1) {
+        if (terminal_value.has_value()) {
+          if (new_state.player == 1) {
             if (value == 0)
               draws += 1;
             else
@@ -146,10 +147,10 @@ class DamathZero {
           } else {
             loss += 1;
           }
+          is_terminal = true;
         }
 
-        board = new_board;
-        player = new_player;
+        state = new_state;
       }
     }
 
@@ -172,7 +173,7 @@ class DamathZero {
   std::shared_ptr<Network> model_;
   std::shared_ptr<torch::optim::Optimizer> optimizer_;
   std::random_device& rd_;
-  MCTS mcts_;
+  MCTS<Game> mcts_;
 };
 
 }  // namespace DamathZero

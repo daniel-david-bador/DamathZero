@@ -36,7 +36,7 @@ export class NodeStorage {
     constexpr auto create_child(Args&&... args) -> void {
       auto child_id = storage.create(std::forward<Args>(args)...);
       storage.get(id).children.emplace_back(child_id);
-      storage.get(child_id).parent = id;
+      storage.get(child_id).parent_id = id;
     }
   };
 
@@ -61,10 +61,6 @@ export class NodeStorage {
     return nodes_[id];
   }
 
-  constexpr auto detach(Node::ID id) -> void {
-    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
-    nodes_[id].parent = -1;
-  }
 
  private:
   std::vector<Node> nodes_;

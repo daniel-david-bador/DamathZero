@@ -11,7 +11,7 @@ find_package(Torch REQUIRED)
 add_library(DamathZero)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/config.cpp
-  src/damathzero.cpp
+  src/alphazero.cpp
   src/game.cpp
   src/memory.cpp
   src/mcts.cpp
@@ -23,9 +23,16 @@ target_compile_options(DamathZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
 target_link_libraries(DamathZero PUBLIC torch)
 
+set(_availableGames tictactoe)
+set(game tictactoe CACHE STRING "Game to compile: ${_availableGames}")
+set_property(CACHE game PROPERTY STRINGS ${_availableGames})
 
-add_executable(DamathZeroMain src/main.cpp)
-target_link_libraries(DamathZeroMain PRIVATE DamathZero)
+if(game IN_LIST _availableGames)
+    add_executable(${game} "src/games/${game}.cpp")
+    target_link_libraries(${game} PRIVATE DamathZero)
+else()
+    message(FATAL_ERROR "game must be one of ${_availableGames}")
+endif()
 
 enable_testing()
 

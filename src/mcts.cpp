@@ -7,51 +7,45 @@ export module damathzero:mcts;
 
 import std;
 
-import :game;
 import :network;
 import :config;
 import :node;
 import :storage;
+import :game;
 
 namespace DamathZero {
 
-export class MCTS {
+export template <Concepts::Game Game>
+class MCTS {
  public:
   MCTS(Config config) : config_(config) {}
 
-  template <typename Network>
-  constexpr auto search(Board board, std::shared_ptr<Network> network)
+  constexpr auto search(Game::State original_state,
+                        std::shared_ptr<typename Game::Network> model)
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
-    auto root_id = nodes_.create(board);
+    auto root_id = nodes_.create();
 
     for (auto _ : std::views::iota(0, config_.NumSimulations)) {
       auto node = nodes_.as_ref(root_id);
+      auto state = original_state;
 
-      while (not is_leaf(node.id))
+      while (not is_leaf(node.id)) {
         node = highest_child_score(node.id);
-
-      auto [value, terminal] =
-          Game::get_value_and_terminated(node->board, node->action);
-      value = Game::get_opponent_value(value);
-
-      if (not terminal) {
-        auto [value_tensor, policy] = network->forward(
-            torch::unsqueeze(torch::tensor(node->board, torch::kFloat32), 0));
-        policy = torch::softmax(torch::squeeze(policy, 0), -1);
-        policy =
-            policy.index({torch::tensor(Game::legal_actions(node->board))});
-        policy /= policy.sum();
-
-        value = value_tensor.template item<double>();
-        expand(node.id, policy);
+        state = Game::apply_action(state, node->action);
       }
 
-      backpropagate(node.id, value);
+      if (auto terminal_value = Game::terminal_value(state, node->action);
+          terminal_value.has_value()) {
+        backpropagate(node.id, *terminal_value, state.player);
+      } else {
+        auto value = expand(node.id, state, model);
+        backpropagate(node.id, value, state.player);
+      }
     }
 
-    auto child_visits = torch::zeros(9, torch::kFloat32);
+    auto child_visits = torch::zeros(Game::ActionSize, torch::kFloat32);
     for (auto child_id : nodes_.get(root_id).children) {
       auto& child = nodes_.get(child_id);
       child_visits[child.action] = auto(child.visits);
@@ -67,7 +61,7 @@ export class MCTS {
 
   constexpr auto score(Node::ID id) const -> double {
     auto& child = nodes_.get(id);
-    auto& parent = nodes_.get(child.parent);
+    auto& parent = nodes_.get(child.parent_id);
 
     auto mean = child.visits > 0.0
                     ? 1.0 - ((child.value / child.visits) + 1) / 2.0
@@ -98,32 +92,46 @@ export class MCTS {
     return *std::ranges::max_element(node.children, highest_visits);
   };
 
-  constexpr auto expand(Node::ID parent_id, const Policy& policy) -> void {
+  constexpr auto expand(Node::ID parent_id, const Game::State& state,
+                        std::shared_ptr<typename Game::Network> model)
+      -> double {
+    auto feature = Game::encode_state(state);
+    auto legal_actions = Game::legal_actions(state);
+
+    auto [value, policy] = model->forward(torch::unsqueeze(feature, 0));
+    policy = torch::softmax(torch::squeeze(policy, 0), -1);
+    policy *= legal_actions;
+    policy /= policy.sum();
+
     auto parent = nodes_.as_ref(parent_id);
-    auto contiguous_policy = policy.contiguous();
-    auto priors = std::vector<double>(
-        contiguous_policy.data_ptr<float>(),
-        contiguous_policy.data_ptr<float>() + contiguous_policy.numel());
-    auto legal_actions = Game::legal_actions(parent->board);
-    assert(priors.size() == legal_actions.size());
-    for (auto [prior, action] : std::views::zip(priors, legal_actions)) {
-      auto [child_board, _] = Game::apply_action(parent->board, action, 1);
-      child_board = Game::change_perspective(child_board, -1);
-      parent.create_child(child_board, action, prior);
+    for (auto i : std::views::iota(0, Game::ActionSize)) {
+      if (legal_actions[i].template item<double>() != 0.0) {
+        auto action = i;
+        auto prior = policy[i].template item<double>();
+        parent.create_child(action, prior, state.player);
+      }
     }
+    return value.template item<double>();
   };
 
-  constexpr auto backpropagate(Node::ID id, double value) -> void {
-    auto& node = nodes_.get(id);
+  constexpr auto backpropagate(Node::ID node_id, double value, Player player)
+      -> void {
+    while (node_id != -1) {
+      auto& node = nodes_.get(node_id);
 
-    node.visits += 1;
-    node.value += value;
+      node.visits += 1;
 
-    value = Game::get_opponent_value(value);
-    if (node.parent > 0)
-      backpropagate(node.parent, value);
+      if (node.player == player) {
+        node.value += value;
+      } else {
+        node.value -= value;
+      }
+
+      node_id = node.parent_id;
+    };
   };
 
+ private:
   NodeStorage nodes_;
   Config config_;
 };
