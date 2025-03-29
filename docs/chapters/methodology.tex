@@ -17,21 +17,28 @@ If there is an opponent's figure in the path of the move and the square behind t
 
 If the player reaches opponent’s side of the board, the player's figure turns into a dama and hence has the ability to move diagonally forward and backward. Game is won if the opponent has no figures left on the board or is out of possible legal moves. The game ends in a draw if no pieces have been captured in the last 40 moves.
 
+\clearpage
+
 \subsection{State Representation}
 
 A player is represented as an enum in C++ as shown in Listing \ref{lst:player_representation}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:player_representation},caption={Player Representation of Damath}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 enum class Player : std::int8_t {
     First = 1;
     Invalid = 0;
     Second = -1;
 }
-\end{lstlisting}
+\end{minted}
+\caption{Player Representation of Damath}
+\label{lst:player_representation}
+\end{listing}
 
 The board is a struct containing an $8 \times 8$ matrix of piece data as shown in Listing \ref{lst:board_representation}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:board_representation},caption={Board Representation of Damath}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 struct Board {
     enum class Type: std::int8_t {
         Promoted = 2;
@@ -48,25 +55,38 @@ struct Board {
 
     std::array<Piece, 8 * 8> data;
 };
-\end{lstlisting}
+\end{minted}
+\caption{Board Representation of Damath}
+\label{lst:board_representation}
+\end{listing}
 
 The state is represented as a struct containing the board and player of the current state as shown in Listing \ref{lst:state_representation}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:state_representation},caption={State Representation of Damath}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 struct State {
   Board board;
   Player player;
 };
-\end{lstlisting}
+\end{minted}
+\caption{State Representation of Damath}
+\label{lst:state_representation}
+\end{listing}
+
+\clearpage
 
 \subsection{Action Representation}
 
 An action is an index to the action space of Damath as shown in Listing \ref{lst:action_representation}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:action_representation},caption={Action Representation of Damath}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 using Action = std::int32_t;
 using ActionSpace = torch::Tensor;
-\end{lstlisting}
+\end{minted}
+\caption{Action Representation of Damath}
+\label{lst:action_representation}
+\end{listing}
 
 The action space of Damath is represented as a $12 \times 4 \times 7$ tensor as shown in Figure \ref{fig:action_space}.
 
@@ -83,7 +103,8 @@ The first dimension of the action space with a size of 12 represents one of the 
 
 This paper implemented Damath in C++ as a collection of pure functions defined by the interface shown in Listing \ref{lst:game_interface}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:game_interface},caption={Game Interface of Damath}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 struct Damath {
   auto initial_state() -> State;
 
@@ -95,7 +116,13 @@ struct Damath {
 
   auto encode_state(const State& state) -> torch::Tensor;
 };
-\end{lstlisting}
+\end{minted}
+\caption{Game Interface of Damath}
+
+
+
+\label{lst:game_interface}
+\end{listing}
 
 
 \section{AlphaZero Framework}
@@ -163,7 +190,8 @@ At each of these time-steps, $t < L$, an action is selected $a_t = \operatorname
 
 The modified Monte-Carlo Tree Search algorithm used in this paper is adapted from the AlphaZero framework. Internally, the node is represented as struct containing the current state and the action taken to get to this node, the index to its parent and the indices of its children, the prior policy of the node from the network, and the value and the number of visits of the node as shown in Listing \ref{lst:mcts_node}.
 
-\begin{lstlisting}[language=C++,captionpos=b,label={lst:mcts_node},caption={Node Representation for the Monte-Carlo Tree Search Algorithm}]
+\begin{listing}[htb]
+\begin{minted}[fontsize=\footnotesize]{cpp}
 struct Node {
   using ID = std::int32_t;
 
@@ -177,7 +205,10 @@ struct Node {
   double value = 0.0;
   double visits = 0.0;
 };
-\end{lstlisting}
+\end{minted}
+\caption{Node Representation for the Monte-Carlo Tree Search Algorithm}
+\label{lst:mcts_node}
+\end{listing}
 
 The pseudocode for the modified Monte-Carlo Tree Search algorithm is shown in Algorithm \ref{alg:mcts}.
 
@@ -212,6 +243,8 @@ The pseudocode for the modified Monte-Carlo Tree Search algorithm is shown in Al
     \caption{Monte-Carlo Tree Search Algorithm}
     \label{alg:mcts}
 \end{algorithm}
+
+\clearpage
 
 The pseudocode for \verb|select| function used in the modified Monte-Carlo Tree Search algorithm is shown in Algorithm \ref{alg:select}.
 
