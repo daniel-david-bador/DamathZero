@@ -19,6 +19,7 @@ target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/mcts.cpp
   src/node.cpp
   src/storage.cpp
+  src/arena.cpp
 )
 target_compile_options(DamathZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(DamathZero PUBLIC cxx_std_23)

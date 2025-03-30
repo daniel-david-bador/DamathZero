@@ -6,6 +6,7 @@ export module damathzero;
 
 import std;
 
+export import :arena;
 export import :config;
 export import :game;
 export import :memory;
@@ -31,6 +32,7 @@ class AlphaZero {
         mcts_(config) {}
 
   auto learn() -> void {
+    auto arena = Arena<Game>(config_);
     auto best_model_index = 0;
 
     for (auto i : std::views::iota(0, config_.num_iterations)) {
@@ -47,8 +49,24 @@ class AlphaZero {
       save_model(model_, i);
 
       auto best_model = read_model(best_model_index);
-      if (compete(best_model))
+
+      auto results = arena.play(model_, best_model,
+                                config_.num_model_evaluation_iterations,
+                                /*num_simulations=*/1000);
+
+      auto did_win =
+          results.wins + results.draws >
+          0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
+
+      std::println(
+          "Trained model {} against the best model with {} wins, {} draws, "
+          "and {} losses.",
+          did_win ? "won" : "lost", results.wins, results.draws,
+          results.losses);
+
+      if (did_win) {
         best_model_index = i;
+      }
     }
   }
 
@@ -124,67 +142,6 @@ class AlphaZero {
 
       state = new_state;
     }
-  }
-
-  auto compete(std::shared_ptr<Network> best_model) -> bool {
-    model_->eval();
-    best_model->eval();
-
-    auto trained_model_player = Player::First;
-
-    auto wins = 0.0;
-    auto draws = 0.0;
-    auto loss = 0.0;
-
-    for (auto _ :
-         std::views::iota(0, config_.num_model_evaluation_iterations)) {
-      auto state = Game::initial_state();
-
-      auto value = 0.0;
-
-      while (true) {
-        torch::Tensor action_probs;
-        if (state.player == trained_model_player)
-          action_probs = mcts_.search(state, model_);
-        else
-          action_probs = mcts_.search(state, best_model);
-
-        auto action = torch::argmax(action_probs).template item<Action>();
-
-        auto new_state = Game::apply_action(state, action);
-        auto terminal_value = Game::terminal_value(new_state, action);
-
-        if (terminal_value.has_value()) {
-          if (value == 0) {
-            draws += 1;
-          } else {
-            if (state.player == trained_model_player)
-              wins += 1;
-            else
-              loss += 1;
-          }
-          break;
-        }
-
-        state = new_state;
-      }
-    }
-
-    auto did_win =
-        wins + draws >
-        0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
-    if (did_win) {
-      std::println(
-          "Trained model won against the best model with {} wins, {} draws, "
-          "and {} losses.",
-          wins, draws, loss);
-    } else {
-      std::println(
-          "Trained model did not win against the best model with {} wins, {} "
-          "draws, and {} losses.",
-          wins, draws, loss);
-    }
-    return did_win;
   }
 
  private:

@@ -104,21 +104,73 @@ struct TicTacToe {
 
     return encoded_state;
   }
+
+  static constexpr auto print(const State& state) -> void {
+    auto& [board, player] = state;
+    auto flip = player.is_first() ? 1 : -1;
+    for (int i = 0; i < 9; i++) {
+      if (i % 3 == 0) {
+        std::cout << "\n";
+      }
+      std::cout << board[i] * flip << " ";
+    }
+    std::cout << "\n";
+  }
 };
 
 static_assert(DamathZero::Concepts::Game<TicTacToe>);
 
-auto print_board(const TicTacToe::State& state) {
-  auto& [board, player] = state;
-  auto flip = player.is_first() ? 1 : -1;
-  for (int i = 0; i < 9; i++) {
-    if (i % 3 == 0) {
-      std::cout << "\n";
-    }
-    std::cout << board[i] * flip << " ";
+struct Controller {
+  static constexpr auto player = DamathZero::Player::First;
+
+  Controller(std::shared_ptr<Network> model) : model(model) {}
+
+  auto on_move(const TicTacToe::State& state) -> DamathZero::Action {
+    TicTacToe::print(state);
+
+    std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
+
+    int input = 0;
+    std::cout << "Enter action: ";
+    std::cin >> input;
+    return static_cast<DamathZero::Action>(input);
   }
-  std::cout << "\n";
-}
+
+  auto on_model_move(const TicTacToe::State& state, torch::Tensor probs,
+                     DamathZero::Action _) -> void {
+    auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
+
+    auto [value, policy] = model->forward(feature);
+    policy = torch::softmax(torch::squeeze(policy, 0), -1);
+    policy *= TicTacToe::legal_actions(state);
+    policy /= policy.sum();
+
+    std::cout << "Policy: " << policy << "\n";
+    std::cout << "MCTS: " << probs << "\n";
+    std::cout << "Value: " << value << "\n";
+  }
+
+  auto on_game_end(const TicTacToe::State& state, DamathZero::GameResult result)
+      -> void {
+    auto new_state = state;
+
+    // flip the player before printing it>
+    new_state.player = player;
+    TicTacToe::print(new_state);
+
+    if (result == DamathZero::GameResult::Win) {
+      std::println("You won!");
+    } else if (result == DamathZero::GameResult::Lost) {
+      std::println("You lost!");
+    } else {
+      std::println("Draw!");
+    }
+  }
+
+  std::shared_ptr<Network> model;
+};
+
+static_assert(DamathZero::Concepts::Controller<Controller, TicTacToe>);
 
 auto main() -> int {
   torch::DeviceGuard device_guard(torch::kCPU);
@@ -143,63 +195,8 @@ auto main() -> int {
 
   alpha_zero.learn();
 
-  auto state = TicTacToe::initial_state();
-  auto human_player = DamathZero::Player::First;
-
-  auto action = -1;
-
-  while (true) {
-    if (state.player == human_player) {
-      print_board(state);
-
-      std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
-
-      int input = 0;
-      std::cout << "Enter action: ";
-      std::cin >> input;
-
-      action = static_cast<DamathZero::Action>(input);
-    } else {
-      auto probs = alpha_zero.search(state, 1000);
-
-      action = torch::argmax(probs).item<DamathZero::Action>();
-
-      auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
-
-      auto [value, policy] = model->forward(feature);
-      policy = torch::softmax(torch::squeeze(policy, 0), -1);
-      policy *= TicTacToe::legal_actions(state);
-      policy /= policy.sum();
-
-      std::cout << "Policy: " << policy << "\n";
-      std::cout << "MCTS: " << probs << "\n";
-      std::cout << "Value: " << value << "\n";
-    }
-
-    auto new_state = TicTacToe::apply_action(state, action);
-    auto terminal_value = TicTacToe::terminal_value(new_state, action);
-
-    if (terminal_value.has_value()) {
-      auto value = *terminal_value;
-      value = state.player == human_player ? value : -value;
-
-      // Flip the end state from the perspective of the human player before
-      // printing it.
-      new_state.player = human_player;
-      print_board(new_state);
-
-      if (value == 1) {
-        std::println("You won!");
-      } else if (value == -1) {
-        std::println("You lost!");
-      } else {
-        std::println("Draw!");
-      }
-      break;
-    }
-
-    state = new_state;
-  }
+  auto arena = DamathZero::Arena<TicTacToe>(config);
+  arena.play_with_model(model, 1000, Controller{model});
 
   return 0;
 }
