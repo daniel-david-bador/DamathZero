@@ -20,17 +20,20 @@ class MCTS {
   MCTS(Config config) : config_(config) {}
 
   constexpr auto search(Game::State original_state,
-                        std::shared_ptr<typename Game::Network> model)
+                        std::shared_ptr<typename Game::Network> model,
+                        std::optional<int> num_simulations = std::nullopt)
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
     auto root_id = nodes_.create(original_state.player);
 
-    for (auto _ : std::views::iota(0, config_.NumSimulations)) {
+    num_simulations = num_simulations.value_or(config_.num_simulations);
+
+    for (auto _ : std::views::iota(0, *num_simulations)) {
       auto node = nodes_.as_ref(root_id);
       auto state = original_state;
 
-      while (not is_leaf(node.id)) {
+      while (node.is_expanded()) {
         node = highest_child_score(node.id);
         state = Game::apply_action(state, node->action);
       }
@@ -56,11 +59,7 @@ class MCTS {
     return child_visits / child_visits.sum(0);
   }
 
-  constexpr auto is_leaf(Node::ID id) const -> bool {
-    auto& node = nodes_.get(id);
-    return node.children.empty();
-  };
-
+ private:
   constexpr auto score(Node::ID id) const -> double {
     auto& child = nodes_.get(id);
     auto& parent = nodes_.get(child.parent_id);
@@ -105,8 +104,11 @@ class MCTS {
   constexpr auto expand(Node::ID parent_id, const Game::State& state,
                         std::shared_ptr<typename Game::Network> model)
       -> double {
-    auto feature = Game::encode_state(state);
-    auto legal_actions = Game::legal_actions(state);
+    torch::NoGradGuard no_grad;
+
+    model->to(config_.device);
+    auto feature = Game::encode_state(state).to(config_.device);
+    auto legal_actions = Game::legal_actions(state).to(config_.device);
 
     auto [value, policy] = model->forward(torch::unsqueeze(feature, 0));
     policy = torch::softmax(torch::squeeze(policy, 0), -1);

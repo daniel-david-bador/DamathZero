@@ -121,19 +121,28 @@ auto print_board(const TicTacToe::State& state) {
 }
 
 auto main() -> int {
-  std::println("{}", torch::mps::is_available());
+  torch::DeviceGuard device_guard(torch::kCPU);
+  auto config = DamathZero::Config{
+      .num_iterations = 1,
+      .num_simulations = 60,
+      .device = torch::kCPU,
+  };
 
   auto model = std::make_shared<Network>();
   auto optimizer = std::make_shared<torch::optim::Adam>(
       model->parameters(), torch::optim::AdamOptions(0.001));
 
-  auto random_device = std::random_device{};
+  auto rng = std::random_device{};
 
   auto alpha_zero = DamathZero::AlphaZero<TicTacToe>{
-      {.NumIterations = 3}, model, optimizer, random_device};
+      config,
+      model,
+      optimizer,
+      rng,
+  };
+
   alpha_zero.learn();
 
-  auto mcts = DamathZero::MCTS<TicTacToe>{{.NumSimulations = 100}};
   auto state = TicTacToe::initial_state();
   auto human_player = DamathZero::Player::First;
 
@@ -151,15 +160,13 @@ auto main() -> int {
 
       action = static_cast<DamathZero::Action>(input);
     } else {
-      model->eval();
-      torch::NoGradGuard no_grad;
+      auto probs = alpha_zero.search(state, 1000);
 
-      auto probs = mcts.search(state, model);
+      action = torch::argmax(probs).item<DamathZero::Action>();
 
-      action = torch::argmax(probs).item<int>();
+      auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
 
-      auto [value, policy] =
-          model->forward(torch::unsqueeze(TicTacToe::encode_state(state), 0));
+      auto [value, policy] = model->forward(feature);
       policy = torch::softmax(torch::squeeze(policy, 0), -1);
       policy *= TicTacToe::legal_actions(state);
       policy /= policy.sum();

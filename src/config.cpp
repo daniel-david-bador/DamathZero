@@ -1,3 +1,7 @@
+module;
+
+#include <torch/torch.h>
+
 export module damathzero:config;
 
 import std;
@@ -5,19 +9,21 @@ import std;
 namespace DamathZero {
 
 export struct Config {
-  int NumIterations = 10;
-  int NumSimulations = 100;
+  int num_iterations = 10;
+  int num_simulations = 100;
 
-  int NumSelfPlayIterations = 1000;
-  int NumTrainingEpochs = 4;
-  int NumModelEvaluationIterations = 50;
+  int num_self_play_iterations = 1000;
+  int num_training_epochs = 4;
+  int num_model_evaluation_iterations = 50;
 
-  std::size_t BatchSize = 64;
+  std::size_t batch_size = 64;
 
   double C = 2.0;
 
-  double DirichletAlpha = 0.3;
-  double DirichletEpsilon = 0.25;
+  double dirichlet_alpha = 0.3;
+  double dirichlet_epsilon = 0.25;
+
+  torch::DeviceType device;
 };
 
 }  // namespace DamathZero

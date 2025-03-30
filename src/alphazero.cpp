@@ -28,46 +28,60 @@ class AlphaZero {
         model_(model),
         optimizer_(optimizer),
         rd_(rd),
-        mcts_{config} {}
+        mcts_(config) {}
 
   auto learn() -> void {
     auto best_model_index = 0;
-    for (auto i : std::views::iota(0, config_.NumIterations)) {
-      std::println("Iteration: {}", i);
+
+    for (auto i : std::views::iota(0, config_.num_iterations)) {
+      std::println("Iteration: {}", i + 1);
       auto memory = Memory{config_, rd_};
 
-      model_->eval();
-      for (auto _ : std::views::iota(0, config_.NumSelfPlayIterations)) {
+      for (auto _ : std::views::iota(0, config_.num_self_play_iterations)) {
         memory.merge(generate_self_play_data());
       }
 
-      model_->train();
-      for (auto _ : std::views::iota(0, config_.NumTrainingEpochs))
+      for (auto _ : std::views::iota(0, config_.num_training_epochs))
         train(memory);
 
-      torch::serialize::OutputArchive output_model_archive;
-      model_->to(torch::kCPU);
-      model_->save(output_model_archive);
-      output_model_archive.save_to(std::format("models/model_{}.pt", i));
+      save_model(model_, i);
 
-      torch::serialize::InputArchive input_archive;
-      input_archive.load_from(
-          std::format("models/model_{}.pt", best_model_index));
-      auto best_model = std::make_shared<Network>();
-      best_model->load(input_archive);
-      best_model->to(torch::kCPU);
-
-      model_->eval();
-      best_model->eval();
+      auto best_model = read_model(best_model_index);
       if (compete(best_model))
         best_model_index = i;
     }
   }
 
+  auto search(Game::State state, int num_simulations) -> torch::Tensor {
+    return mcts_.search(state, model_, num_simulations);
+  }
+
+ private:
+  auto save_model(std::shared_ptr<Network> model, int checkpoint) const
+      -> void {
+    torch::serialize::OutputArchive output_model_archive;
+    model->to(torch::kCPU);
+    model->save(output_model_archive);
+    output_model_archive.save_to(std::format("models/model_{}.pt", checkpoint));
+  };
+
+  auto read_model(int checkpoint) const -> std::shared_ptr<Network> {
+    torch::serialize::InputArchive input_archive;
+    input_archive.load_from(std::format("models/model_{}.pt", checkpoint));
+    auto model = std::make_shared<Network>();
+    model->load(input_archive);
+    model->to(config_.device);
+    return model;
+  }
+
   auto train(Memory& memory) {
     namespace F = torch::nn::functional;
+    model_->train();
+    model_->to(config_.device);
+
     memory.shuffle();
-    for (size_t i = 0; i < memory.size(); i += config_.BatchSize) {
+
+    for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
       auto [feature, target_value, target_policy] = memory.sample_batch(i);
       auto [out_value, out_policy] = model_->forward(feature);
 
@@ -81,6 +95,8 @@ class AlphaZero {
   }
 
   auto generate_self_play_data() -> Memory {
+    model_->eval();
+
     auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
     auto state = Game::initial_state();
 
@@ -111,16 +127,20 @@ class AlphaZero {
   }
 
   auto compete(std::shared_ptr<Network> best_model) -> bool {
+    model_->eval();
+    best_model->eval();
+
     auto trained_model_player = Player::First;
 
-    double wins = 0.0;
-    double draws = 0.0;
-    double loss = 0.0;
+    auto wins = 0.0;
+    auto draws = 0.0;
+    auto loss = 0.0;
 
-    for (auto _ : std::views::iota(0, config_.NumModelEvaluationIterations)) {
+    for (auto _ :
+         std::views::iota(0, config_.num_model_evaluation_iterations)) {
       auto state = Game::initial_state();
 
-      double value = 0.0;
+      auto value = 0.0;
 
       while (true) {
         torch::Tensor action_probs;
@@ -152,7 +172,7 @@ class AlphaZero {
 
     auto did_win =
         wins + draws >
-        0.7 * static_cast<double>(config_.NumModelEvaluationIterations);
+        0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
     if (did_win) {
       std::println(
           "Trained model won against the best model with {} wins, {} draws, "

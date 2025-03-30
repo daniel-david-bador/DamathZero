@@ -31,6 +31,10 @@ export class NodeStorage {
 
     constexpr auto operator->() -> Node* { return &storage.get(id); }
 
+    constexpr auto is_expanded() const -> bool {
+      return not storage.get(id).children.empty();
+    }
+
     template <typename... Args>
     constexpr auto create_child(Args&&... args) -> void {
       auto child_id = storage.create(std::forward<Args>(args)...);

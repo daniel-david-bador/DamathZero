@@ -29,7 +29,7 @@ export class Memory {
   }
 
   auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
-    auto size = std::min(config_.BatchSize, data_.size() - start);
+    auto size = std::min(config_.batch_size, data_.size() - start);
 
     auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
 
@@ -51,8 +51,11 @@ export class Memory {
       policies.emplace_back(policy);
     }
 
-    return {torch::stack(features, 0), torch::stack(values, 0),
-            torch::stack(policies, 0)};
+    auto device = config_.device;
+
+    return {torch::stack(features, 0).to(device),
+            torch::stack(values, 0).to(device),
+            torch::stack(policies, 0).to(device)};
   }
 
  private:
