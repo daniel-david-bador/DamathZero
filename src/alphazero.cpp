@@ -25,11 +25,7 @@ class AlphaZero {
   AlphaZero(Config config, std::shared_ptr<Network> model,
             std::shared_ptr<torch::optim::Optimizer> optimizer,
             std::random_device& rd)
-      : config_(config),
-        model_(model),
-        optimizer_(optimizer),
-        rd_(rd),
-        mcts_(config) {}
+      : config_(config), model_(model), optimizer_(optimizer), rd_(rd) {}
 
   auto learn() -> void {
     auto arena = Arena<Game>(config_);
@@ -40,11 +36,12 @@ class AlphaZero {
       auto memory = Memory{config_, rd_};
 
       for (auto _ : std::views::iota(0, config_.num_self_play_iterations)) {
-        memory.merge(generate_self_play_data());
+        generate_self_play_data(memory, model_);
       }
 
-      for (auto _ : std::views::iota(0, config_.num_training_epochs))
+      for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
         train(memory);
+      }
 
       save_model(model_, i);
 
@@ -70,10 +67,6 @@ class AlphaZero {
     }
   }
 
-  auto search(Game::State state, int num_simulations) -> torch::Tensor {
-    return mcts_.search(state, model_, num_simulations);
-  }
-
  private:
   auto save_model(std::shared_ptr<Network> model, int checkpoint) const
       -> void {
@@ -93,6 +86,7 @@ class AlphaZero {
   }
 
   auto train(Memory& memory) {
+    std::println("Database size {}", memory.size());
     namespace F = torch::nn::functional;
     model_->train();
     model_->to(config_.device);
@@ -112,14 +106,14 @@ class AlphaZero {
     }
   }
 
-  auto generate_self_play_data() -> Memory {
-    model_->eval();
+  auto run_actor(Memory& memory, std::shared_ptr<Network> model) {
+    auto mcts = MCTS<Game>{config_};
 
     auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
     auto state = Game::initial_state();
 
     while (true) {
-      auto action_probs = mcts_.search(state, model_);
+      auto action_probs = mcts.search(state, model);
 
       statistics.emplace_back(state, action_probs);
 
@@ -129,7 +123,6 @@ class AlphaZero {
       auto terminal_value = Game::terminal_value(new_state, action);
 
       if (terminal_value.has_value()) {
-        auto memory = Memory{config_, rd_};
         auto value = *terminal_value;
         for (auto [hist_state, hist_probs] : statistics) {
           auto hist_value = hist_state.player == state.player ? value : -value;
@@ -137,10 +130,25 @@ class AlphaZero {
                         torch::tensor({hist_value}, torch::kFloat32),
                         hist_probs);
         }
-        return memory;
+        break;
       }
 
       state = new_state;
+    }
+  }
+
+  auto generate_self_play_data(Memory& memory, std::shared_ptr<Network> model)
+      -> void {
+    model->eval();
+    auto threads = std::vector<std::thread>();
+
+    for (auto _ : std::views::iota(0, config_.num_actors)) {
+      threads.emplace_back(
+          [this, &memory, model]() { run_actor(memory, model); });
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
     }
   }
 
@@ -149,7 +157,6 @@ class AlphaZero {
   std::shared_ptr<Network> model_;
   std::shared_ptr<torch::optim::Optimizer> optimizer_;
   std::random_device& rd_;
-  MCTS<Game> mcts_;
 };
 
 }  // namespace DamathZero

@@ -16,6 +16,8 @@ export struct Config {
   int num_training_epochs = 4;
   int num_model_evaluation_iterations = 50;
 
+  int num_actors = 6;
+
   std::size_t batch_size = 64;
 
   double C = 2.0;

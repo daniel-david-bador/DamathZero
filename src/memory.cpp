@@ -18,17 +18,20 @@ export class Memory {
 
   constexpr auto size() -> size_t { return data_.size(); }
 
-  constexpr auto shuffle() -> void { std::ranges::shuffle(data_, gen_); }
+  constexpr auto shuffle() -> void {
+    auto guard = std::lock_guard(mutex_);
+    std::ranges::shuffle(data_, gen_);
+  }
 
   auto append(Feature feature, Value value, Policy policy) -> void {
+    auto guard = std::lock_guard(mutex_);
+
     data_.emplace_back(feature, value, policy);
   }
 
-  auto merge(Memory&& memory) -> void {
-    data_.insert(data_.end(), memory.data_.begin(), memory.data_.end());
-  }
-
   auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
+    auto guard = std::lock_guard(mutex_);
+
     auto size = std::min(config_.batch_size, data_.size() - start);
 
     auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
@@ -59,6 +62,7 @@ export class Memory {
   }
 
  private:
+  std::mutex mutex_;
   Config config_;
   std::mt19937 gen_;
   std::vector<std::tuple<Feature, Value, Policy>> data_;
