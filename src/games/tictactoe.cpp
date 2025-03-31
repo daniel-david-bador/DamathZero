@@ -158,12 +158,16 @@ struct Controller {
     new_state.player = player;
     TicTacToe::print(new_state);
 
-    if (result == DamathZero::GameResult::Win) {
-      std::println("You won!");
-    } else if (result == DamathZero::GameResult::Lost) {
-      std::println("You lost!");
-    } else {
-      std::println("Draw!");
+    switch (result) {
+      case DamathZero::GameResult::Win:
+        std::println("You won!");
+        break;
+      case DamathZero::GameResult::Lost:
+        std::println("You lost!");
+        break;
+      case DamathZero::GameResult::Draw:
+        std::println("Draw!");
+        break;
     }
   }
 
