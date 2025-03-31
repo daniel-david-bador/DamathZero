@@ -35,9 +35,7 @@ class AlphaZero {
       std::println("Iteration: {}", i + 1);
       auto memory = Memory{config_, rd_};
 
-      for (auto _ : std::views::iota(0, config_.num_self_play_iterations)) {
-        generate_self_play_data(memory, model_);
-      }
+      generate_self_play_data(memory, model_);
 
       std::println("Memory size {}", memory.size());
       for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
@@ -109,39 +107,45 @@ class AlphaZero {
   auto run_actor(Memory& memory, std::shared_ptr<Network> model) -> void {
     auto mcts = MCTS<Game>{config_};
 
-    auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
-    auto state = Game::initial_state();
+    auto num_iterations = config_.num_self_play_iterations / config_.num_actors;
+    for (auto _ : std::views::iota(0, num_iterations)) {
+      auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
+      auto state = Game::initial_state();
+      while (true) {
+        auto action_probs = mcts.search(state, model);
 
-    while (true) {
-      auto action_probs = mcts.search(state, model);
+        statistics.emplace_back(state, action_probs);
 
-      statistics.emplace_back(state, action_probs);
+        auto action =
+            torch::multinomial(action_probs, 1).template item<Action>();
 
-      auto action = torch::multinomial(action_probs, 1).template item<Action>();
+        auto new_state = Game::apply_action(state, action);
+        auto terminal_value = Game::terminal_value(new_state, action);
 
-      auto new_state = Game::apply_action(state, action);
-      auto terminal_value = Game::terminal_value(new_state, action);
-
-      if (terminal_value.has_value()) {
-        auto value = *terminal_value;
-        for (auto [hist_state, hist_probs] : statistics) {
-          auto hist_value = hist_state.player == state.player ? value : -value;
-          memory.append(Game::encode_state(hist_state),
-                        torch::tensor({hist_value}, torch::kFloat32),
-                        hist_probs);
+        if (terminal_value.has_value()) {
+          auto value = *terminal_value;
+          for (auto [hist_state, hist_probs] : statistics) {
+            auto hist_value =
+                hist_state.player == state.player ? value : -value;
+            memory.append(Game::encode_state(hist_state),
+                          torch::tensor({hist_value}, torch::kFloat32),
+                          hist_probs);
+          }
+          break;
         }
-        break;
-      }
 
-      state = new_state;
+        state = new_state;
+      }
     }
   }
 
   auto generate_self_play_data(Memory& memory, std::shared_ptr<Network> model)
       -> void {
+    auto threads = std::vector<std::thread>();
     model->eval();
     for (auto _ : std::views::iota(0, config_.num_actors)) {
-      threads.emplace_back([this, &memory, model]() {});
+      threads.emplace_back(
+          [this, &memory, model]() { run_actor(memory, model); });
     }
 
     for (auto& thread : threads) {

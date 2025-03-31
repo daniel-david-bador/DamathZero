@@ -181,7 +181,8 @@ auto main() -> int {
   auto config = DamathZero::Config{
       .num_iterations = 1,
       .num_simulations = 60,
-      .num_self_play_iterations = 1000,
+      .num_self_play_iterations = 500,
+      .num_actors = 6,
       .device = torch::kCPU,
   };
 
