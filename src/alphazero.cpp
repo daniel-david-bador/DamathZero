@@ -39,6 +39,7 @@ class AlphaZero {
         generate_self_play_data(memory, model_);
       }
 
+      std::println("Memory size {}", memory.size());
       for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
         train(memory);
       }
@@ -85,8 +86,7 @@ class AlphaZero {
     return model;
   }
 
-  auto train(Memory& memory) {
-    std::println("Database size {}", memory.size());
+  auto train(Memory& memory) -> void {
     namespace F = torch::nn::functional;
     model_->train();
     model_->to(config_.device);
@@ -106,7 +106,7 @@ class AlphaZero {
     }
   }
 
-  auto run_actor(Memory& memory, std::shared_ptr<Network> model) {
+  auto run_actor(Memory& memory, std::shared_ptr<Network> model) -> void {
     auto mcts = MCTS<Game>{config_};
 
     auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
