@@ -140,11 +140,8 @@ class AlphaZero {
   auto generate_self_play_data(Memory& memory, std::shared_ptr<Network> model)
       -> void {
     model->eval();
-    auto threads = std::vector<std::thread>();
-
     for (auto _ : std::views::iota(0, config_.num_actors)) {
-      threads.emplace_back(
-          [this, &memory, model]() { run_actor(memory, model); });
+      threads.emplace_back([this, &memory, model]() {});
     }
 
     for (auto& thread : threads) {

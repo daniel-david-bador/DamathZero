@@ -15,12 +15,12 @@ namespace DamathZero {
 export class NodeStorage {
   struct NodeRef {
     NodeStorage& storage;
-    Node::ID id;
+    NodeId id;
 
-    constexpr NodeRef(NodeStorage& storage, Node::ID id)
+    constexpr NodeRef(NodeStorage& storage, NodeId id)
         : storage(storage), id(id) {}
 
-    constexpr auto operator=(Node::ID id) -> NodeRef& {
+    constexpr auto operator=(NodeId id) -> NodeRef& {
       this->id = id;
       return *this;
     }
@@ -31,37 +31,33 @@ export class NodeStorage {
 
     constexpr auto operator->() -> Node* { return &storage.get(id); }
 
-    constexpr auto is_expanded() const -> bool {
-      return not storage.get(id).children.empty();
-    }
-
     template <typename... Args>
     constexpr auto create_child(Args&&... args) -> void {
       auto child_id = storage.create(std::forward<Args>(args)...);
-      storage.get(id).children.emplace_back(child_id);
+      storage.get(id).add_child(child_id);
       storage.get(child_id).parent_id = id;
     }
   };
 
  public:
   template <typename... Args>
-  constexpr auto create(Args&&... args) -> Node::ID {
+  constexpr auto create(Args&&... args) -> NodeId {
     nodes_.emplace_back(std::forward<Args>(args)...);
-    return nodes_.size() - 1;
+    return NodeId(nodes_.size() - 1);
   }
 
   constexpr auto clear() -> void { nodes_.clear(); }
 
-  constexpr auto as_ref(Node::ID id) -> NodeRef { return NodeRef(*this, id); }
+  constexpr auto as_ref(NodeId id) -> NodeRef { return NodeRef(*this, id); }
 
-  constexpr auto get(Node::ID id) -> Node& {
-    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
-    return nodes_[id];
+  constexpr auto get(NodeId id) -> Node& {
+    assert(id.is_valid());
+    return nodes_[id.value()];
   }
 
-  constexpr auto get(Node::ID id) const -> Node const& {
-    assert(id >= 0 and id < static_cast<int>(nodes_.size()));
-    return nodes_[id];
+  constexpr auto get(NodeId id) const -> Node const& {
+    assert(id.is_valid());
+    return nodes_[id.value()];
   }
 
  private:

@@ -33,7 +33,7 @@ class MCTS {
       auto node = nodes_.as_ref(root_id);
       auto state = original_state;
 
-      while (node.is_expanded()) {
+      while (node->is_expanded()) {
         node = highest_child_score(node.id);
         state = Game::apply_action(state, node->action);
       }
@@ -49,7 +49,7 @@ class MCTS {
     }
 
     auto child_visits = torch::zeros(Game::ActionSize, torch::kFloat32);
-    for (auto child_id : nodes_.get(root_id).children) {
+    for (auto child_id : nodes_.get(root_id).children()) {
       auto& child = nodes_.get(child_id);
       child_visits[child.action] = auto(child.visits);
     }
@@ -60,7 +60,7 @@ class MCTS {
   }
 
  private:
-  constexpr auto score(Node::ID id) const -> double {
+  constexpr auto score(NodeId id) const -> double {
     auto& child = nodes_.get(id);
     auto& parent = nodes_.get(child.parent_id);
 
@@ -79,29 +79,31 @@ class MCTS {
     return mean + exploration;
   };
 
-  constexpr auto highest_child_score(Node::ID id) const -> Node::ID {
+  constexpr auto highest_child_score(NodeId id) const -> NodeId {
     auto& node = nodes_.get(id);
-    assert(not node.children.empty());
+    assert(node.is_expanded());
 
-    auto highest_score = [this](Node::ID a, Node::ID b) {
+    auto highest_score = [this](NodeId a, NodeId b) {
       return score(a) < score(b);
     };
 
-    return *std::ranges::max_element(node.children, highest_score);
+    auto range = node.children();
+    return *std::ranges::max_element(range, highest_score);
   };
 
-  constexpr auto highest_child_visits(Node::ID id) const -> Node::ID {
+  constexpr auto highest_child_visits(NodeId id) const -> NodeId {
     auto& node = nodes_.get(id);
-    assert(not node.children.empty());
+    assert(node.is_expanded());
 
-    auto highest_visits = [this](Node::ID a, Node::ID b) {
+    auto highest_visits = [this](NodeId a, NodeId b) {
       return nodes_.get(a).visits < nodes_.get(b).visits;
     };
 
-    return *std::ranges::max_element(node.children, highest_visits);
+    auto range = node.children();
+    return *std::ranges::max_element(range, highest_visits);
   };
 
-  constexpr auto expand(Node::ID parent_id, const Game::State& state,
+  constexpr auto expand(NodeId parent_id, const Game::State& state,
                         std::shared_ptr<typename Game::Network> model)
       -> double {
     torch::NoGradGuard no_grad;
@@ -130,9 +132,9 @@ class MCTS {
     return value.template item<double>();
   };
 
-  constexpr auto backpropagate(Node::ID node_id, double value, Player player)
+  constexpr auto backpropagate(NodeId node_id, double value, Player player)
       -> void {
-    while (node_id != -1) {
+    while (node_id.is_valid()) {
       auto& node = nodes_.get(node_id);
 
       node.visits += 1;
