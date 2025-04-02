@@ -42,19 +42,18 @@ class AlphaZero {
 
       auto best_model = read_model(best_model_index);
 
-      auto results = arena.play(model_, best_model,
-                                config_.num_model_evaluation_iterations,
-                                /*num_simulations=*/1000);
+      auto [wins, draws, losses] = arena.play(
+          model_, best_model, config_.num_model_evaluation_iterations,
+          /*num_simulations=*/1000);
 
       auto did_win =
-          results.wins + results.draws >
+          wins + draws >
           0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
 
       std::println(
           "Trained model {} against the best model with {} wins, {} draws, "
           "and {} losses.",
-          did_win ? "won" : "lost", results.wins, results.draws,
-          results.losses);
+          did_win ? "won" : "lost", wins, draws, losses);
 
       if (did_win) {
         best_model_index = i;
