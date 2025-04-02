@@ -28,7 +28,7 @@ struct Network : torch::nn::Module {
   }
 };
 
-struct TicTacToe {
+struct Damath {
   using Action = AlphaZero::Action;
   using Player = AlphaZero::Player;
   using Network = Network;
@@ -118,17 +118,17 @@ struct TicTacToe {
   }
 };
 
-static_assert(AlphaZero::Concepts::Game<TicTacToe>);
+static_assert(AlphaZero::Concepts::Game<Damath>);
 
 struct Agent {
   static constexpr auto player = AlphaZero::Player::First;
 
   Agent(std::shared_ptr<Network> model) : model(model) {}
 
-  auto on_move(const TicTacToe::State& state) -> AlphaZero::Action {
-    TicTacToe::print(state);
+  auto on_move(const Damath::State& state) -> AlphaZero::Action {
+    Damath::print(state);
 
-    std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
+    std::cout << Damath::legal_actions(state).nonzero() << '\n';
 
     int input = 0;
     std::cout << "Enter action: ";
@@ -136,13 +136,13 @@ struct Agent {
     return static_cast<AlphaZero::Action>(input);
   }
 
-  auto on_model_move(const TicTacToe::State& state, torch::Tensor probs,
+  auto on_model_move(const Damath::State& state, torch::Tensor probs,
                      AlphaZero::Action _) -> void {
-    auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
+    auto feature = torch::unsqueeze(Damath::encode_state(state), 0);
 
     auto [value, policy] = model->forward(feature);
     policy = torch::softmax(torch::squeeze(policy, 0), -1);
-    policy *= TicTacToe::legal_actions(state);
+    policy *= Damath::legal_actions(state);
     policy /= policy.sum();
 
     std::cout << "Policy: " << policy << "\n";
@@ -150,13 +150,13 @@ struct Agent {
     std::cout << "Value: " << value << "\n";
   }
 
-  auto on_game_end(const TicTacToe::State& state, AlphaZero::GameResult result)
+  auto on_game_end(const Damath::State& state, AlphaZero::GameResult result)
       -> void {
     auto new_state = state;
 
     // flip the player before printing it>
     new_state.player = player;
-    TicTacToe::print(new_state);
+    Damath::print(new_state);
 
     switch (result) {
       case AlphaZero::GameResult::Win:
@@ -174,7 +174,7 @@ struct Agent {
   std::shared_ptr<Network> model;
 };
 
-static_assert(AlphaZero::Concepts::Agent<Agent, TicTacToe>);
+static_assert(AlphaZero::Concepts::Agent<Agent, Damath>);
 
 auto main() -> int {
   torch::DeviceGuard device_guard(torch::kCPU);
@@ -192,7 +192,7 @@ auto main() -> int {
 
   auto rng = std::random_device{};
 
-  auto alpha_zero = AlphaZero::AlphaZero<TicTacToe>{
+  auto alpha_zero = AlphaZero::AlphaZero<Damath>{
       config,
       model,
       optimizer,
@@ -201,7 +201,7 @@ auto main() -> int {
 
   alpha_zero.learn();
 
-  auto arena = AlphaZero::Arena<TicTacToe>(config);
+  auto arena = AlphaZero::Arena<Damath>(config);
   arena.play_with_model(model, 1000, Agent{model});
 
   return 0;

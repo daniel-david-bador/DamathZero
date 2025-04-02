@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 import std;
-import damathzero;
+import alphazero;
 
-using namespace DamathZero;
+using namespace AlphaZero;
 
 TEST(Game, InitialBoard) {
   auto expected_board = std::vector<int>(9, 0);

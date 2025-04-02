@@ -2,14 +2,14 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:arena;
+export module alphazero:arena;
 
 import std;
 import :game;
 import :mcts;
 import :config;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export struct Result {
   int wins;
@@ -26,7 +26,7 @@ export enum GameResult {
 namespace Concepts {
 
 export template <typename C, typename G>
-concept Controller =
+concept Agent =
     Concepts::Game<G> and requires(C c, G::State state, torch::Tensor probs,
                                    GameResult result, Action action) {
       std::same_as<decltype(C::player), Player>;
@@ -47,7 +47,7 @@ class Arena {
 
   auto play_with_model(std::shared_ptr<Network> model,
                        int num_model_simulations,
-                       Concepts::Controller<Game> auto controller) -> void {
+                       Concepts::Agent<Game> auto controller) -> void {
     auto mcts = MCTS<Game>(config_);
 
     model->eval();
@@ -128,4 +128,4 @@ class Arena {
   Config config_;
 };
 
-};  // namespace DamathZero
+};  // namespace AlphaZero

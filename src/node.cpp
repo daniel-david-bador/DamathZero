@@ -2,14 +2,14 @@ module;
 
 #include <assert.h>
 
-export module damathzero:node;
+export module alphazero:node;
 
 import std;
 
 import :config;
 import :game;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export struct NodeId {
  public:
@@ -73,4 +73,4 @@ export class Node {
   NodeId children_last = NodeId::Invalid;
 };
 
-}  // namespace DamathZero
+}  // namespace AlphaZero

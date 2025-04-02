@@ -3,7 +3,7 @@ module;
 #include <assert.h>
 #include <torch/torch.h>
 
-export module damathzero:mcts;
+export module alphazero:mcts;
 
 import std;
 
@@ -12,7 +12,7 @@ import :node;
 import :storage;
 import :game;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export template <Concepts::Game Game>
 class MCTS {
@@ -154,4 +154,4 @@ class MCTS {
   Config config_;
 };
 
-}  // namespace DamathZero
+}  // namespace AlphaZero

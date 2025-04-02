@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 import std;
-import damathzero;
+import alphazero;
 
-using namespace DamathZero;
+using namespace AlphaZero;
 
 TEST(MCTS, NodeRef) {
   auto nodes = NodeStorage{};

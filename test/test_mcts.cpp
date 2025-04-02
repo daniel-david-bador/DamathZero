@@ -2,9 +2,9 @@
 #include <torch/torch.h>
 
 import std;
-import damathzero;
+import alphazero;
 
-using namespace DamathZero;
+using namespace AlphaZero;
 
 TEST(MCTS, Search) {
   for (int i = 0; i < 100; i++) {

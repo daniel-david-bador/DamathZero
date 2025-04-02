@@ -2,7 +2,7 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero;
+export module alphazero;
 
 import std;
 
@@ -14,7 +14,7 @@ export import :mcts;
 export import :node;
 export import :storage;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export template <Concepts::Game Game>
 class AlphaZero {
@@ -160,4 +160,4 @@ class AlphaZero {
   std::random_device& rd_;
 };
 
-}  // namespace DamathZero
+}  // namespace AlphaZero

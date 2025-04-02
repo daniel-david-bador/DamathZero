@@ -2,14 +2,14 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:memory;
+export module alphazero:memory;
 
 import std;
 
 import :config;
 import :game;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export class Memory {
  public:
@@ -68,4 +68,4 @@ export class Memory {
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };
 
-}  // namespace DamathZero
+}  // namespace AlphaZero

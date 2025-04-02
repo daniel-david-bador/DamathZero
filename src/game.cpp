@@ -2,11 +2,11 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:game;
+export module alphazero:game;
 
 import std;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export using Action = int;
 
@@ -62,4 +62,4 @@ export class Player {
 inline constexpr auto Player::First = Player(true);
 inline constexpr auto Player::Second = Player(false);
 
-}  // namespace DamathZero
+}  // namespace AlphaZero

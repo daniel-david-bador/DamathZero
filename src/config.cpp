@@ -2,11 +2,11 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:config;
+export module alphazero:config;
 
 import std;
 
-namespace DamathZero {
+namespace AlphaZero {
 
 export struct Config {
   int num_iterations = 10;
@@ -28,4 +28,4 @@ export struct Config {
   torch::DeviceType device;
 };
 
-}  // namespace DamathZero
+}  // namespace AlphaZero
