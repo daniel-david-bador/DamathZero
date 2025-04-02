@@ -144,7 +144,7 @@ class AlphaZero {
 
         if (terminal_value.has_value()) {
           auto value = *terminal_value;
-          for (auto [hist_state, hist_probs] : statistics) {
+          for (auto& [hist_state, hist_probs] : statistics) {
             auto hist_value =
                 hist_state.player == state.player ? value : -value;
             memory.append(Game::encode_state(hist_state),
