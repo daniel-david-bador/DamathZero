@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 4.0)
 
-set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD 0e5b6991-d74f-4b3d-a41c-cf096e0b2508)
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD a9e1cf81-9932-4810-974b-6eccaf14e457)
 set(CMAKE_CXX_MODULE_STD ON)
 
 project(AlphaZero LANGUAGES CXX)
@@ -25,16 +25,8 @@ target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)
 target_link_libraries(AlphaZero PUBLIC torch) # indicators::indicators
 
-set(_availableGames tictactoe)
-set(game tictactoe CACHE STRING "Game to compile: ${_availableGames}")
-set_property(CACHE game PROPERTY STRINGS ${_availableGames})
-
-if(${game} IN_LIST _availableGames)
-    add_executable(${game} "src/games/${game}.cpp")
-    target_link_libraries(${game} PRIVATE AlphaZero)
-else()
-    message(FATAL_ERROR "game must be one of ${_availableGames}")
-endif()
+add_executable(DamathZero "src/games/damath.cpp")
+target_link_libraries(DamathZero PRIVATE AlphaZero)
 
 add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf
