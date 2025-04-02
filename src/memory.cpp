@@ -13,8 +13,7 @@ namespace AlphaZero {
 
 export class Memory {
  public:
-  Memory(Config config, std::random_device& device)
-      : config_{config}, gen_(device()) {}
+  Memory(Config config, std::mt19937 gen) : config_{config}, gen_(gen) {}
 
   constexpr auto size() -> size_t { return data_.size(); }
 

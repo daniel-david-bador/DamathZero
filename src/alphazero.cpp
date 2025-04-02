@@ -24,8 +24,8 @@ class AlphaZero {
  public:
   AlphaZero(Config config, std::shared_ptr<Network> model,
             std::shared_ptr<torch::optim::Optimizer> optimizer,
-            std::random_device& rd)
-      : config_(config), model_(model), optimizer_(optimizer), rd_(rd) {}
+            std::mt19937& gen)
+      : config_(config), model_(model), optimizer_(optimizer), gen_(gen) {}
 
   auto learn() -> void {
     auto arena = Arena<Game>(config_);
@@ -33,7 +33,7 @@ class AlphaZero {
 
     for (auto i : std::views::iota(0, config_.num_iterations)) {
       std::println("Iteration: {}", i + 1);
-      auto memory = Memory{config_, rd_};
+      auto memory = Memory{config_, gen_};
 
       generate_self_play_data(memory, model_);
 
@@ -107,12 +107,13 @@ class AlphaZero {
   auto run_actor(Memory& memory, std::shared_ptr<Network> model) -> void {
     auto mcts = MCTS<Game>{config_};
 
-    auto num_iterations = config_.num_self_play_iterations / config_.num_actors;
+    auto num_iterations = config_.num_self_play_iterations_per_actor;
     for (auto _ : std::views::iota(0, num_iterations)) {
       auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
       auto state = Game::initial_state();
       while (true) {
-        auto action_probs = mcts.search(state, model);
+        auto action_probs =
+            mcts.search(state, model, config_.num_simulations, &gen_);
 
         statistics.emplace_back(state, action_probs);
 
@@ -145,7 +146,7 @@ class AlphaZero {
     model->eval();
     for (auto _ : std::views::iota(0, config_.num_actors)) {
       threads.emplace_back(
-          [this, &memory, model]() { run_actor(memory, model); });
+          [this, &memory, model] { run_actor(memory, model); });
     }
 
     for (auto& thread : threads) {
@@ -157,7 +158,7 @@ class AlphaZero {
   Config config_;
   std::shared_ptr<Network> model_;
   std::shared_ptr<torch::optim::Optimizer> optimizer_;
-  std::random_device& rd_;
+  std::mt19937& gen_;
 };
 
 }  // namespace AlphaZero

@@ -12,11 +12,11 @@ export struct Config {
   int num_iterations = 10;
   int num_simulations = 100;
 
-  int num_self_play_iterations = 1000;
+  int num_self_play_iterations_per_actor = 1000;
+  int num_actors = 6;
+
   int num_training_epochs = 4;
   int num_model_evaluation_iterations = 50;
-
-  int num_actors = 6;
 
   std::size_t batch_size = 64;
 

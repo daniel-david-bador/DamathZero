@@ -21,14 +21,18 @@ class MCTS {
 
   constexpr auto search(Game::State original_state,
                         std::shared_ptr<typename Game::Network> model,
-                        std::optional<int> num_simulations = std::nullopt)
+                        std::optional<int> num_simulations = std::nullopt,
+                        std::optional<std::mt19937*> noise_gen = std::nullopt)
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
     auto root_id = nodes_.create(original_state.player);
+    if (noise_gen) {
+      expand(root_id, original_state, model);
+      add_exploration_noise(root_id, *noise_gen);
+    }
 
     num_simulations = num_simulations.value_or(config_.num_simulations);
-
     for (auto _ : std::views::iota(0, *num_simulations)) {
       auto node = nodes_.as_ref(root_id);
       auto state = original_state;
@@ -148,6 +152,31 @@ class MCTS {
       node_id = node.parent_id;
     };
   };
+
+  constexpr auto add_exploration_noise(NodeId node_id, std::mt19937* gen)
+      -> void {
+    assert(gen != nullptr);
+
+    auto& node = nodes_.get(node_id);
+
+    auto epsilon = config_.dirichlet_epsilon;
+    auto noise = std::vector<float32_t>(node.num_children(), 0.0);
+    auto gamma =
+        std::gamma_distribution<float32_t>(config_.dirichlet_alpha, 1.0);
+
+    auto sum = 0.0;
+    std::ranges::generate(noise, [&sum, &gamma, gen] {
+      auto x = gamma(*gen);
+      sum += x;
+      return x;
+    });
+
+    for (auto [child_id, x] : std::views::zip(node.children(), noise)) {
+      auto& child = nodes_.get(child_id);
+      x = x / sum;
+      child.prior = child.prior * (1 - epsilon) + x * epsilon;
+    }
+  }
 
  private:
   NodeStorage nodes_;
