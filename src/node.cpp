@@ -39,6 +39,11 @@ export class Node {
            std::views::transform([](int value) { return NodeId(value); });
   }
 
+  constexpr auto num_children() const -> int {
+    assert(is_expanded());
+    return children_last.value() - children_first.value() + 1;
+  }
+
   constexpr auto is_expanded() const -> bool {
     return children_first.is_valid();
   }
