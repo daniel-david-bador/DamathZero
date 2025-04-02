@@ -33,7 +33,7 @@ class MCTS {
     }
 
     num_simulations = num_simulations.value_or(config_.num_simulations);
-    for (auto _ : std::views::iota(0, *num_simulations)) {
+    for (auto _ : std::views::iota(0, *num_simulations + 1)) {
       auto node = nodes_.as_ref(root_id);
       auto state = original_state;
 

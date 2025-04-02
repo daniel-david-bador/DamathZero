@@ -37,11 +37,7 @@ class AlphaZero {
 
       generate_self_play_data(memory, model_);
 
-      std::println("Memory size {}", memory.size());
-      for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
-        train(memory);
-      }
-
+      train(memory);
       save_model(model_, i);
 
       auto best_model = read_model(best_model_index);
@@ -86,21 +82,25 @@ class AlphaZero {
 
   auto train(Memory& memory) -> void {
     namespace F = torch::nn::functional;
+
+    std::println("Memory size {}", memory.size());
+
     model_->train();
     model_->to(config_.device);
+    for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
+      memory.shuffle();
 
-    memory.shuffle();
+      for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
+        auto [feature, target_value, target_policy] = memory.sample_batch(i);
+        auto [out_value, out_policy] = model_->forward(feature);
 
-    for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
-      auto [feature, target_value, target_policy] = memory.sample_batch(i);
-      auto [out_value, out_policy] = model_->forward(feature);
+        auto loss = F::mse_loss(out_value, target_value) +
+                    F::cross_entropy(out_policy, target_policy);
 
-      auto loss = F::mse_loss(out_value, target_value) +
-                  F::cross_entropy(out_policy, target_policy);
-
-      optimizer_->zero_grad();
-      loss.backward();
-      optimizer_->step();
+        optimizer_->zero_grad();
+        loss.backward();
+        optimizer_->step();
+      }
     }
   }
 
@@ -108,14 +108,33 @@ class AlphaZero {
     auto mcts = MCTS<Game>{config_};
 
     auto num_iterations = config_.num_self_play_iterations_per_actor;
-    for (auto _ : std::views::iota(0, num_iterations)) {
+
+    // Generate a list of indices that use random playout.
+    auto n = static_cast<int32_t>(config_.random_playout_percentage *
+                                  num_iterations);
+    auto random_playout_indices = torch::randint(num_iterations, {n});
+
+    for (auto i : std::views::iota(0, num_iterations)) {
       auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
       auto state = Game::initial_state();
       while (true) {
-        auto action_probs =
-            mcts.search(state, model, config_.num_simulations, &gen_);
+        auto is_not_random_playout =
+            not torch::isin(i, random_playout_indices).item<bool>();
 
-        statistics.emplace_back(state, action_probs);
+        // If we're performing random playout we set `num_simulations` to be
+        // random on MCTS search.
+        auto num_simulations =
+            is_not_random_playout
+                ? config_.num_simulations
+                : torch::randint(1, config_.num_simulations, 1).item<int32_t>();
+        auto action_probs = mcts.search(
+            state, model, num_simulations,
+            is_not_random_playout ? std::make_optional(&gen_) : std::nullopt);
+
+        // If we're using random playout we don't include it in the dataset.
+        if (is_not_random_playout) {
+          statistics.emplace_back(state, action_probs);
+        }
 
         auto action =
             torch::multinomial(action_probs, 1).template item<Action>();

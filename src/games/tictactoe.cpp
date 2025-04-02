@@ -177,11 +177,10 @@ struct Agent {
 static_assert(AlphaZero::Concepts::Agent<Agent, TicTacToe>);
 
 auto main() -> int {
-  torch::DeviceGuard device_guard(torch::kCPU);
   auto config = AlphaZero::Config{
       .num_iterations = 1,
       .num_simulations = 60,
-      .num_self_play_iterations_per_actor = 10,
+      .num_self_play_iterations_per_actor = 100,
       .num_actors = 6,
       .device = torch::kCPU,
   };
@@ -202,7 +201,7 @@ auto main() -> int {
   alpha_zero.learn();
 
   auto arena = AlphaZero::Arena<TicTacToe>(config);
-  arena.play_with_model(model, 1000, Agent{model});
+  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model});
 
   return 0;
 }
