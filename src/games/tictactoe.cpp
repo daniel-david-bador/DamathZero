@@ -35,8 +35,10 @@ struct TicTacToe {
 
   static constexpr auto ActionSize = 9;
 
+  using Board = std::vector<int>;
+
   struct State {
-    std::vector<int> data;
+    Board board;
     Player player;
   };
 
@@ -47,43 +49,43 @@ struct TicTacToe {
   static constexpr auto apply_action(const State& state, Action action)
       -> State {
     auto new_state = state;
-    new_state.data[action] = state.player.is_first() ? 1 : -1;
+    new_state.board[action] = state.player.is_first() ? 1 : -1;
     new_state.player = state.player.next();
     return new_state;
   }
 
-  static constexpr auto legal_actions(const State& board) -> torch::Tensor {
+  static constexpr auto legal_actions(const State& state) -> torch::Tensor {
     auto legal_actions = torch::zeros(ActionSize, torch::kFloat32);
 
-    for (std::size_t i = 0; i < board.data.size(); i++)
-      if (board.data[i] == 0)
+    for (std::size_t i = 0; i < state.board.size(); i++)
+      if (state.board[i] == 0)
         legal_actions[i] = 1.0;
 
     return legal_actions;
   }
 
-  static constexpr auto check_win(const State& board, Action action) -> bool {
+  static constexpr auto check_win(const State& state, Action action) -> bool {
     if (action < 0)
       return false;
 
-    auto piece = board.data[action];
+    auto piece = state.board[action];
 
-    return (board.data[0] == piece and board.data[1] == piece and
-            board.data[2] == piece) or
-           (board.data[3] == piece and board.data[4] == piece and
-            board.data[5] == piece) or
-           (board.data[6] == piece and board.data[7] == piece and
-            board.data[8] == piece) or
-           (board.data[0] == piece and board.data[3] == piece and
-            board.data[6] == piece) or
-           (board.data[1] == piece and board.data[4] == piece and
-            board.data[7] == piece) or
-           (board.data[2] == piece and board.data[5] == piece and
-            board.data[8] == piece) or
-           (board.data[0] == piece and board.data[4] == piece and
-            board.data[8] == piece) or
-           (board.data[2] == piece and board.data[4] == piece and
-            board.data[6] == piece);
+    return (state.board[0] == piece and state.board[1] == piece and
+            state.board[2] == piece) or
+           (state.board[3] == piece and state.board[4] == piece and
+            state.board[5] == piece) or
+           (state.board[6] == piece and state.board[7] == piece and
+            state.board[8] == piece) or
+           (state.board[0] == piece and state.board[3] == piece and
+            state.board[6] == piece) or
+           (state.board[1] == piece and state.board[4] == piece and
+            state.board[7] == piece) or
+           (state.board[2] == piece and state.board[5] == piece and
+            state.board[8] == piece) or
+           (state.board[0] == piece and state.board[4] == piece and
+            state.board[8] == piece) or
+           (state.board[2] == piece and state.board[4] == piece and
+            state.board[6] == piece);
   }
 
   static constexpr auto terminal_value(const State& state, Action action)
@@ -99,8 +101,8 @@ struct TicTacToe {
   static constexpr auto encode_state(const State& state) -> torch::Tensor {
     auto encoded_state = torch::zeros(ActionSize, torch::kFloat32);
     auto flip = state.player.is_first() ? 1 : -1;
-    for (std::size_t i = 0; i < state.data.size(); i++)
-      encoded_state[i] = state.data[i] * flip;
+    for (std::size_t i = 0; i < state.board.size(); i++)
+      encoded_state[i] = state.board[i] * flip;
 
     return encoded_state;
   }
