@@ -12,7 +12,7 @@ import :node;
 import :storage;
 import :game;
 
-namespace AlphaZero {
+namespace AZ {
 
 export template <Concepts::Game Game>
 class MCTS {
@@ -42,10 +42,10 @@ class MCTS {
         state = Game::apply_action(state, node->action);
       }
 
-      if (auto terminal_value = Game::terminal_value(state, node->action);
-          terminal_value.has_value()) {
+      auto outcome = Game::get_outcome(state, node->action);
+      if (outcome) {
         auto& parent = nodes_.get(node->parent_id);
-        backpropagate(node.id, *terminal_value, parent.player);
+        backpropagate(node.id, outcome->as_scalar(), parent.player);
       } else {
         auto value = expand(node.id, state, model);
         backpropagate(node.id, value, state.player);
@@ -116,7 +116,7 @@ class MCTS {
     auto feature = Game::encode_state(state).to(config_.device);
     auto legal_actions = Game::legal_actions(state).to(config_.device);
 
-    auto [value, policy] = model->forward(torch::unsqueeze(feature, 0));
+    auto [wdl, policy] = model->forward(torch::unsqueeze(feature, 0));
     policy = torch::softmax(torch::squeeze(policy, 0), -1);
     policy *= legal_actions;
     policy /= policy.sum();
@@ -133,6 +133,9 @@ class MCTS {
       parent.create_child(new_state.player, action, prior);
     }
 
+    wdl = wdl.squeeze(0);
+
+    auto value = wdl[0] - wdl[2];
     return value.template item<double>();
   };
 
@@ -183,4 +186,4 @@ class MCTS {
   Config config_;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ

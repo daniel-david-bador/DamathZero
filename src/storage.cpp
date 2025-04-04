@@ -10,7 +10,7 @@ import :config;
 import :game;
 import :node;
 
-namespace AlphaZero {
+namespace AZ {
 
 export class NodeStorage {
   struct NodeRef {
@@ -64,4 +64,4 @@ export class NodeStorage {
   std::vector<Node> nodes_;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ

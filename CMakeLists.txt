@@ -25,6 +25,9 @@ target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)
 target_link_libraries(AlphaZero PUBLIC torch) # indicators::indicators
 
+add_executable(TicTacToeZero "src/games/tictactoe.cpp")
+target_link_libraries(TicTacToeZero PRIVATE AlphaZero)
+
 add_executable(DamathZero "src/games/damath.cpp")
 target_link_libraries(DamathZero PRIVATE AlphaZero)
 
