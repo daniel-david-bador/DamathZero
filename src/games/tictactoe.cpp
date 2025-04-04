@@ -182,23 +182,17 @@ auto main() -> int {
       .device = torch::kCPU,
   };
 
-  auto model = std::make_shared<Network>();
-  auto optimizer = std::make_shared<torch::optim::Adam>(
-      model->parameters(), torch::optim::AdamOptions(0.001));
-
   auto gen = std::mt19937{};
 
   auto alpha_zero = AZ::AlphaZero<TicTacToe>{
       config,
-      model,
-      optimizer,
       gen,
   };
 
-  alpha_zero.learn();
+  auto model = alpha_zero.learn();
 
   auto arena = AZ::Arena<TicTacToe>(config);
-  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model});
+  arena.play_with_model(model, /*num_simulations=*/60, Agent{model});
 
   return 0;
 }

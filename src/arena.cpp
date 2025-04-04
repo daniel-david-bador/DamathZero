@@ -92,9 +92,8 @@ class Arena {
         auto action = torch::argmax(action_probs).template item<Action>();
 
         auto new_state = Game::apply_action(state, action);
-        auto outcome = Game::get_outcome(new_state, action);
 
-        if (outcome) {
+        if (auto outcome = Game::get_outcome(new_state, action)) {
           // outcome from the perspective of model1
           auto flipped_outcome =
               state.player.is_first() ? *outcome : outcome->flip();

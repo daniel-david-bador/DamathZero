@@ -22,29 +22,29 @@ class AlphaZero {
   using State = Game::State;
 
  public:
-  AlphaZero(Config config, std::shared_ptr<Network> model,
-            std::shared_ptr<torch::optim::Optimizer> optimizer,
-            std::mt19937& gen)
-      : config_(config), model_(model), optimizer_(optimizer), gen_(gen) {}
+  AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {}
 
-  auto learn() -> void {
+  auto learn() -> std::shared_ptr<Network> {
     auto arena = Arena<Game>(config_);
-    auto best_model_index = 0;
+
+    auto model = std::make_shared<Network>();
+    auto best_model = std::make_shared<Network>();
+
+    auto optimizer = std::make_shared<torch::optim::Adam>(
+        model->parameters(), torch::optim::AdamOptions(0.001));
 
     for (auto i : std::views::iota(0, config_.num_iterations)) {
       std::println("Iteration: {}", i + 1);
       auto memory = Memory{config_, gen_};
 
-      generate_self_play_data(memory, model_);
+      generate_self_play_data(memory, model);
 
-      train(memory);
-      save_model(model_, i);
+      train(memory, model, optimizer);
+      save_model(model, i);
 
-      auto best_model = read_model(best_model_index);
-
-      auto [wins, draws, losses] = arena.play(
-          model_, best_model, config_.num_model_evaluation_iterations,
-          /*num_simulations=*/1000);
+      auto [wins, draws, losses] =
+          arena.play(model, best_model, config_.num_model_evaluation_iterations,
+                     /*num_simulations=*/1000);
 
       auto did_win =
           wins + draws >
@@ -56,9 +56,11 @@ class AlphaZero {
           did_win ? "won" : "lost", wins, draws, losses);
 
       if (did_win) {
-        best_model_index = i;
+        best_model = model;
       }
     }
+
+    return best_model;
   }
 
  private:
@@ -79,26 +81,27 @@ class AlphaZero {
     return model;
   }
 
-  auto train(Memory& memory) -> void {
+  auto train(Memory& memory, std::shared_ptr<Network> model,
+             std::shared_ptr<torch::optim::Optimizer> optimizer) -> void {
     namespace F = torch::nn::functional;
 
     std::println("Memory size {}", memory.size());
 
-    model_->train();
-    model_->to(config_.device);
+    model->train();
+    model->to(config_.device);
     for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
       memory.shuffle();
 
       for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
         auto [feature, target_value, target_policy] = memory.sample_batch(i);
-        auto [out_value, out_policy] = model_->forward(feature);
+        auto [out_value, out_policy] = model->forward(feature);
 
         auto loss = F::cross_entropy(out_value, target_value) +
                     F::cross_entropy(out_policy, target_policy);
 
-        optimizer_->zero_grad();
+        optimizer->zero_grad();
         loss.backward();
-        optimizer_->step();
+        optimizer->step();
       }
     }
   }
@@ -139,9 +142,7 @@ class AlphaZero {
             torch::multinomial(action_probs, 1).template item<Action>();
 
         auto new_state = Game::apply_action(state, action);
-        auto outcome = Game::get_outcome(new_state, action);
-
-        if (outcome) {
+        if (auto outcome = Game::get_outcome(new_state, action)) {
           for (auto& [hist_state, hist_probs] : statistics) {
             auto hist_value = hist_state.player == state.player
                                   ? outcome->as_tensor()
@@ -173,8 +174,6 @@ class AlphaZero {
 
  private:
   Config config_;
-  std::shared_ptr<Network> model_;
-  std::shared_ptr<torch::optim::Optimizer> optimizer_;
   std::mt19937& gen_;
 };
 
