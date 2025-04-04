@@ -6,7 +6,7 @@ export module alphazero:config;
 
 import std;
 
-namespace AlphaZero {
+namespace AZ {
 
 export struct Config {
   int32_t num_iterations = 10;
@@ -32,4 +32,4 @@ export struct Config {
   torch::DeviceType device;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ

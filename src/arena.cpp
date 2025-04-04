@@ -9,30 +9,18 @@ import :game;
 import :mcts;
 import :config;
 
-namespace AlphaZero {
-
-export struct Result {
-  int wins;
-  int draws;
-  int losses;
-};
-
-export enum GameResult {
-  Win,
-  Lost,
-  Draw,
-};
+namespace AZ {
 
 namespace Concepts {
 
 export template <typename C, typename G>
 concept Agent =
     Concepts::Game<G> and requires(C c, G::State state, torch::Tensor probs,
-                                   GameResult result, Action action) {
+                                   GameOutcome outcome, Action action) {
       std::same_as<decltype(C::player), Player>;
       { c.on_move(state) } -> std::same_as<Action>;
       { c.on_model_move(state, probs, action) } -> std::same_as<void>;
-      { c.on_game_end(state, result) } -> std::same_as<void>;
+      { c.on_game_end(state, outcome) } -> std::same_as<void>;
     };
 
 }  // namespace Concepts
@@ -43,6 +31,12 @@ class Arena {
   using State = Game::State;
 
  public:
+  struct Result {
+    int wins;
+    int draws;
+    int losses;
+  };
+
   Arena(Config config) : config_(config) {}
 
   auto play_with_model(std::shared_ptr<Network> model,
@@ -64,19 +58,16 @@ class Arena {
       }
 
       auto new_state = Game::apply_action(state, action);
-      auto terminal_value = Game::terminal_value(new_state, action);
+      auto outcome = Game::get_outcome(new_state, action);
 
-      if (terminal_value.has_value()) {
-        auto value = controller.player == state.player ? *terminal_value
-                                                       : -*terminal_value;
-
-        controller.on_game_end(new_state, value == 0   ? GameResult::Draw
-                                          : value == 1 ? GameResult::Win
-                                                       : GameResult::Lost);
+      if (outcome) {
+        controller.on_game_end(new_state, controller.player == state.player
+                                              ? *outcome
+                                              : outcome->flip());
         break;
       }
 
-      state = new_state;
+      state = std::move(new_state);
     }
   }
 
@@ -93,7 +84,6 @@ class Arena {
 
     for (auto _ : std::views::iota(0, rounds)) {
       auto state = Game::initial_state();
-      auto value = 0.0;
 
       while (true) {
         auto model = state.player.is_first() ? model1 : model2;
@@ -102,22 +92,25 @@ class Arena {
         auto action = torch::argmax(action_probs).template item<Action>();
 
         auto new_state = Game::apply_action(state, action);
-        auto terminal_value = Game::terminal_value(new_state, action);
+        auto outcome = Game::get_outcome(new_state, action);
 
-        if (terminal_value.has_value()) {
-          if (value == 0) {
+        if (outcome) {
+          // outcome from the perspective of model1
+          auto flipped_outcome =
+              state.player.is_first() ? *outcome : outcome->flip();
+
+          if (flipped_outcome == GameOutcome::Win) {
+            wins += 1;
+          } else if (flipped_outcome == GameOutcome::Draw) {
             draws += 1;
-          } else if (value == 1) {
-            if (state.player.is_first()) {
-              wins += 1;
-            } else {
-              losses += 1;
-            }
+          } else if (flipped_outcome == GameOutcome::Loss) {
+            losses += 1;
           }
+
           break;
         }
 
-        state = new_state;
+        state = std::move(new_state);
       }
     }
 
@@ -128,4 +121,4 @@ class Arena {
   Config config_;
 };
 
-};  // namespace AlphaZero
+};  // namespace AZ

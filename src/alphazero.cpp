@@ -14,7 +14,7 @@ export import :mcts;
 export import :node;
 export import :storage;
 
-namespace AlphaZero {
+namespace AZ {
 
 export template <Concepts::Game Game>
 class AlphaZero {
@@ -93,7 +93,7 @@ class AlphaZero {
         auto [feature, target_value, target_policy] = memory.sample_batch(i);
         auto [out_value, out_policy] = model_->forward(feature);
 
-        auto loss = F::mse_loss(out_value, target_value) +
+        auto loss = F::cross_entropy(out_value, target_value) +
                     F::cross_entropy(out_policy, target_policy);
 
         optimizer_->zero_grad();
@@ -139,21 +139,20 @@ class AlphaZero {
             torch::multinomial(action_probs, 1).template item<Action>();
 
         auto new_state = Game::apply_action(state, action);
-        auto terminal_value = Game::terminal_value(new_state, action);
+        auto outcome = Game::get_outcome(new_state, action);
 
-        if (terminal_value.has_value()) {
-          auto value = *terminal_value;
+        if (outcome) {
           for (auto& [hist_state, hist_probs] : statistics) {
-            auto hist_value =
-                hist_state.player == state.player ? value : -value;
-            memory.append(Game::encode_state(hist_state),
-                          torch::tensor({hist_value}, torch::kFloat32),
+            auto hist_value = hist_state.player == state.player
+                                  ? outcome->as_tensor()
+                                  : outcome->flip().as_tensor();
+            memory.append(Game::encode_state(hist_state), hist_value,
                           hist_probs);
           }
           break;
         }
 
-        state = new_state;
+        state = std::move(new_state);
       }
     }
   }
@@ -179,4 +178,4 @@ class AlphaZero {
   std::mt19937& gen_;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ

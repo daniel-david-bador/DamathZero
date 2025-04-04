@@ -9,7 +9,7 @@ import std;
 import :config;
 import :game;
 
-namespace AlphaZero {
+namespace AZ {
 
 export struct NodeId {
  public:
@@ -78,4 +78,4 @@ export class Node {
   NodeId children_last = NodeId::Invalid;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ

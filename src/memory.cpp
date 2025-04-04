@@ -9,7 +9,11 @@ import std;
 import :config;
 import :game;
 
-namespace AlphaZero {
+namespace AZ {
+
+export using Feature = torch::Tensor;
+export using Policy = torch::Tensor;
+export using Value = torch::Tensor;
 
 export class Memory {
  public:
@@ -67,4 +71,4 @@ export class Memory {
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };
 
-}  // namespace AlphaZero
+}  // namespace AZ
