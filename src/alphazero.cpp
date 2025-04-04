@@ -56,7 +56,7 @@ class AlphaZero {
           did_win ? "won" : "lost", wins, draws, losses);
 
       if (did_win) {
-        best_model = model;
+        best_model = load_model(i);
       }
     }
 
@@ -72,7 +72,7 @@ class AlphaZero {
     output_model_archive.save_to(std::format("models/model_{}.pt", checkpoint));
   };
 
-  auto read_model(int checkpoint) const -> std::shared_ptr<Network> {
+  auto load_model(int checkpoint) const -> std::shared_ptr<Network> {
     torch::serialize::InputArchive input_archive;
     input_archive.load_from(std::format("models/model_{}.pt", checkpoint));
     auto model = std::make_shared<Network>();

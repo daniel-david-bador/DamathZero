@@ -177,8 +177,8 @@ auto main() -> int {
   auto config = AZ::Config{
       .num_iterations = 1,
       .num_simulations = 60,
-      .num_self_play_iterations_per_actor = 50,
-      .num_actors = 6,
+      .num_self_play_iterations_per_actor = 100,
+      .num_actors = 5,
       .device = torch::kCPU,
   };
 
