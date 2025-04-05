@@ -18,7 +18,6 @@ export template <typename C, typename G>
 concept Agent =
     Concepts::Game<G> and requires(C c, G::State state, torch::Tensor probs,
                                    GameOutcome outcome, Action action) {
-      std::same_as<decltype(C::player), Player>;
       { c.on_move(state) } -> std::same_as<Action>;
       { c.on_model_move(state, probs, action) } -> std::same_as<void>;
       { c.on_game_end(state, outcome) } -> std::same_as<void>;
@@ -41,7 +40,8 @@ class Arena {
 
   auto play_with_model(std::shared_ptr<Network> model,
                        int num_model_simulations,
-                       Concepts::Agent<Game> auto controller) -> void {
+                       Concepts::Agent<Game> auto controller,
+                       Player human_player) -> void {
     auto mcts = MCTS<Game, Network>(config_);
 
     model->eval();
@@ -49,7 +49,7 @@ class Arena {
 
     auto action = -1;
     while (true) {
-      if (state.player == decltype(controller)::player) {
+      if (state.player == human_player) {
         action = controller.on_move(state);
       } else {
         auto probs = mcts.search(state, model, num_model_simulations);
@@ -61,7 +61,7 @@ class Arena {
       auto outcome = Game::get_outcome(new_state, action);
 
       if (outcome) {
-        controller.on_game_end(new_state, controller.player == state.player
+        controller.on_game_end(new_state, human_player == state.player
                                               ? *outcome
                                               : outcome->flip());
         break;
