@@ -142,14 +142,14 @@ struct Agent {
                      AZ::Action _) -> void {
     auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
 
-    auto [value, policy] = model->forward(feature);
+    auto [wdl, policy] = model->forward(feature);
     policy = torch::softmax(torch::squeeze(policy, 0), -1);
     policy *= TicTacToe::legal_actions(state);
     policy /= policy.sum();
 
     std::cout << "Policy:\n" << policy.reshape({3, 3}) << "\n";
     std::cout << "MCTS:\n" << probs.reshape({3, 3}) << "\n";
-    std::cout << "Value: " << value << "\n";
+    std::cout << "Win-Draw-Loss: " << wdl << "\n";
   }
 
   auto on_game_end(const TicTacToe::State& state, AZ::GameOutcome result)
@@ -193,7 +193,8 @@ auto main() -> int {
   auto model = alpha_zero.learn();
 
   auto arena = AZ::Arena<TicTacToe, Network>(config);
-  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model});
+  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},
+                        AZ::Player::Second);
 
   return 0;
 }
