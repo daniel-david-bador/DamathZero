@@ -5,6 +5,7 @@ module;
 export module alphazero:arena;
 
 import std;
+import :network;
 import :game;
 import :mcts;
 import :config;
@@ -25,9 +26,8 @@ concept Agent =
 
 }  // namespace Concepts
 
-export template <Concepts::Game Game>
+export template <Concepts::Game Game, Concepts::Network Network>
 class Arena {
-  using Network = Game::Network;
   using State = Game::State;
 
  public:
@@ -42,7 +42,7 @@ class Arena {
   auto play_with_model(std::shared_ptr<Network> model,
                        int num_model_simulations,
                        Concepts::Agent<Game> auto controller) -> void {
-    auto mcts = MCTS<Game>(config_);
+    auto mcts = MCTS<Game, Network>(config_);
 
     model->eval();
     auto state = Game::initial_state();
@@ -80,7 +80,7 @@ class Arena {
     auto draws = 0;
     auto losses = 0;
 
-    auto mcts = MCTS<Game>(config_);
+    auto mcts = MCTS<Game, Network>(config_);
 
     for (auto _ : std::views::iota(0, rounds)) {
       auto state = Game::initial_state();

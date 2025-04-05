@@ -17,7 +17,7 @@ export using Value = torch::Tensor;
 
 export class Memory {
  public:
-  Memory(Config config, std::mt19937 gen) : config_{config}, gen_(gen) {}
+  Memory(Config config, std::mt19937& gen) : config_{config}, gen_(gen) {}
 
   constexpr auto size() -> size_t { return data_.size(); }
 
@@ -67,7 +67,7 @@ export class Memory {
  private:
   std::mutex mutex_;
   Config config_;
-  std::mt19937 gen_;
+  std::mt19937& gen_;
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };
 

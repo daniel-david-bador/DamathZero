@@ -6,6 +6,7 @@ export module alphazero;
 
 import std;
 
+export import :network;
 export import :arena;
 export import :config;
 export import :game;
@@ -16,16 +17,15 @@ export import :storage;
 
 namespace AZ {
 
-export template <Concepts::Game Game>
+export template <Concepts::Game Game, Concepts::Network Network>
 class AlphaZero {
-  using Network = Game::Network;
   using State = Game::State;
 
  public:
   AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {}
 
   auto learn() -> std::shared_ptr<Network> {
-    auto arena = Arena<Game>(config_);
+    auto arena = Arena<Game, Network>(config_);
 
     auto model = std::make_shared<Network>();
     auto best_model = std::make_shared<Network>();
@@ -107,7 +107,7 @@ class AlphaZero {
   }
 
   auto run_actor(Memory& memory, std::shared_ptr<Network> model) -> void {
-    auto mcts = MCTS<Game>{config_};
+    auto mcts = MCTS<Game, Network>{config_};
 
     auto num_iterations = config_.num_self_play_iterations_per_actor;
 
