@@ -3,7 +3,7 @@
 import std;
 import alphazero;
 
-struct Network : torch::nn::Module {
+struct Network : public torch::nn::Module {
   Network()
       : fc1(register_module("fc1", torch::nn::Linear(9, 64))),
         fc2(register_module("fc2", torch::nn::Linear(64, 32))),
@@ -28,9 +28,9 @@ struct Network : torch::nn::Module {
   torch::nn::BatchNorm1d bn1, bn2;
 };
 
-struct TicTacToe {
-  using Network = Network;
+static_assert(AZ::Concepts::Network<Network>);
 
+struct TicTacToe {
   static constexpr auto ActionSize = 9;
 
   using Board = std::vector<int>;
@@ -129,7 +129,8 @@ struct Agent {
   auto on_move(const TicTacToe::State& state) -> AZ::Action {
     TicTacToe::print(state);
 
-    std::cout << TicTacToe::legal_actions(state).nonzero() << '\n';
+    std::cout << TicTacToe::legal_actions(state).nonzero().transpose(0, 1)
+              << '\n';
 
     int input = 0;
     std::cout << "Enter action: ";
@@ -146,8 +147,8 @@ struct Agent {
     policy *= TicTacToe::legal_actions(state);
     policy /= policy.sum();
 
-    std::cout << "Policy: " << policy << "\n";
-    std::cout << "MCTS: " << probs << "\n";
+    std::cout << "Policy:\n" << policy.reshape({3, 3}) << "\n";
+    std::cout << "MCTS:\n" << probs.reshape({3, 3}) << "\n";
     std::cout << "Value: " << value << "\n";
   }
 
@@ -184,15 +185,15 @@ auto main() -> int {
 
   auto gen = std::mt19937{};
 
-  auto alpha_zero = AZ::AlphaZero<TicTacToe>{
+  auto alpha_zero = AZ::AlphaZero<TicTacToe, Network>{
       config,
       gen,
   };
 
   auto model = alpha_zero.learn();
 
-  auto arena = AZ::Arena<TicTacToe>(config);
-  arena.play_with_model(model, /*num_simulations=*/60, Agent{model});
+  auto arena = AZ::Arena<TicTacToe, Network>(config);
+  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model});
 
   return 0;
 }

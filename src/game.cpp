@@ -18,9 +18,7 @@ namespace Concepts {
 export template <typename G>
 concept Game = requires(const G::State& state, Action action) {
   typename G::State;
-  typename G::Network;
 
-  std::is_base_of_v<torch::nn::Module, typename G::Network>;
   std::same_as<decltype(state.player), Player>;
   std::same_as<decltype(G::ActionSize), int>;
 
