@@ -21,6 +21,11 @@ export class Memory {
 
   constexpr auto size() -> size_t { return data_.size(); }
 
+  constexpr auto pop() -> void {
+    auto guard = std::lock_guard(mutex_);
+    data_.pop_back();
+  }
+
   constexpr auto shuffle() -> void {
     auto guard = std::lock_guard(mutex_);
     std::ranges::shuffle(data_, gen_);
