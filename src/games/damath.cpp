@@ -1,7 +1,4 @@
-#include <arm_neon.h>
 #include <torch/torch.h>
-
-#include <cstdint>
 
 import std;
 import alphazero;
@@ -33,43 +30,42 @@ struct Network : torch::nn::Module {
 };
 
 struct Damath {
-  using Action = AlphaZero::Action;
-  using Player = AlphaZero::Player;
+  using Action = AZ::Action;
+  using Player = AZ::Player;
   using Network = Network;
 
   static constexpr auto ActionSize = 8 * 8 * 4 * 7;
 
   struct Board {
     struct Piece {
-      std::uint8_t valid : 1;
-      std::uint8_t first : 1;
+      std::uint8_t occup : 1;
+      std::uint8_t enemy : 1;
       std::uint8_t queen : 1;
-      std::uint8_t oppos : 1;
+      std::uint8_t ngtve : 1;
       std::uint8_t value : 4;
     };
 
     static constexpr std::array<std::array<const char, 8>, 8> operators{
-        {{'*', ' ', '/', ' ', '-', ' ', '+', ' '},
-         {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
+        {{' ', '+', ' ', '-', ' ', '/', ' ', '*'},
          {'-', ' ', '+', ' ', '*', ' ', '/', ' '},
-         {' ', '+', ' ', '-', ' ', '/', ' ', '*'},
+         {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
          {'*', ' ', '/', ' ', '-', ' ', '+', ' '},
-         {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
+         {' ', '+', ' ', '-', ' ', '/', ' ', '*'},
          {'-', ' ', '+', ' ', '*', ' ', '/', ' '},
-         {' ', '+', ' ', '-', ' ', '/', ' ', '*'}}};
+         {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
+         {'*', ' ', '/', ' ', '-', ' ', '+', ' '}}};
 
-    // clang-format off
-    std::array<std::array<Board::Piece, 8>, 8> pieces{{ 
-      {{{1,1,0,0,2},{0,0,0,0,0},{1,1,0,1,5},{0,0,0,0,0},{1,1,0,0,8},{0,0,0,0,0},{1,1,0,1,11},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{1,1,0,1,7},{0,0,0,0,0},{1,1,0,0,10},{0,0,0,0,0},{1,1,0,1,3},{0,0,0,0,0},{1,1,0,0,0}}},
-      {{{1,1,0,0,4},{0,0,0,0,0},{1,1,0,1,1},{0,0,0,0,0},{1,1,0,0,6},{0,0,0,0,0},{1,1,0,1,9},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{1,0,0,1,9},{0,0,0,0,0},{1,0,0,0,6},{0,0,0,0,0},{1,0,0,1,1},{0,0,0,0,0},{1,0,0,0,4}}},
-      {{{1,0,0,0,0},{0,0,0,0,0},{1,0,0,1,3},{0,0,0,0,0},{1,0,0,0,10},{0,0,0,0,0},{1,0,0,1,7},{0,0,0,0,0}}},
+    std::array<std::array<Board::Piece, 8>, 8> pieces{{
+        // clang-format off
       {{{0,0,0,0,0},{1,0,0,1,11},{0,0,0,0,0},{1,0,0,0,8},{0,0,0,0,0},{1,0,0,1,5},{0,0,0,0,0},{1,0,0,0,2}}},
-    }};
-    // clang-format on
+      {{{1,0,0,0,0},{0,0,0,0,0},{1,0,0,1,3},{0,0,0,0,0},{1,0,0,0,10},{0,0,0,0,0},{1,0,0,1,7},{0,0,0,0,0}}},
+      {{{0,0,0,0,0},{1,0,0,1,9},{0,0,0,0,0},{1,0,0,0,6},{0,0,0,0,0},{1,0,0,1,1},{0,0,0,0,0},{1,0,0,0,4}}},
+      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
+      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
+      {{{1,1,0,0,4},{0,0,0,0,0},{1,1,0,1,1},{0,0,0,0,0},{1,1,0,0,6},{0,0,0,0,0},{1,1,0,1,9},{0,0,0,0,0}}},
+      {{{0,0,0,0,0},{1,1,0,1,7},{0,0,0,0,0},{1,1,0,0,10},{0,0,0,0,0},{1,1,0,1,3},{0,0,0,0,0},{1,1,0,0,0}}},
+      {{{1,1,0,0,2},{0,0,0,0,0},{1,1,0,1,5},{0,0,0,0,0},{1,1,0,0,8},{0,0,0,0,0},{1,1,0,1,11},{0,0,0,0,0}}},
+    }};  // clang-format on
   };
 
   struct State {
@@ -77,6 +73,28 @@ struct Damath {
     Player player = Player::First;
     std::pair<double, double> scores{0.0, 0.0};
   };
+
+  static constexpr auto flip(const Board& board) -> Board {
+    auto new_board = Board{
+        .pieces =  // clang-format off
+            {{{{board.pieces[7][7], board.pieces[7][6], board.pieces[7][5], board.pieces[7][4], board.pieces[7][3], board.pieces[7][2], board.pieces[7][1], board.pieces[7][0]}},
+              {{board.pieces[6][7], board.pieces[6][6], board.pieces[6][5], board.pieces[6][4], board.pieces[6][3], board.pieces[6][2], board.pieces[6][1], board.pieces[6][0]}},
+              {{board.pieces[5][7], board.pieces[5][6], board.pieces[5][5], board.pieces[5][4], board.pieces[5][3], board.pieces[5][2], board.pieces[5][1], board.pieces[5][0]}},
+              {{board.pieces[4][7], board.pieces[4][6], board.pieces[4][5], board.pieces[4][4], board.pieces[4][3], board.pieces[4][2], board.pieces[4][1], board.pieces[4][0]}},
+              {{board.pieces[3][7], board.pieces[3][6], board.pieces[3][5], board.pieces[3][4], board.pieces[3][3], board.pieces[3][2], board.pieces[3][1], board.pieces[3][0]}},
+              {{board.pieces[2][7], board.pieces[2][6], board.pieces[2][5], board.pieces[2][4], board.pieces[2][3], board.pieces[2][2], board.pieces[2][1], board.pieces[2][0]}},
+              {{board.pieces[1][7], board.pieces[1][6], board.pieces[1][5], board.pieces[1][4], board.pieces[1][3], board.pieces[1][2], board.pieces[1][1], board.pieces[1][0]}},
+              {{board.pieces[0][7], board.pieces[0][6], board.pieces[0][5], board.pieces[0][4], board.pieces[0][3], board.pieces[0][2], board.pieces[0][1], board.pieces[0][0]}}
+            }},  // clang-format on
+    };
+
+    for (auto& row : new_board.pieces)
+      for (auto& piece : row)
+        if (piece.occup)
+          piece.enemy = not piece.enemy;
+
+    return new_board;
+  }
 
   static constexpr auto initial_state() -> State { return State{}; }
 
@@ -96,10 +114,10 @@ struct Damath {
       auto& score = state.player.is_first() ? new_state.scores.first
                                             : new_state.scores.second;
       auto player_value =
-          static_cast<double>((state.board.pieces[y][x].oppos ? -1 : 1) *
+          static_cast<double>((state.board.pieces[y][x].ngtve ? -1 : 1) *
                               state.board.pieces[y][x].value);
       auto opponent_value = static_cast<double>(
-          (state.board.pieces[enemy_y][enemy_x].oppos ? -1 : 1) *
+          (state.board.pieces[enemy_y][enemy_x].ngtve ? -1 : 1) *
           state.board.pieces[enemy_y][enemy_x].value);
       if (op == '+') {
         score += (player_value + opponent_value);
@@ -115,48 +133,48 @@ struct Damath {
 
     if (direction == 0) {  // move diagonally to the upper left
       new_x -= distance;
-      new_y -= distance;
+      new_y += distance;
 
       [&] {
-        for (int enemy_y = y - 1; enemy_y > new_y; enemy_y--)
+        for (int enemy_y = y + 1; enemy_y < new_y; enemy_y++)
           for (int enemy_x = x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board.pieces[enemy_y][enemy_x].valid) {
+            if (state.board.pieces[enemy_y][enemy_x].occup) {
               eat(enemy_x, enemy_y);
               return;
             }
       }();
     } else if (direction == 1) {  // move diagonally to the upper right
       new_x += distance;
-      new_y -= distance;
+      new_y += distance;
 
       [&] {
-        for (int enemy_y = y - 1; enemy_y > new_y; enemy_y--)
+        for (int enemy_y = y + 1; enemy_y < new_y; enemy_y++)
           for (int enemy_x = x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board.pieces[enemy_y][enemy_x].valid) {
+            if (state.board.pieces[enemy_y][enemy_x].occup) {
               eat(enemy_x, enemy_y);
               return;
             }
       }();
     } else if (direction == 2) {  // move diagonally to the lower left
       new_x -= distance;
-      new_y += distance;
+      new_y -= distance;
 
       [&] {
-        for (int enemy_y = y + 1; enemy_y < new_y; enemy_y++)
+        for (int enemy_y = y - 1; enemy_y > new_y; enemy_y--)
           for (int enemy_x = x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board.pieces[enemy_y][enemy_x].valid) {
+            if (state.board.pieces[enemy_y][enemy_x].occup) {
               eat(enemy_x, enemy_y);
               return;
             }
       }();
     } else if (direction == 3) {  // move diagonally to the lower right
       new_x += distance;
-      new_y += distance;
+      new_y -= distance;
 
       [&] {
-        for (int enemy_y = y + 1; enemy_y < new_y; enemy_y++)
+        for (int enemy_y = y - 1; enemy_y > new_y; enemy_y--)
           for (int enemy_x = x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board.pieces[enemy_y][enemy_x].valid) {
+            if (state.board.pieces[enemy_y][enemy_x].occup) {
               eat(enemy_x, enemy_y);
               return;
             }
@@ -170,138 +188,267 @@ struct Damath {
         (new_y == 0 or new_y == 7))
       new_state.board.pieces[new_y][new_x].queen = true;
 
-    // if (checkMultipleJumps(new_state, new_x, new_y))
-    //   // if the player can jump again, do not change the player
-    //   return new_state;
+    if (get_eat_actions(new_state, new_x, new_y).size() > 0)
+      return new_state;
 
+    new_state.board = flip(new_state.board);
     new_state.player = state.player.next();
     return new_state;
   }
 
-  static constexpr auto legal_actions(const State& _) -> torch::Tensor {
-    auto legal_actions = torch::zeros({8, 8, 4, 7}, torch::kFloat32);
+  struct ActionNode {
+    int action;
+    std::vector<ActionNode> children;
 
-    // // check for multiple eating moves
-    // for (std::size_t y = 0; y < 8; y++)
-    //   for (std::size_t x = 0; x < 8; x++)
-    //     if (state.board.pieces[y][x].valid) {
-    //       // only check for eats if the piece is valid
-    //       for (std::size_t direction = 0; direction < 4; direction++)
-    //         for (std::size_t distance = 2; distance <= 7; distance++) {
-    //           legal_actions[y][x][direction][distance] = [&] {
-    //             if (not state.board.pieces[y][x].queen and distance > 2)
-    //               // only queens can move more than 2 spaces
-    //               return 0.0;
+    auto height() const -> int {
+      if (children.empty())
+        return 1;
+      else
+        return 1 + std::ranges::max(
+                       children | std::views::transform([](const auto& child) {
+                         return child.height();
+                       }));
+    }
+  };
 
-    //             auto new_x = x;
-    //             auto new_y = y;
+  static constexpr auto get_eat_actions(const State& state, int x, int y)
+      -> std::vector<ActionNode> {
+    auto actions = std::vector<ActionNode>{};
 
-    //             if (direction == 0) {
-    //               // move diagonally to the upper left
-    //               new_x -= distance;
-    //               new_y -= distance;
-    //             } else if (direction == 1) {
-    //               // move diagonally to the upper right
-    //               new_x += distance;
-    //               new_y -= distance;
-    //             } else if (direction == 2) {
-    //               // move diagonally to the lower left
-    //               new_x -= distance;
-    //               new_y += distance;
-    //             } else if (direction == 3) {
-    //               // move diagonally to the lower right
-    //               new_x += distance;
-    //               new_y += distance;
-    //             }
+    auto piece = state.board.pieces[y][x];
 
-    //             if (new_x < 0 or new_x > 7 or new_y < 0 or
-    //                 new_y > 7)  // out of bounds
-    //               return 0.0;
+    if (piece.queen) {
+      for (auto distance = 2; x - distance >= 0 and y + distance < 8;
+           distance++)
+        if (not state.board.pieces[y + distance][x - distance].occup)
+          for (auto enemy = 1; enemy < distance; enemy++)
+            if (state.board.pieces[y + enemy][x - enemy].enemy) {
+              auto valid = true;
 
-    //             if (state.board.pieces[new_y][new_x].valid)  // already
-    //             occupied
-    //               return 0.0;
+              for (auto between = distance - enemy + 1; between < distance;
+                   between++)
+                if (state.board.pieces[y + between][x - between].occup)
+                  valid = false;
 
-    //             return 1.0;
-    //           }();
-    //         }
-    //     }
+              if (valid) {
+                auto action =
+                    (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 0) + (8 * y) + x;
+                actions.push_back(
+                    {action, get_eat_actions(apply_action(state, action),
+                                             x - distance, y + distance)});
+              }
+            }
+      for (auto distance = 2; x + distance < 8 and y + distance < 8; distance++)
+        if (not state.board.pieces[y + distance][x + distance].occup)
+          for (auto enemy = 1; enemy < distance; enemy++)
+            if (state.board.pieces[y + enemy][x + enemy].enemy) {
+              auto valid = true;
 
-    // for (std::size_t y = 0; y < 8; y++)
-    //   for (std::size_t x = 0; x < 8; x++)
-    //     if (state.board.pieces[y][x].valid) {
-    //       for (std::size_t direction = 0; direction < 4; direction++) {
-    //         auto jumps = std::vector<Action>{};
-    //         legal_actions[y][x][direction][1] = [&] {
-    //           auto enemy_x = x;
-    //           auto enemy_y = y;
+              for (auto between = distance - enemy + 1; between < distance;
+                   between++)
+                if (state.board.pieces[y + between][x + between].occup)
+                  valid = false;
 
-    //           auto new_x = x;
-    //           auto new_y = y;
+              if (valid) {
+                auto action =
+                    (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 1) + (8 * y) + x;
+                actions.push_back(
+                    {action, get_eat_actions(apply_action(state, action),
+                                             x + distance, y + distance)});
+              }
+            }
+      for (auto distance = 2; x - distance >= 0 and y - distance >= 0;
+           distance++)
+        if (not state.board.pieces[y - distance][x - distance].occup)
+          for (auto enemy = 1; enemy < distance; enemy++)
+            if (state.board.pieces[y - enemy][x - enemy].enemy) {
+              auto valid = true;
 
-    //           if (direction == 0) {
-    //             // move diagonally to the upper left
-    //             enemy_x -= 1;
-    //             enemy_y -= 1;
-    //             new_x -= 2;
-    //             new_y -= 2;
-    //           } else if (direction == 1) {
-    //             // move diagonally to the upper right
-    //             enemy_x += 1;
-    //             enemy_y -= 1;
-    //             new_x += 2;
-    //             new_y -= 2;
-    //           }
+              for (auto between = distance - enemy + 1; between < distance;
+                   between++)
+                if (state.board.pieces[y - between][x - between].occup)
+                  valid = false;
 
-    //           if (new_x < 0 or new_x > 7 or new_y < 0 or
-    //               new_y > 7)  // out of bounds
-    //             return 0.0;
+              if (valid) {
+                auto action =
+                    (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 2) + (8 * y) + x;
+                actions.push_back(
+                    {action, get_eat_actions(apply_action(state, action),
+                                             x - distance, y - distance)});
+              }
+            }
+      for (auto distance = 2; x + distance < 8 and y - distance >= 0;
+           distance++)
+        if (not state.board.pieces[y - distance][x + distance].occup)
+          for (auto enemy = 1; enemy < distance; enemy++)
+            if (state.board.pieces[y - enemy][x + enemy].enemy) {
+              auto valid = true;
 
-    //           if (state.board.pieces[new_y][new_x].valid)  // already
-    //           occupied
-    //             return 0.0;
+              for (auto between = distance - enemy + 1; between < distance;
+                   between++)
+                if (state.board.pieces[y - between][x + between].occup)
+                  valid = false;
 
-    //           if (not state.board.pieces[enemy_y][enemy_x].enemy)
-    //             return 0.0;
+              if (valid) {
+                auto action =
+                    (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 3) + (8 * y) + x;
+                actions.push_back(
+                    {action, get_eat_actions(apply_action(state, action),
+                                             x + distance, y - distance)});
+              }
+            }
+    } else {
+      if (y + 2 < 8) {
+        if (x - 2 >= 0 and not state.board.pieces[y + 2][x - 2].occup and
+            state.board.pieces[y + 1][x - 1].enemy) {
+          auto action = (8 * 8 * 4 * 1) + (8 * 8 * 0) + (8 * y) + x;
+          actions.push_back(
+              {action,
+               get_eat_actions(apply_action(state, action), x - 2, y + 2)});
+        }
+        if (x + 2 < 8 and not state.board.pieces[y + 2][x + 2].occup and
+            state.board.pieces[y + 1][x + 1].enemy) {
+          auto action = (8 * 8 * 4 * 1) + (8 * 8 * 1) + (8 * y) + x;
+          actions.push_back(
+              {action,
+               get_eat_actions(apply_action(state, action), x + 2, y + 2)});
+        }
+      }
+    }
 
-    //           return 1.0;
-    //         }();
-    //       }
-
-    //       for (std::size_t direction = 0; direction < 4; direction++) {
-    //         legal_actions[y][x][direction][1] = [&] {
-    //           auto new_x = x;
-    //           auto new_y = y;
-
-    //           if (direction == 0) {
-    //             // move diagonally to the upper left
-    //             new_x -= 1;
-    //             new_y -= 1;
-    //           } else if (direction == 1) {
-    //             // move diagonally to the upper right
-    //             new_x += 1;
-    //             new_y -= 1;
-    //           }
-
-    //           if (new_x < 0 or new_x > 7 or new_y < 0 or
-    //               new_y > 7)  // out of bounds
-    //             return 0.0;
-
-    //           if (state.board.pieces[new_y][new_x].valid)  // already
-    //           occupied
-    //             return 0.0;
-
-    //           return 1.0;
-    //         }();
-    //       }
-    //     }
-
-    return legal_actions;
+    return actions;
   }
 
-  static constexpr auto terminal_value(const State& state, Action)
+  static constexpr auto get_jump_actions(const State& state, int x, int y)
+      -> std::vector<Action> {
+    auto actions = std::vector<Action>{};
+
+    auto piece = state.board.pieces[y][x];
+
+    assert(not piece.enemy);
+
+    if (piece.queen) {
+      for (auto distance = 1; x - distance >= 0 and y + distance < 8;
+           distance++)
+        if (not state.board.pieces[y + distance][x - distance].occup) {
+          auto valid = true;
+
+          for (auto between = 1; between < distance; between++)
+            if (state.board.pieces[y + between][x - between].occup)
+              valid = false;
+
+          if (valid) {
+            auto action =
+                (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 0) + (8 * y) + x;
+            actions.push_back(action);
+          }
+        }
+      for (auto distance = 1; x + distance < 8 and y + distance < 8; distance++)
+        if (not state.board.pieces[y + distance][x + distance].occup) {
+          auto valid = true;
+
+          for (auto between = 1; between < distance; between++)
+            if (state.board.pieces[y + between][x + between].occup)
+              valid = false;
+
+          if (valid) {
+            auto action =
+                (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 1) + (8 * y) + x;
+            actions.push_back(action);
+          }
+        }
+      for (auto distance = 1; x - distance >= 0 and y - distance >= 0;
+           distance++)
+        if (not state.board.pieces[y - distance][x - distance].occup) {
+          auto valid = true;
+
+          for (auto between = 1; between < distance; between++)
+            if (state.board.pieces[y - between][x - between].occup)
+              valid = false;
+
+          if (valid) {
+            auto action =
+                (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 2) + (8 * y) + x;
+            actions.push_back(action);
+          }
+        }
+      for (auto distance = 1; x + distance < 8 and y - distance >= 0;
+           distance++)
+        if (not state.board.pieces[y - distance][x + distance].occup) {
+          auto valid = true;
+
+          for (auto between = 1; between < distance; between++)
+            if (state.board.pieces[y - between][x + between].occup)
+              valid = false;
+
+          if (valid) {
+            auto action =
+                (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 3) + (8 * y) + x;
+            actions.push_back(action);
+          }
+        }
+    } else {
+      if (y + 1 < 8) {
+        if (x - 1 >= 0 and not state.board.pieces[y + 1][x - 1].occup) {
+          auto action = (8 * 8 * 4 * 0) + (8 * 8 * 0) + (8 * y) + x;
+          actions.push_back(action);
+        }
+        if (x + 1 < 8 and not state.board.pieces[y + 1][x + 1].occup) {
+          auto action = (8 * 8 * 4 * 0) + (8 * 8 * 1) + (8 * y) + x;
+          actions.push_back(action);
+        }
+      }
+    }
+
+    return actions;
+  }
+
+  static constexpr auto legal_actions(const State& state) -> torch::Tensor {
+    auto legal_actions = std::vector<Action>{};
+
+    auto pieces = std::vector<std::pair<int, int>>{};
+
+    for (int y = 0; y < 8; y++)
+      for (int x = 0; x < 8; x++)
+        if (state.board.pieces[y][x].occup)
+          if (not state.board.pieces[y][x].enemy)
+            pieces.push_back({x, y});
+
+    auto eat_actions = std::vector<ActionNode>{};
+    for (auto& [x, y] : pieces)
+      eat_actions.append_range(get_eat_actions(state, x, y));
+
+    auto heights =
+        eat_actions |
+        std::views::transform([](const auto& node) { return node.height(); }) |
+        std::ranges::to<std::vector>();
+
+    for (auto it = std::max_element(heights.begin(), heights.end());
+         it != heights.end(); it = std::find(it + 1, heights.end(), *it))
+      legal_actions.push_back(
+          eat_actions[std::distance(heights.begin(), it)].action);
+
+    auto legal_actions_tensor = torch::zeros(ActionSize, torch::kFloat32);
+    if (not legal_actions.empty()) {
+      for (auto& action : legal_actions)
+        legal_actions_tensor[action] = 1.0;
+
+      return legal_actions_tensor;
+    }
+
+    for (auto& [x, y] : pieces)
+      legal_actions.append_range(get_jump_actions(state, x, y));
+
+    for (auto& action : legal_actions)
+      legal_actions_tensor[action] = 1.0;
+
+    return legal_actions_tensor;
+  }
+
+  static constexpr auto terminal_value(const State& state, Action action)
       -> std::optional<double> {
-    if (legal_actions(state).sum(0).item<double>() == 0.0) {
+    if (legal_actions(apply_action(state, action)).sum(0).item<double>() ==
+        0.0) {
       auto [first, second] = state.scores;
       if (first > second)
         return {1.0};
@@ -310,7 +457,7 @@ struct Damath {
       else
         return {0.0};
     } else
-      return {};
+      return std::nullopt;
   }
 
   // static constexpr auto encode_state(const State& state) -> torch::Tensor {
@@ -326,10 +473,10 @@ struct Damath {
     auto& board = state.board;
     auto [first, second] = state.scores;
     std::print("Score: {:.5f} {:.5f}\n", first, second);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 7; i >= 0; i--) {
       for (int j = 0; j < 8; j++) {
-        if (board.pieces[i][j].valid == 1) {
-          std::print(" {: ^3} ", (board.pieces[i][j].oppos ? -1 : 1) *
+        if (board.pieces[i][j].occup) {
+          std::print(" {: ^3} ", (board.pieces[i][j].ngtve ? -1 : 1) *
                                      board.pieces[i][j].value);
         } else {
           std::print(" {: ^3} ", board.operators[i][j]);
@@ -441,11 +588,44 @@ auto main() -> int {
                  direction == 0 or direction == 2 ? "left" : "right");
     return (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + (x);
   };
-  state = Damath::apply_action(state, action(1, 5, 1, 2));
+
+  auto get_action = [&](auto action) {
+    auto distance = (action / (8 * 8 * 4)) + 1;
+    auto direction = (action % (8 * 8 * 4)) / (8 * 8);
+    auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
+    auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
+    return std::make_tuple(x, y, direction, distance);
+  };
+
+  auto legal_actions = Damath::legal_actions(state).nonzero();
+  for (int i = 0; i < legal_actions.size(0); i++) {
+    auto action = legal_actions[i].item<int>();
+    auto [x, y, direction, distance] = get_action(action);
+    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
+                 distance, direction == 0 or direction == 2 ? "left" : "right");
+  }
+
+  state = Damath::apply_action(state, action(3, 2, 1, 2));
   Damath::print(state);
 
-  state = Damath::apply_action(state, action(4, 2, 2, 2));
+  legal_actions = Damath::legal_actions(state).nonzero();
+  for (int i = 0; i < legal_actions.size(0); i++) {
+    auto action = legal_actions[i].item<int>();
+    auto [x, y, direction, distance] = get_action(action);
+    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
+                 distance, direction == 0 or direction == 2 ? "left" : "right");
+  }
+
+  state = Damath::apply_action(state, action(1, 2, 1, 2));
   Damath::print(state);
+
+  legal_actions = Damath::legal_actions(state).nonzero();
+  for (int i = 0; i < legal_actions.size(0); i++) {
+    auto action = legal_actions[i].item<int>();
+    auto [x, y, direction, distance] = get_action(action);
+    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
+                 distance, direction == 0 or direction == 2 ? "left" : "right");
+  }
 
   return 0;
 }

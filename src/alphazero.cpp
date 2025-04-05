@@ -85,6 +85,9 @@ class AlphaZero {
              std::shared_ptr<torch::optim::Optimizer> optimizer) -> void {
     namespace F = torch::nn::functional;
 
+    if (memory.size() % config_.batch_size == 1)
+      memory.pop();
+    
     std::println("Memory size {}", memory.size());
 
     model->train();
