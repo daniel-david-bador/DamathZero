@@ -17,6 +17,7 @@ export struct Config {
 
   int32_t num_training_epochs = 4;
   int32_t num_model_evaluation_iterations = 50;
+  int32_t num_model_evaluation_simulations = 1000;
 
   size_t batch_size = 64;
 

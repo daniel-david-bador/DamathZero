@@ -42,9 +42,9 @@ class AlphaZero {
       train(memory, model, optimizer);
       save_model(model, i);
 
-      auto [wins, draws, losses] =
-          arena.play(model, best_model, config_.num_model_evaluation_iterations,
-                     /*num_simulations=*/1000);
+      auto [wins, draws, losses] = arena.play(
+          model, best_model, config_.num_model_evaluation_iterations,
+          /*num_simulations=*/config_.num_model_evaluation_simulations);
 
       auto did_win =
           wins + draws >
@@ -87,7 +87,7 @@ class AlphaZero {
 
     if (memory.size() % config_.batch_size == 1)
       memory.pop();
-    
+
     std::println("Memory size {}", memory.size());
 
     model->train();
