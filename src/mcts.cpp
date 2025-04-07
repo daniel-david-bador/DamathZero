@@ -68,8 +68,6 @@ class MCTS {
     auto& child = nodes_.get(id);
     auto& parent = nodes_.get(child.parent_id);
 
-    assert(child.player != parent.player);
-
     auto exploration = child.prior * config_.C *
                        (std::sqrt(parent.visits) / (1 + child.visits));
 
@@ -121,14 +119,12 @@ class MCTS {
     policy /= policy.sum();
 
     auto parent = nodes_.as_ref(parent_id);
-    assert(parent->player == state.player);
 
     auto actions = legal_actions.nonzero();
     for (auto i = 0; i < actions.size(0); i++) {
       auto action = actions[i].template item<Action>();
       auto prior = policy[action].template item<double>();
       auto new_state = Game::apply_action(state, action);
-      assert(new_state.player != state.player);
       parent.create_child(new_state.player, action, prior);
     }
 

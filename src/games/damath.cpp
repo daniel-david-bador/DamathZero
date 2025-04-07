@@ -3,18 +3,14 @@
 import std;
 import alphazero;
 
-struct Network : torch::nn::Module {
-  torch::nn::Linear fc1, fc2, value_head, policy_head;
-  torch::nn::BatchNorm1d bn1, bn2;
-
+struct Network : public torch::nn::Module {
   Network()
-      : fc1(register_module("fc1", torch::nn::Linear(64, 128))),
-        fc2(register_module("fc2", torch::nn::Linear(128, 32))),
-        value_head(register_module("value", torch::nn::Linear(32, 1))),
-        policy_head(
-            register_module("policy", torch::nn::Linear(32, 8 * 8 * 4 * 7))),
-        bn1(register_module("bn1", torch::nn::BatchNorm1d(32))),
-        bn2(register_module("bn2", torch::nn::BatchNorm1d(32))) {}
+      : fc1(register_module("fc1", torch::nn::Linear(256, 1024))),
+        fc2(register_module("fc2", torch::nn::Linear(1024, 1024))),
+        wdl_head(register_module("value", torch::nn::Linear(1024, 3))),
+        policy_head(register_module("policy", torch::nn::Linear(1024, 1792))),
+        bn1(register_module("bn1", torch::nn::BatchNorm1d(1024))),
+        bn2(register_module("bn2", torch::nn::BatchNorm1d(1024))) {}
 
   auto forward(torch::Tensor x) -> std::tuple<torch::Tensor, torch::Tensor> {
     x = torch::relu(fc1->forward(x));
@@ -22,12 +18,17 @@ struct Network : torch::nn::Module {
     x = torch::relu(fc2->forward(x));
     x = torch::relu(bn2->forward(x));
 
-    auto value = torch::tanh(value_head->forward(x));
+    auto wdl = torch::tanh(wdl_head->forward(x));
     auto policy = policy_head->forward(x);
 
-    return {value, policy};
+    return {wdl, policy};
   }
+
+  torch::nn::Linear fc1, fc2, wdl_head, policy_head;
+  torch::nn::BatchNorm1d bn1, bn2;
 };
+
+static_assert(AZ::Concepts::Network<Network>);
 
 struct Damath {
   using Action = AZ::Action;
@@ -72,6 +73,7 @@ struct Damath {
     Board board = Board{};
     Player player = Player::First;
     std::pair<double, double> scores{0.0, 0.0};
+    int draw_count = 0;
   };
 
   static constexpr auto flip(const Board& board) -> Board {
@@ -109,10 +111,12 @@ struct Damath {
     auto new_x = x;
     auto new_y = y;
 
+    new_state.draw_count += 1;
+    auto has_eaten = false;
+
     auto eat = [&](auto enemy_x, auto enemy_y) {
       auto op = state.board.operators[new_y][new_x];
-      auto& score = state.player.is_first() ? new_state.scores.first
-                                            : new_state.scores.second;
+      auto& score = new_state.scores.first;
       auto player_value =
           static_cast<double>((state.board.pieces[y][x].ngtve ? -1 : 1) *
                               state.board.pieces[y][x].value);
@@ -128,7 +132,9 @@ struct Damath {
       } else if (op == '/') {
         score += (player_value / opponent_value);
       }
+      new_state.draw_count = 0;
       new_state.board.pieces[enemy_y][enemy_x] = {0, 0, 0, 0, 0};
+      has_eaten = true;
     };
 
     if (direction == 0) {  // move diagonally to the upper left
@@ -188,11 +194,15 @@ struct Damath {
         (new_y == 0 or new_y == 7))
       new_state.board.pieces[new_y][new_x].queen = true;
 
-    if (get_eat_actions(new_state, new_x, new_y).size() > 0)
+    if (has_eaten and get_eat_actions(new_state, new_x, new_y).size() > 0)
       return new_state;
+
+    auto [score1, score2] = new_state.scores;
 
     new_state.board = flip(new_state.board);
     new_state.player = state.player.next();
+    new_state.scores.first = score2;
+    new_state.scores.second = score1;
     return new_state;
   }
 
@@ -225,8 +235,7 @@ struct Damath {
             if (state.board.pieces[y + enemy][x - enemy].enemy) {
               auto valid = true;
 
-              for (auto between = distance - enemy + 1; between < distance;
-                   between++)
+              for (auto between = enemy + 1; between < distance; between++)
                 if (state.board.pieces[y + between][x - between].occup)
                   valid = false;
 
@@ -244,8 +253,7 @@ struct Damath {
             if (state.board.pieces[y + enemy][x + enemy].enemy) {
               auto valid = true;
 
-              for (auto between = distance - enemy + 1; between < distance;
-                   between++)
+              for (auto between = enemy + 1; between < distance; between++)
                 if (state.board.pieces[y + between][x + between].occup)
                   valid = false;
 
@@ -264,8 +272,7 @@ struct Damath {
             if (state.board.pieces[y - enemy][x - enemy].enemy) {
               auto valid = true;
 
-              for (auto between = distance - enemy + 1; between < distance;
-                   between++)
+              for (auto between = enemy + 1; between < distance; between++)
                 if (state.board.pieces[y - between][x - between].occup)
                   valid = false;
 
@@ -284,8 +291,7 @@ struct Damath {
             if (state.board.pieces[y - enemy][x + enemy].enemy) {
               auto valid = true;
 
-              for (auto between = distance - enemy + 1; between < distance;
-                   between++)
+              for (auto between = enemy + 1; between < distance; between++)
                 if (state.board.pieces[y - between][x + between].occup)
                   valid = false;
 
@@ -312,6 +318,22 @@ struct Damath {
           actions.push_back(
               {action,
                get_eat_actions(apply_action(state, action), x + 2, y + 2)});
+        }
+      }
+      if (y - 2 >= 0) {
+        if (x - 2 >= 0 and not state.board.pieces[y - 2][x - 2].occup and
+            state.board.pieces[y - 1][x - 1].enemy) {
+          auto action = (8 * 8 * 4 * 1) + (8 * 8 * 2) + (8 * y) + x;
+          actions.push_back(
+              {action,
+               get_eat_actions(apply_action(state, action), x - 2, y - 2)});
+        }
+        if (x + 2 < 8 and not state.board.pieces[y - 2][x + 2].occup and
+            state.board.pieces[y - 1][x + 1].enemy) {
+          auto action = (8 * 8 * 4 * 1) + (8 * 8 * 3) + (8 * y) + x;
+          actions.push_back(
+              {action,
+               get_eat_actions(apply_action(state, action), x + 2, y - 2)});
         }
       }
     }
@@ -445,187 +467,202 @@ struct Damath {
     return legal_actions_tensor;
   }
 
-  static constexpr auto terminal_value(const State& state, Action action)
-      -> std::optional<double> {
-    if (legal_actions(apply_action(state, action)).sum(0).item<double>() ==
-        0.0) {
+  static constexpr auto get_outcome(const State& state, Action action)
+      -> std::optional<AZ::GameOutcome> {
+    if (state.draw_count >= 80)
+      return AZ::GameOutcome::Draw;
+
+    if (legal_actions(state).sum(0).item<double>() == 0.0) {
+      auto distance = (action / (8 * 8 * 4)) + 1;
+      auto direction = (action % (8 * 8 * 4)) / (8 * 8);
+      auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
+      auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
+
+      auto old_x = x;
+      auto old_y = y;
+
+      if (direction == 0) {  // move diagonally to the upper left
+        old_x += distance;
+        old_y -= distance;
+      } else if (direction == 1) {  // move diagonally to the upper right
+        old_x -= distance;
+        old_y -= distance;
+      } else if (direction == 2) {  // move diagonally to the lower left
+        old_x += distance;
+        old_y += distance;
+      } else if (direction == 3) {  // move diagonally to the lower right
+        old_x -= distance;
+        old_y += distance;
+      }
+
+      auto piece = state.board.pieces[old_y][old_x];
+
       auto [first, second] = state.scores;
       if (first > second)
-        return {1.0};
+        return not piece.enemy ? AZ::GameOutcome::Win : AZ::GameOutcome::Loss;
       else if (first < second)
-        return {-1.0};
+        return not piece.enemy ? AZ::GameOutcome::Loss : AZ::GameOutcome::Win;
       else
-        return {0.0};
+        return AZ::GameOutcome::Draw;
     } else
-      return std::nullopt;
+      return {};
   }
 
-  // static constexpr auto encode_state(const State& state) -> torch::Tensor {
-  //   auto encoded_state = torch::zeros(ActionSize, torch::kFloat32);
-  //   auto flip = state.player.is_first() ? 1 : -1;
-  //   for (std::size_t i = 0; i < state.data.size(); i++)
-  //     encoded_state[i] = state.data[i] * flip;
+  static constexpr auto encode_state(const State& state) -> torch::Tensor {
+    auto encoded_state = torch::zeros(256, torch::kFloat32);
+    for (int x = 0; x < 8; x++) {
+      for (int y = 0; y < 8; y++) {
+        if (state.player.is_first()) {
+          if (state.board.pieces[y][x].occup) {
+            auto& piece = state.board.pieces[y][x];
+            auto value = (piece.ngtve ? -1 : 1) * piece.value;
+            auto index = (8 * 8 * (not piece.enemy ? 0 : 1)) + (8 * y) + (x);
+            encoded_state[index] = value;
+          }
+          encoded_state[(8 * 8 * 2) + (8 * y) + x] = state.scores.first;
+          encoded_state[(8 * 8 * 3) + (8 * y) + x] = state.scores.second;
+        } else {
+          if (state.board.pieces[y][x].occup) {
+            auto& piece = state.board.pieces[y][x];
+            auto value = (piece.ngtve ? -1 : 1) * piece.value;
+            auto index = (8 * 8 * (piece.enemy ? 0 : 1)) + (8 * y) + (x);
+            encoded_state[index] = value;
+          }
+          encoded_state[(8 * 8 * 2) + (8 * y) + x] = state.scores.second;
+          encoded_state[(8 * 8 * 3) + (8 * y) + x] = state.scores.first;
+        }
+      }
+    }
 
-  //   return encoded_state;
-  // }
+    return encoded_state;
+  }
 
   static constexpr auto print(const State& state) -> void {
     auto& board = state.board;
     auto [first, second] = state.scores;
     std::print("Score: {:.5f} {:.5f}\n", first, second);
     for (int i = 7; i >= 0; i--) {
+      std::print(" {: ^3} ", i);
       for (int j = 0; j < 8; j++) {
         if (board.pieces[i][j].occup) {
+          if (board.pieces[i][j].queen)
+            std::cout << "\033[1m";  // bold
+          std::cout << (board.pieces[i][j].enemy ? "\033[31m"
+                                                 : "\033[34m");  // blue
           std::print(" {: ^3} ", (board.pieces[i][j].ngtve ? -1 : 1) *
                                      board.pieces[i][j].value);
+          std::cout << "\033[0m";  // reset color
         } else {
           std::print(" {: ^3} ", board.operators[i][j]);
         }
       }
       std::println();
     }
+
+    std::print("     ");
+    for (int i = 0; i < 8; i++) {
+      std::print(" {: ^3} ", i);
+    }
+    std::println();
   }
 };
 
-// static_assert(AlphaZero::Concepts::Game<Damath>);
+static_assert(AZ::Concepts::Game<Damath>);
 
-// struct Agent {
-//   static constexpr auto player = AlphaZero::Player::First;
+struct Agent {
+  static constexpr auto player = AZ::Player::First;
 
-//   Agent(std::shared_ptr<Network> model) : model(model) {}
+  auto on_move(const Damath::State& state) -> AZ::Action {
+    Damath::print(state);
 
-//   auto on_move(const Damath::State& state) -> AlphaZero::Action {
-//     Damath::print(state);
+    auto get_action = [&](auto action) {
+      auto distance = (action / (8 * 8 * 4)) + 1;
+      auto direction = (action % (8 * 8 * 4)) / (8 * 8);
+      auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
+      auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
+      return std::make_tuple(x, y, direction, distance);
+    };
 
-//     std::cout << Damath::legal_actions(state).nonzero() << '\n';
+    auto legal_actions = Damath::legal_actions(state).nonzero();
+    for (int i = 0; i < legal_actions.size(0); i++) {
+      auto action = legal_actions[i].item<int>();
+      auto [x, y, direction, distance] = get_action(action);
+      std::println("[{}] ({}, {}) {} {} {}", action, x, y,
+                   direction < 2 ? "up" : "down", distance,
+                   direction == 0 or direction == 2 ? "left" : "right");
+    }
 
-//     int input = 0;
-//     std::cout << "Enter action: ";
-//     std::cin >> input;
-//     return static_cast<AlphaZero::Action>(input);
-//   }
+    int input = 0;
+    std::cout << "Enter action: ";
+    std::cin >> input;
+    return static_cast<AZ::Action>(input);
+  }
 
-//   auto on_model_move(const Damath::State& state, torch::Tensor probs,
-//                      AlphaZero::Action _) -> void {
-//     auto feature = torch::unsqueeze(Damath::encode_state(state), 0);
+  auto on_model_move(const Damath::State& state, torch::Tensor probs,
+                     AZ::Action) -> void {
+    Damath::print(state);
+    auto feature = torch::unsqueeze(Damath::encode_state(state), 0);
 
-//     auto [value, policy] = model->forward(feature);
-//     policy = torch::softmax(torch::squeeze(policy, 0), -1);
-//     policy *= Damath::legal_actions(state);
-//     policy /= policy.sum();
+    auto legal_actions = Damath::legal_actions(state);
 
-//     std::cout << "Policy: " << policy << "\n";
-//     std::cout << "MCTS: " << probs << "\n";
-//     std::cout << "Value: " << value << "\n";
-//   }
+    auto [wdl, policy] = model->forward(feature);
+    policy = torch::softmax(torch::squeeze(policy, 0), -1);
+    policy *= legal_actions;
+    policy /= policy.sum();
 
-//   auto on_game_end(const Damath::State& state, AlphaZero::GameResult
-//   result)
-//       -> void {
-//     auto new_state = state;
+    std::cout << "Legal actions: " << legal_actions.nonzero().transpose(0, 1)
+              << "\n";
+    std::cout << "Policy: "
+              << policy.index({legal_actions.nonzero()}).transpose(0, 1)
+              << "\n";
+    std::cout << "MCTS: "
+              << probs.index({legal_actions.nonzero()}).transpose(0, 1) << "\n";
+    std::cout << "Win-Draw-Loss: " << wdl << "\n";
+  }
 
-//     // flip the player before printing it>
-//     new_state.player = player;
-//     Damath::print(new_state);
+  auto on_game_end(const Damath::State& state, AZ::GameOutcome result) -> void {
+    auto new_state = state;
 
-//     switch (result) {
-//       case AlphaZero::GameResult::Win:
-//         std::println("You won!");
-//         break;
-//       case AlphaZero::GameResult::Lost:
-//         std::println("You lost!");
-//         break;
-//       case AlphaZero::GameResult::Draw:
-//         std::println("Draw!");
-//         break;
-//     }
-//   }
+    // flip the player before printing it>
+    new_state.player = player;
+    Damath::print(new_state);
 
-//   std::shared_ptr<Network> model;
-// };
+    if (result == AZ::GameOutcome::Win) {
+      std::println("You won!");
+    } else if (result == AZ::GameOutcome::Loss) {
+      std::println("You lost!");
+    } else {
+      std::println("Draw!");
+    }
+  }
 
-// static_assert(AlphaZero::Concepts::Agent<Agent, Damath>);
+  std::shared_ptr<Network> model;
+};
 
-// auto main() -> int {
-//   torch::DeviceGuard device_guard(torch::kCPU);
-//   auto config = AlphaZero::Config{
-//       .num_iterations = 1,
-//       .num_simulations = 60,
-//       .num_self_play_iterations = 500,
-//       .num_actors = 6,
-//       .device = torch::kCPU,
-//   };
-
-//   auto model = std::make_shared<Network>();
-//   auto optimizer = std::make_shared<torch::optim::Adam>(
-//       model->parameters(), torch::optim::AdamOptions(0.001));
-
-//   auto rng = std::random_device{};
-
-//   auto alpha_zero = AlphaZero::AlphaZero<Damath>{
-//       config,
-//       model,
-//       optimizer,
-//       rng,
-//   };
-
-//   alpha_zero.learn();
-
-//   auto arena = AlphaZero::Arena<Damath>(config);
-//   arena.play_with_model(model, 1000, Agent{model});
-
-//   return 0;
-// }
+static_assert(AZ::Concepts::Agent<Agent, Damath>);
 
 auto main() -> int {
-  auto state = Damath::initial_state();
-  Damath::print(state);
-
-  auto action = [&](auto x, auto y, auto direction, auto distance) {
-    std::println("Player {} moves ({},{}) {} {} block to the {}!",
-                 state.player.is_first() ? 1 : 2, x, y,
-                 direction < 2 ? "up" : "down", distance,
-                 direction == 0 or direction == 2 ? "left" : "right");
-    return (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + (x);
+  auto config = AZ::Config{
+      .num_iterations = 1,
+      .num_simulations = 10,
+      .num_self_play_iterations_per_actor = 100,
+      .num_actors = 1,
+      .num_model_evaluation_simulations = 10,
+      .device = torch::kCPU,
   };
 
-  auto get_action = [&](auto action) {
-    auto distance = (action / (8 * 8 * 4)) + 1;
-    auto direction = (action % (8 * 8 * 4)) / (8 * 8);
-    auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
-    auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
-    return std::make_tuple(x, y, direction, distance);
+  auto gen = std::mt19937{};
+
+  auto alpha_zero = AZ::AlphaZero<Damath, Network>{
+      config,
+      gen,
   };
 
-  auto legal_actions = Damath::legal_actions(state).nonzero();
-  for (int i = 0; i < legal_actions.size(0); i++) {
-    auto action = legal_actions[i].item<int>();
-    auto [x, y, direction, distance] = get_action(action);
-    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
-                 distance, direction == 0 or direction == 2 ? "left" : "right");
-  }
+  auto model = alpha_zero.learn();
 
-  state = Damath::apply_action(state, action(3, 2, 1, 2));
-  Damath::print(state);
-
-  legal_actions = Damath::legal_actions(state).nonzero();
-  for (int i = 0; i < legal_actions.size(0); i++) {
-    auto action = legal_actions[i].item<int>();
-    auto [x, y, direction, distance] = get_action(action);
-    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
-                 distance, direction == 0 or direction == 2 ? "left" : "right");
-  }
-
-  state = Damath::apply_action(state, action(1, 2, 1, 2));
-  Damath::print(state);
-
-  legal_actions = Damath::legal_actions(state).nonzero();
-  for (int i = 0; i < legal_actions.size(0); i++) {
-    auto action = legal_actions[i].item<int>();
-    auto [x, y, direction, distance] = get_action(action);
-    std::println("({}, {}) {} {} {}", x, y, direction < 2 ? "up" : "down",
-                 distance, direction == 0 or direction == 2 ? "left" : "right");
-  }
+  auto arena = AZ::Arena<Damath, Network>(config);
+  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},
+                        AZ::Player::Second);
 
   return 0;
 }
