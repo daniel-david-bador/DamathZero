@@ -18,7 +18,7 @@ struct Network : public torch::nn::Module {
     x = torch::relu(fc2->forward(x));
     x = torch::relu(bn2->forward(x));
 
-    auto wdl = torch::softmax(wdl_head->forward(x), 0);
+    auto wdl = torch::softmax(wdl_head->forward(x), -1);
     auto policy = policy_head->forward(x);
 
     return {wdl, policy};
@@ -478,24 +478,24 @@ struct Damath {
       auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
       auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
 
-      auto old_x = x;
-      auto old_y = y;
+      auto new_x = x;
+      auto new_y = y;
 
       if (direction == 0) {  // move diagonally to the upper left
-        old_x += distance;
-        old_y -= distance;
+        new_x -= distance;
+        new_y += distance;
       } else if (direction == 1) {  // move diagonally to the upper right
-        old_x -= distance;
-        old_y -= distance;
+        new_x += distance;
+        new_y += distance;
       } else if (direction == 2) {  // move diagonally to the lower left
-        old_x += distance;
-        old_y += distance;
+        new_x -= distance;
+        new_y -= distance;
       } else if (direction == 3) {  // move diagonally to the lower right
-        old_x -= distance;
-        old_y += distance;
+        new_x += distance;
+        new_y -= distance;
       }
 
-      auto piece = state.board.pieces[old_y][old_x];
+      auto piece = state.board.pieces[new_y][new_x];
 
       auto [first, second] = state.scores;
       if (first > second)
