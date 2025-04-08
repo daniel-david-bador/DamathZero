@@ -5,7 +5,7 @@ import alphazero;
 
 struct Network : public torch::nn::Module {
   Network()
-      : fc1(register_module("fc1", torch::nn::Linear(256, 1024))),
+      : fc1(register_module("fc1", torch::nn::Linear(384, 1024))),
         fc2(register_module("fc2", torch::nn::Linear(1024, 1024))),
         wdl_head(register_module("value", torch::nn::Linear(1024, 3))),
         policy_head(register_module("policy", torch::nn::Linear(1024, 1792))),
@@ -18,7 +18,7 @@ struct Network : public torch::nn::Module {
     x = torch::relu(fc2->forward(x));
     x = torch::relu(bn2->forward(x));
 
-    auto wdl = torch::tanh(wdl_head->forward(x));
+    auto wdl = torch::softmax(wdl_head->forward(x), 0);
     auto policy = policy_head->forward(x);
 
     return {wdl, policy};
@@ -509,30 +509,60 @@ struct Damath {
   }
 
   static constexpr auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros(256, torch::kFloat32);
+    auto encoded_state = torch::zeros(384, torch::kFloat32);
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
         if (state.player.is_first()) {
+          encoded_state[(8 * 8 * 0) + (8 * y) + x] = state.scores.first;
+          encoded_state[(8 * 8 * 1) + (8 * y) + x] = state.scores.second;
           if (state.board.pieces[y][x].occup) {
             auto& piece = state.board.pieces[y][x];
             auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            auto index = (8 * 8 * (not piece.enemy ? 0 : 1)) + (8 * y) + (x);
+            auto index =
+                (8 * 8 * ((not piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0))) +
+                (8 * y) + (x);
             encoded_state[index] = value;
           }
-          encoded_state[(8 * 8 * 2) + (8 * y) + x] = state.scores.first;
-          encoded_state[(8 * 8 * 3) + (8 * y) + x] = state.scores.second;
         } else {
+          encoded_state[(8 * 8 * 0) + (8 * y) + x] = state.scores.second;
+          encoded_state[(8 * 8 * 1) + (8 * y) + x] = state.scores.first;
           if (state.board.pieces[y][x].occup) {
             auto& piece = state.board.pieces[y][x];
             auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            auto index = (8 * 8 * (piece.enemy ? 0 : 1)) + (8 * y) + (x);
+            auto index =
+                (8 * 8 * ((piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0))) +
+                (8 * y) + (x);
             encoded_state[index] = value;
           }
-          encoded_state[(8 * 8 * 2) + (8 * y) + x] = state.scores.second;
-          encoded_state[(8 * 8 * 3) + (8 * y) + x] = state.scores.first;
         }
       }
     }
+
+    // auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
+    // for (int x = 0; x < 8; x++) {
+    //   for (int y = 0; y < 8; y++) {
+    //     if (state.player.is_first()) {
+    //       encoded_state[x][y][0] = state.scores.first;
+    //       encoded_state[x][y][1] = state.scores.second;
+    //       if (state.board.pieces[y][x].occup) {
+    //         auto& piece = state.board.pieces[y][x];
+    //         auto value = (piece.ngtve ? -1 : 1) * piece.value;
+    //         encoded_state[x][y][(not piece.enemy ? 2 : 4) +
+    //                             (piece.queen ? 1 : 0)] = value;
+    //       }
+    //     } else {
+    //       encoded_state[x][y][0] = state.scores.second;
+    //       encoded_state[x][y][1] = state.scores.first;
+    //       if (state.board.pieces[y][x].occup) {
+    //         auto& piece = state.board.pieces[y][x];
+    //         auto value = (piece.ngtve ? -1 : 1) * piece.value;
+    //         encoded_state[x][y][(piece.enemy ? 2 : 4) + (piece.queen ? 1 :
+    //         0)] =
+    //             value;
+    //       }
+    //     }
+    //   }
+    // }
 
     return encoded_state;
   }
