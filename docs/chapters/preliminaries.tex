@@ -624,6 +624,18 @@ Damath comes from the Filipino checkers called ``dama'' and mathematics. Accordi
 
 Damath is very similar to the game of Checkers, except that the checkerboard has the basic mathematical operations (addition, subtraction, multiplication and division) on each playable tiles which dictates the operation that will be used when a piece of a player captures the piece of an opponent. It has numbers labeled 0-7 on its sides to determine the coordinates of the piece. Each piece of the player has corresponding values depending on what type of damath is being played. Both board and damath pieces are mostly made of thick cardboard or illustration board.
 
+\begin{figure}[htb]
+     \centering
+     \includegraphics[width=0.5\linewidth]{images/initial_state.png}
+     \caption{Initial State of Damath}
+     \label{fig:initial_state}
+\end{figure}
+ 
+If there is an opponent's figure in the path of the move and the square behind that figure is vacant, the player must capture the opponent's figure by jumping over it and removing it from the playing board. The capturing figure must perform a calculation based on the mathematical operator where the capturing figure lands. If multiple such successive captures exist, the player must perform them all in one move. The result of the calculation is added to the score of the player who captured the piece.
+
+If the player reaches opponent’s side of the board, the player's figure turns into a dama and hence has the ability to move diagonally forward and backward. Game is won if the opponent has no figures left on the board or is out of possible legal moves. The game ends in a draw if no pieces have been captured in the last 40 moves.
+ 
+
 \section{Existing AI Models for Damath}
 
 Although AI in Damath is less explored than in other board games, a few existing models attempt to simulate intelligent play within the rules of the game. These models are often based on rule-based algorithms or basic decision trees that follow predefined strategies. However, they have limitations, particularly in their inability to adapt dynamically to player strategies or to demonstrate the flexibility required for challenging higher-level human players.
