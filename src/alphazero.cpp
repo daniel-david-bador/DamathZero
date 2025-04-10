@@ -24,11 +24,8 @@ class AlphaZero {
  public:
   AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {}
 
-  auto learn() -> std::shared_ptr<Network> {
-    auto arena = Arena<Game, Network>(config_);
-
-    auto model = std::make_shared<Network>();
-    auto best_model = std::make_shared<Network>();
+  auto learn(std::shared_ptr<Network> model) {
+    // auto arena = Arena<Game, Network>(config_);
 
     auto optimizer = std::make_shared<torch::optim::Adam>(
         model->parameters(), torch::optim::AdamOptions(0.001));
@@ -40,27 +37,21 @@ class AlphaZero {
       generate_self_play_data(memory, model);
 
       train(memory, model, optimizer);
-      save_model(model, i);
-
-      auto [wins, draws, losses] = arena.play(
-          model, best_model, config_.num_model_evaluation_iterations,
-          /*num_simulations=*/config_.num_model_evaluation_simulations);
-
-      auto did_win =
-          wins + draws >
-          0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
-
-      std::println(
-          "Trained model {} against the best model with {} wins, {} draws, "
-          "and {} losses.",
-          did_win ? "won" : "lost", wins, draws, losses);
-
-      if (did_win) {
-        best_model = load_model(i);
-      }
+      // save_model(model, i);
+      // auto [wins, draws, losses] = arena.play(
+      //     model, best_model, config_.num_model_evaluation_iterations,
+      //     /*num_simulations=*/config_.num_model_evaluation_simulations);
+      //
+      // auto did_win =
+      //     wins + draws >
+      //     0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
+      //
+      // std::println(
+      //     "Trained model {} against the best model with {} wins, {} draws, "
+      //     "and {} losses.",
+      //     did_win ? "won" : "lost", wins, draws, losses);
     }
-
-    return best_model;
+    // return best_model;
   }
 
  private:
@@ -92,9 +83,8 @@ class AlphaZero {
 
     model->train();
     model->to(config_.device);
+    memory.shuffle();
     for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
-      memory.shuffle();
-
       for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
         auto [feature, target_value, target_policy] = memory.sample_batch(i);
         auto [out_value, out_policy] = model->forward(feature);
@@ -120,6 +110,7 @@ class AlphaZero {
     auto random_playout_indices = torch::randint(num_iterations, {n});
 
     for (auto i : std::views::iota(0, num_iterations)) {
+      std::println("{}", i);
       auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
       auto state = Game::initial_state();
       while (true) {

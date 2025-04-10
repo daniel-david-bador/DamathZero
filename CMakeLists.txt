@@ -21,6 +21,7 @@ target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/storage.cpp
   src/arena.cpp
   src/network.cpp
+  src/models/transformer.cpp
 )
 target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)
