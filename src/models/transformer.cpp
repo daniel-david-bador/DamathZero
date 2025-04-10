@@ -114,10 +114,10 @@ struct MLP : public nn::Module {
 struct Block : public nn::Module {
   Block(int32_t embedding_dim, int32_t num_attention_heads,
         int32_t mlp_hidden_size, float32_t mlp_dropout_prob) {
-    // auto opts = nn::LayerNormOptions({embedding_dim});
-    //
-    // layer_norm1 = register_module("layer_norm1", nn::LayerNorm(opts));
-    // layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
+    auto opts = nn::LayerNormOptions({embedding_dim});
+
+    layer_norm1 = register_module("layer_norm1", nn::LayerNorm(opts));
+    layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
 
     mlp =
         std::make_shared<MLP>(embedding_dim, mlp_hidden_size, mlp_dropout_prob);
@@ -127,9 +127,10 @@ struct Block : public nn::Module {
 
   auto forward(torch::Tensor x, bool output_attention = false)
       -> std::tuple<torch::Tensor, std::optional<torch::Tensor>> {
-    auto [attention_out, attention_probs] = attention->forward(x);
+    auto [attention_out, attention_probs] =
+        attention->forward(layer_norm1->forward(x));
     x = x + attention_out;
-    auto mlp_out = mlp->forward(x);
+    auto mlp_out = mlp->forward(layer_norm2->forward(x));
     x = x + mlp_out;
 
     if (not output_attention) {
@@ -138,9 +139,9 @@ struct Block : public nn::Module {
 
     return {x, attention_probs};
   }
-  //
-  // nn::LayerNorm layer_norm1{nullptr};
-  // nn::LayerNorm layer_norm2{nullptr};
+
+  nn::LayerNorm layer_norm1{nullptr};
+  nn::LayerNorm layer_norm2{nullptr};
 
   std::shared_ptr<MLP> mlp;
   std::shared_ptr<Attention> attention;
