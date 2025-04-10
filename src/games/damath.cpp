@@ -2,38 +2,11 @@
 
 import std;
 import alphazero;
-
-struct Network : public torch::nn::Module {
-  Network()
-      : fc1(register_module("fc1", torch::nn::Linear(384, 1024))),
-        fc2(register_module("fc2", torch::nn::Linear(1024, 1024))),
-        wdl_head(register_module("value", torch::nn::Linear(1024, 3))),
-        policy_head(register_module("policy", torch::nn::Linear(1024, 1792))),
-        bn1(register_module("bn1", torch::nn::BatchNorm1d(1024))),
-        bn2(register_module("bn2", torch::nn::BatchNorm1d(1024))) {}
-
-  auto forward(torch::Tensor x) -> std::tuple<torch::Tensor, torch::Tensor> {
-    x = torch::relu(fc1->forward(x));
-    x = torch::relu(bn1->forward(x));
-    x = torch::relu(fc2->forward(x));
-    x = torch::relu(bn2->forward(x));
-
-    auto wdl = torch::softmax(wdl_head->forward(x), -1);
-    auto policy = policy_head->forward(x);
-
-    return {wdl, policy};
-  }
-
-  torch::nn::Linear fc1, fc2, wdl_head, policy_head;
-  torch::nn::BatchNorm1d bn1, bn2;
-};
-
-static_assert(AZ::Concepts::Network<Network>);
+import alphazero.models.transformer;
 
 struct Damath {
   using Action = AZ::Action;
   using Player = AZ::Player;
-  using Network = Network;
 
   static constexpr auto ActionSize = 8 * 8 * 4 * 7;
 
@@ -509,60 +482,30 @@ struct Damath {
   }
 
   static constexpr auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros(384, torch::kFloat32);
+    auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
         if (state.player.is_first()) {
-          encoded_state[(8 * 8 * 0) + (8 * y) + x] = state.scores.first;
-          encoded_state[(8 * 8 * 1) + (8 * y) + x] = state.scores.second;
+          encoded_state[x][y][0] = state.scores.first;
+          encoded_state[x][y][1] = state.scores.second;
           if (state.board.pieces[y][x].occup) {
             auto& piece = state.board.pieces[y][x];
             auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            auto index =
-                (8 * 8 * ((not piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0))) +
-                (8 * y) + (x);
-            encoded_state[index] = value;
+            encoded_state[x][y][(not piece.enemy ? 2 : 4) +
+                                (piece.queen ? 1 : 0)] = value;
           }
         } else {
-          encoded_state[(8 * 8 * 0) + (8 * y) + x] = state.scores.second;
-          encoded_state[(8 * 8 * 1) + (8 * y) + x] = state.scores.first;
+          encoded_state[x][y][0] = state.scores.second;
+          encoded_state[x][y][1] = state.scores.first;
           if (state.board.pieces[y][x].occup) {
             auto& piece = state.board.pieces[y][x];
             auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            auto index =
-                (8 * 8 * ((piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0))) +
-                (8 * y) + (x);
-            encoded_state[index] = value;
+            encoded_state[x][y][(piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0)] =
+                value;
           }
         }
       }
     }
-
-    // auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
-    // for (int x = 0; x < 8; x++) {
-    //   for (int y = 0; y < 8; y++) {
-    //     if (state.player.is_first()) {
-    //       encoded_state[x][y][0] = state.scores.first;
-    //       encoded_state[x][y][1] = state.scores.second;
-    //       if (state.board.pieces[y][x].occup) {
-    //         auto& piece = state.board.pieces[y][x];
-    //         auto value = (piece.ngtve ? -1 : 1) * piece.value;
-    //         encoded_state[x][y][(not piece.enemy ? 2 : 4) +
-    //                             (piece.queen ? 1 : 0)] = value;
-    //       }
-    //     } else {
-    //       encoded_state[x][y][0] = state.scores.second;
-    //       encoded_state[x][y][1] = state.scores.first;
-    //       if (state.board.pieces[y][x].occup) {
-    //         auto& piece = state.board.pieces[y][x];
-    //         auto value = (piece.ngtve ? -1 : 1) * piece.value;
-    //         encoded_state[x][y][(piece.enemy ? 2 : 4) + (piece.queen ? 1 :
-    //         0)] =
-    //             value;
-    //       }
-    //     }
-    //   }
-    // }
 
     return encoded_state;
   }
@@ -599,9 +542,48 @@ struct Damath {
 
 static_assert(AZ::Concepts::Game<Damath>);
 
-struct Agent {
-  static constexpr auto player = AZ::Player::First;
+using namespace AZ::Models::Transformer;
+namespace nn = torch::nn;
 
+struct Model : torch::nn::Module {
+  Model(int32_t action_size, int32_t num_blocks, int32_t num_attention_head,
+        int32_t embedding_dim, int32_t mlp_hidden_size,
+        float32_t mlp_dropout_prob) {
+    encoder = register_module(
+        "encoder",
+        std::make_shared<Encoder>(num_blocks, embedding_dim, num_attention_head,
+                                  mlp_hidden_size, mlp_dropout_prob));
+
+    embedding = register_module(
+        "embedding",
+        std::make_shared<Embedding>(embedding_dim, /*feature_width=*/8,
+                                    /*feature_height=*/8, /*num_channels=*/6));
+
+    wdl_head = register_module("wdl_head", nn::Linear(embedding_dim, 3));
+    policy_head =
+        register_module("policy_head", nn::Linear(embedding_dim, action_size));
+  }
+  auto forward(torch::Tensor x) -> std::tuple<torch::Tensor, torch::Tensor> {
+    namespace F = torch::nn::functional;
+
+    x = embedding->forward(x);
+    auto [out, _] = encoder->forward(x, /*output_attention=*/false);
+
+    auto wdl = F::softmax(wdl_head->forward(out), 1);
+    auto policy = policy_head->forward(out);
+    return {wdl, policy};
+  }
+
+  std::shared_ptr<Encoder> encoder{nullptr};
+  std::shared_ptr<Embedding> embedding{nullptr};
+
+  nn::Linear wdl_head{nullptr};
+  nn::Linear policy_head{nullptr};
+};
+
+static_assert(AZ::Concepts::Network<Model>);
+
+struct Agent {
   auto on_move(const Damath::State& state) -> AZ::Action {
     Damath::print(state);
 
@@ -666,7 +648,8 @@ struct Agent {
     }
   }
 
-  std::shared_ptr<Network> model;
+  std::shared_ptr<Model> model;
+  static constexpr auto player = AZ::Player::First;
 };
 
 static_assert(AZ::Concepts::Agent<Agent, Damath>);
@@ -674,23 +657,23 @@ static_assert(AZ::Concepts::Agent<Agent, Damath>);
 auto main() -> int {
   auto config = AZ::Config{
       .num_iterations = 1,
-      .num_simulations = 10,
+      .num_simulations = 60,
       .num_self_play_iterations_per_actor = 100,
-      .num_actors = 1,
+      .num_actors = 5,
       .num_model_evaluation_simulations = 10,
       .device = torch::kCPU,
   };
-
   auto gen = std::mt19937{};
 
-  auto alpha_zero = AZ::AlphaZero<Damath, Network>{
+  auto model = std::make_shared<Model>(Damath::ActionSize, 3, 4, 32, 128, 0.1);
+
+  auto alpha_zero = AZ::AlphaZero<Damath, Model>{
       config,
       gen,
   };
+  alpha_zero.learn(model);
 
-  auto model = alpha_zero.learn();
-
-  auto arena = AZ::Arena<Damath, Network>(config);
+  auto arena = AZ::Arena<Damath, Model>(config);
   arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},
                         AZ::Player::Second);
 
