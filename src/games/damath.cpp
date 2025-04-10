@@ -103,7 +103,7 @@ struct Damath {
       } else if (op == '*') {
         score += (player_value * opponent_value);
       } else if (op == '/') {
-        score += (player_value / opponent_value);
+        score += opponent_value > 0 ? (player_value / opponent_value) : 0;
       }
       new_state.draw_count = 0;
       new_state.board.pieces[enemy_y][enemy_x] = {0, 0, 0, 0, 0};
@@ -468,9 +468,15 @@ struct Damath {
         new_y -= distance;
       }
 
-      auto piece = state.board.pieces[new_y][new_x];
+      auto canonical_state = state;
+      canonical_state.board = flip(state.board);
+      canonical_state.player = state.player.next();
+      canonical_state.scores.first = state.scores.second;
+      canonical_state.scores.second = state.scores.first;
 
-      auto [first, second] = state.scores;
+      auto piece = canonical_state.board.pieces[new_y][new_x];
+
+      auto [first, second] = canonical_state.scores;
       if (first > second)
         return not piece.enemy ? AZ::GameOutcome::Win : AZ::GameOutcome::Loss;
       else if (first < second)
@@ -658,8 +664,8 @@ auto main() -> int {
   auto config = AZ::Config{
       .num_iterations = 1,
       .num_simulations = 60,
-      .num_self_play_iterations_per_actor = 100,
-      .num_actors = 5,
+      .num_self_play_iterations_per_actor = 10,
+      .num_actors = 1,
       .num_model_evaluation_simulations = 10,
       .device = torch::kCPU,
   };
