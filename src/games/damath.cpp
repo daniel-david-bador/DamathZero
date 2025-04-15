@@ -163,11 +163,14 @@ struct Damath {
     new_state.board.pieces[y][x] = {0, 0, 0, 0, 0};
     new_state.board.pieces[new_y][new_x] = state.board.pieces[y][x];
 
-    if (not new_state.board.pieces[new_y][new_x].queen and
-        (new_y == 0 or new_y == 7))
+    auto is_knighted = false;
+    if ((not new_state.board.pieces[new_y][new_x].queen) and (new_y == 7)) {
       new_state.board.pieces[new_y][new_x].queen = true;
+      is_knighted = true;
+    }
 
-    if (has_eaten and get_eat_actions(new_state, new_x, new_y).size() > 0)
+    if ((not is_knighted) and has_eaten and
+        get_eat_actions(new_state, new_x, new_y).size() > 0)
       return new_state;
 
     auto [score1, score2] = new_state.scores;
