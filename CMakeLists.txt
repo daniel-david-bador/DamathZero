@@ -8,7 +8,7 @@ project(AlphaZero LANGUAGES CXX)
 find_package(GTest REQUIRED)
 find_package(Torch REQUIRED)
 
-# include(cmake/indicators.cmake)
+include(cmake/indicators.cmake)
 
 add_library(AlphaZero)
 target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
@@ -20,8 +20,8 @@ target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/node.cpp
   src/storage.cpp
   src/arena.cpp
-  src/network.cpp
   src/models/transformer.cpp
+  src/models/model.cpp
 )
 target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)

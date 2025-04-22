@@ -2,7 +2,7 @@
 
 import std;
 import alphazero;
-import alphazero.models.transformer;
+import alphazero.model.transformer;
 
 struct Damath {
   using Action = AZ::Action;
@@ -555,23 +555,32 @@ using namespace AZ::Models::Transformer;
 namespace nn = torch::nn;
 
 struct Model : torch::nn::Module {
-  Model(int32_t action_size, int32_t num_blocks, int32_t num_attention_head,
-        int32_t embedding_dim, int32_t mlp_hidden_size,
-        float32_t mlp_dropout_prob) {
+  struct Config {
+    int32_t action_size;
+    int32_t num_blocks;
+    int32_t num_attention_head;
+    int32_t embedding_dim;
+    int32_t mlp_hidden_size;
+    float32_t mlp_dropout_prob;
+  };
+
+  Model(Config config) : config(config) {
     encoder = register_module(
         "encoder",
-        std::make_shared<Encoder>(num_blocks, embedding_dim, num_attention_head,
-                                  mlp_hidden_size, mlp_dropout_prob));
+        std::make_shared<Encoder>(
+            config.num_blocks, config.embedding_dim, config.num_attention_head,
+            config.mlp_hidden_size, config.mlp_dropout_prob));
 
     embedding = register_module(
         "embedding",
-        std::make_shared<Embedding>(embedding_dim, /*feature_width=*/8,
+        std::make_shared<Embedding>(config.embedding_dim, /*feature_width=*/8,
                                     /*feature_height=*/8, /*num_channels=*/6));
 
-    wdl_head = register_module("wdl_head", nn::Linear(embedding_dim, 3));
-    policy_head =
-        register_module("policy_head", nn::Linear(embedding_dim, action_size));
+    wdl_head = register_module("wdl_head", nn::Linear(config.embedding_dim, 3));
+    policy_head = register_module(
+        "policy_head", nn::Linear(config.embedding_dim, config.action_size));
   }
+
   auto forward(torch::Tensor x) -> std::tuple<torch::Tensor, torch::Tensor> {
     namespace F = torch::nn::functional;
 
@@ -583,6 +592,8 @@ struct Model : torch::nn::Module {
     return {wdl, policy};
   }
 
+  Config config;
+
   std::shared_ptr<Encoder> encoder{nullptr};
   std::shared_ptr<Embedding> embedding{nullptr};
 
@@ -590,7 +601,7 @@ struct Model : torch::nn::Module {
   nn::Linear policy_head{nullptr};
 };
 
-static_assert(AZ::Concepts::Network<Model>);
+static_assert(AZ::Concepts::Model<Model>);
 
 struct Agent {
   auto on_move(const Damath::State& state) -> AZ::Action {
@@ -665,22 +676,28 @@ static_assert(AZ::Concepts::Agent<Agent, Damath>);
 
 auto main() -> int {
   auto config = AZ::Config{
-      .num_iterations = 1,
+      .num_iterations = 3,
       .num_simulations = 60,
       .num_self_play_iterations_per_actor = 10,
-      .num_actors = 1,
-      .num_model_evaluation_simulations = 10,
+      .num_actors = 5,
+      .num_model_evaluation_simulations = 100,
       .device = torch::kCPU,
   };
   auto gen = std::mt19937{};
-
-  auto model = std::make_shared<Model>(Damath::ActionSize, 3, 4, 32, 128, 0.1);
 
   auto alpha_zero = AZ::AlphaZero<Damath, Model>{
       config,
       gen,
   };
-  alpha_zero.learn(model);
+
+  auto model = alpha_zero.learn({
+      .action_size = Damath::ActionSize,
+      .num_blocks = 10,
+      .num_attention_head = 4,
+      .embedding_dim = 256,
+      .mlp_hidden_size = 512,
+      .mlp_dropout_prob = 0.1,
+  });
 
   auto arena = AZ::Arena<Damath, Model>(config);
   arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},

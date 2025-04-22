@@ -6,7 +6,7 @@ export module alphazero;
 
 import std;
 
-export import :network;
+export import :model;
 export import :arena;
 export import :config;
 export import :game;
@@ -17,15 +17,18 @@ export import :storage;
 
 namespace AZ {
 
-export template <Concepts::Game Game, Concepts::Network Network>
+export template <Concepts::Game Game, Concepts::Model Model>
 class AlphaZero {
   using State = Game::State;
 
  public:
   AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {}
 
-  auto learn(std::shared_ptr<Network> model) {
-    // auto arena = Arena<Game, Network>(config_);
+  auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
+    auto arena = Arena<Game, Model>(config_);
+
+    auto model = std::make_shared<Model>(model_config);
+    auto best_model = std::make_shared<Model>(model_config);
 
     auto optimizer = std::make_shared<torch::optim::Adam>(
         model->parameters(), torch::optim::AdamOptions(0.001));
@@ -37,42 +40,28 @@ class AlphaZero {
       generate_self_play_data(memory, model);
 
       train(memory, model, optimizer);
-      // save_model(model, i);
-      // auto [wins, draws, losses] = arena.play(
-      //     model, best_model, config_.num_model_evaluation_iterations,
-      //     /*num_simulations=*/config_.num_model_evaluation_simulations);
-      //
-      // auto did_win =
-      //     wins + draws >
-      //     0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
-      //
-      // std::println(
-      //     "Trained model {} against the best model with {} wins, {} draws, "
-      //     "and {} losses.",
-      //     did_win ? "won" : "lost", wins, draws, losses);
+      auto [wins, draws, losses] = arena.play(
+          model, best_model, config_.num_model_evaluation_iterations,
+          /*num_simulations=*/config_.num_model_evaluation_simulations);
+
+      auto did_win =
+          wins + draws >
+          0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
+
+      if (did_win)
+        best_model = clone_model(model, config_.device);
+
+      std::println(
+          "Trained model {} against the best model with {} wins, {} draws, "
+          "and {} losses.",
+          did_win ? "won" : "lost", wins, draws, losses);
     }
-    // return best_model;
+
+    return best_model;
   }
 
  private:
-  auto save_model(std::shared_ptr<Network> model, int checkpoint) const
-      -> void {
-    torch::serialize::OutputArchive output_model_archive;
-    model->to(torch::kCPU);
-    model->save(output_model_archive);
-    output_model_archive.save_to(std::format("models/model_{}.pt", checkpoint));
-  };
-
-  auto load_model(int checkpoint) const -> std::shared_ptr<Network> {
-    torch::serialize::InputArchive input_archive;
-    input_archive.load_from(std::format("models/model_{}.pt", checkpoint));
-    auto model = std::make_shared<Network>();
-    model->load(input_archive);
-    model->to(config_.device);
-    return model;
-  }
-
-  auto train(Memory& memory, std::shared_ptr<Network> model,
+  auto train(Memory& memory, std::shared_ptr<Model> model,
              std::shared_ptr<torch::optim::Optimizer> optimizer) -> void {
     namespace F = torch::nn::functional;
 
@@ -97,10 +86,12 @@ class AlphaZero {
         optimizer->step();
       }
     }
+
+    std::println("Done!");
   }
 
-  auto run_actor(Memory& memory, std::shared_ptr<Network> model) -> void {
-    auto mcts = MCTS<Game, Network>{config_};
+  auto run_actor(Memory& memory, std::shared_ptr<Model> model) -> void {
+    auto mcts = MCTS<Game, Model>{config_};
 
     auto num_iterations = config_.num_self_play_iterations_per_actor;
 
@@ -152,7 +143,7 @@ class AlphaZero {
     }
   }
 
-  auto generate_self_play_data(Memory& memory, std::shared_ptr<Network> model)
+  auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model)
       -> void {
     auto threads = std::vector<std::thread>();
     model->eval();

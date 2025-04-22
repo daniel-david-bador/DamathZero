@@ -4,7 +4,7 @@ module;
 
 import std;
 
-export module alphazero.models.transformer;
+export module alphazero.model.transformer;
 
 namespace AZ::Models::Transformer {
 

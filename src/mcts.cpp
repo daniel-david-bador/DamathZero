@@ -7,7 +7,7 @@ export module alphazero:mcts;
 
 import std;
 
-import :network;
+import :model;
 import :config;
 import :node;
 import :storage;
@@ -15,13 +15,13 @@ import :game;
 
 namespace AZ {
 
-export template <Concepts::Game Game, Concepts::Network Network>
+export template <Concepts::Game Game, Concepts::Model Model>
 class MCTS {
  public:
   MCTS(Config config) : config_(config) {}
 
   constexpr auto search(Game::State original_state,
-                        std::shared_ptr<Network> model,
+                        std::shared_ptr<Model> model,
                         std::optional<int> num_simulations = std::nullopt,
                         std::optional<std::mt19937*> noise_gen = std::nullopt)
       -> torch::Tensor {
@@ -106,7 +106,7 @@ class MCTS {
   };
 
   constexpr auto expand(NodeId parent_id, const Game::State& state,
-                        std::shared_ptr<Network> model) -> double {
+                        std::shared_ptr<Model> model) -> double {
     torch::NoGradGuard no_grad;
 
     model->to(config_.device);
