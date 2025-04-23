@@ -66,7 +66,7 @@ class AlphaZero {
         save_model(model, std::format("models/model_{}.pt", i));
       }
 
-      std::print("[Iteration {}] WDL - {}:{}:{}", i, wins, draws, losses);
+      std::println("[Iteration {}] WDL - {}:{}:{}", i, wins, draws, losses);
     }
 
     return best_model;

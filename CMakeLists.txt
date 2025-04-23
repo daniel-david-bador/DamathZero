@@ -11,7 +11,7 @@ find_package(SDL3 REQUIRED)
 
 include(cmake/indicators.cmake)
 
-add_library(AlphaZero)
+add_library(AlphaZero SHARED)
 target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/config.cpp
   src/alphazero.cpp

@@ -1,16 +1,21 @@
+#include <torch/torch.h>
+
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <torch/torch.h>
 
 import std;
 import alphazero;
 import damathzero;
 
-static SDL_Window* window = NULL;
-static SDL_Renderer* renderer = NULL;
+SDL_FRect rects[32];
+SDL_FRect info;
 
 auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
+  *appstate = new DamathZero;
+
+  auto& app = *static_cast<DamathZero*>(*appstate);
+
   SDL_SetAppMetadata("DamathZero", "1.0", "com.bads.damathzero");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -18,8 +23,8 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
     return SDL_APP_FAILURE;
   }
 
-  if (!SDL_CreateWindowAndRenderer("DamathZero", 640, 480, 0, &window,
-                                   &renderer)) {
+  if (!SDL_CreateWindowAndRenderer("DamathZero", 1300, 800, 0, &app.window,
+                                   &app.renderer)) {
     SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
@@ -40,7 +45,7 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       gen,
   };
 
-  static auto model = alpha_zero.learn({
+  app.model = alpha_zero.learn({
       .action_size = Damath::ActionSize,
       .num_blocks = 2,
       .num_attention_head = 4,
@@ -49,53 +54,45 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       .mlp_dropout_prob = 0.1,
   });
 
-  *appstate = model.get();
+  int index = 0;
+  for (int i = 0; i < 8; i++)
+    for (int j = 0; j < 8; j++)
+      if (i % 2 == j % 2 and (i % 2 == 0 or j % 2 == 1))
+        rects[index++] = {i * 100.0f, j * 100.0f, 100, 100};
+
+  info = {800, 0, 500, 800};
 
   return SDL_APP_CONTINUE;
 }
 
-auto SDL_AppEvent(void*, SDL_Event* event) -> SDL_AppResult {
+auto SDL_AppEvent(void* appstate, SDL_Event* event) -> SDL_AppResult {
+  auto& _ = *static_cast<DamathZero*>(appstate);
+
   if (event->type == SDL_EVENT_QUIT)
     return SDL_APP_SUCCESS;
 
   return SDL_APP_CONTINUE;
 }
 
-auto SDL_AppIterate(void*) -> SDL_AppResult {
-  const int charsize = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE;
+auto SDL_AppIterate(void* appstate) -> SDL_AppResult {
+  auto& app = *static_cast<DamathZero*>(appstate);
+  auto& renderer = app.renderer;
 
-  /* as you can see from this, rendering draws over whatever was drawn before
-   * it. */
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0,
-                         SDL_ALPHA_OPAQUE); /* black, full alpha */
-  SDL_RenderClear(renderer);                /* start with a blank canvas. */
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+  SDL_RenderClear(renderer);
 
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255,
-                         SDL_ALPHA_OPAQUE); /* white, full alpha */
-  SDL_RenderDebugText(renderer, 272, 100, "Hello world!");
-  SDL_RenderDebugText(renderer, 224, 150, "This is some debug text.");
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+  SDL_RenderFillRects(renderer, rects, 32);
 
-  SDL_SetRenderDrawColor(renderer, 51, 102, 255,
-                         SDL_ALPHA_OPAQUE); /* light blue, full alpha */
-  SDL_RenderDebugText(renderer, 184, 200, "You can do it in different colors.");
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255,
-                         SDL_ALPHA_OPAQUE); /* white, full alpha */
-
-  SDL_SetRenderScale(renderer, 4.0f, 4.0f);
-  SDL_RenderDebugText(renderer, 14, 65, "It can be scaled.");
-  SDL_SetRenderScale(renderer, 1.0f, 1.0f);
-  SDL_RenderDebugText(
-      renderer, 64, 350,
-      "This only does ASCII chars. So this laughing emoji won't draw: 🤣");
-
-  SDL_RenderDebugTextFormat(renderer, (float)((680 - (charsize * 46)) / 2), 400,
-                            "(This program has been running for %" SDL_PRIu64
-                            " seconds.)",
-                            SDL_GetTicks() / 1000);
+  SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
+  SDL_RenderFillRect(renderer, &info);
 
   SDL_RenderPresent(renderer);
 
   return SDL_APP_CONTINUE;
 }
 
-auto SDL_AppQuit(void*, SDL_AppResult) -> void {}
+auto SDL_AppQuit(void* appstate, SDL_AppResult) -> void {
+  auto* app = static_cast<DamathZero*>(appstate);
+  delete app;
+}
