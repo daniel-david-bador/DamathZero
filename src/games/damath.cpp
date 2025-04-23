@@ -676,8 +676,8 @@ static_assert(AZ::Concepts::Agent<Agent, Damath>);
 
 auto main() -> int {
   auto config = AZ::Config{
-      .num_iterations = 3,
-      .num_simulations = 60,
+      .num_iterations = 10,
+      .num_simulations = 10,
       .num_self_play_iterations_per_actor = 10,
       .num_actors = 5,
       .num_model_evaluation_simulations = 100,
@@ -692,10 +692,10 @@ auto main() -> int {
 
   auto model = alpha_zero.learn({
       .action_size = Damath::ActionSize,
-      .num_blocks = 10,
+      .num_blocks = 2,
       .num_attention_head = 4,
-      .embedding_dim = 256,
-      .mlp_hidden_size = 512,
+      .embedding_dim = 64,
+      .mlp_hidden_size = 128,
       .mlp_dropout_prob = 0.1,
   });
 

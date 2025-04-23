@@ -25,7 +25,8 @@ target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
 )
 target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)
-target_link_libraries(AlphaZero PUBLIC torch) # indicators::indicators
+target_link_libraries(AlphaZero PRIVATE indicators::indicators) 
+target_link_libraries(AlphaZero PUBLIC torch)
 
 add_executable(TicTacToeZero "src/games/tictactoe.cpp")
 target_link_libraries(TicTacToeZero PRIVATE AlphaZero)

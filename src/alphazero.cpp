@@ -2,6 +2,9 @@ module;
 
 #include <torch/torch.h>
 
+#include <indicators/dynamic_progress.hpp>
+#include <indicators/progress_bar.hpp>
+
 export module alphazero;
 
 import std;
@@ -15,6 +18,15 @@ export import :mcts;
 export import :node;
 export import :storage;
 
+namespace opt = indicators::option;
+
+static constexpr auto colors = std::array<indicators::Color, 8>{
+    indicators::Color::red,     indicators::Color::green,
+    indicators::Color::yellow,  indicators::Color::blue,
+    indicators::Color::magenta, indicators::Color::cyan,
+    indicators::Color::white,   indicators::Color::grey,
+};
+
 namespace AZ {
 
 export template <Concepts::Game Game, Concepts::Model Model>
@@ -22,9 +34,21 @@ class AlphaZero {
   using State = Game::State;
 
  public:
-  AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {}
+  AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {
+    bars_.set_option(opt::HideBarWhenComplete{true});
+  }
 
   auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
+    namespace opt = indicators::option;
+    auto bar = std::make_unique<indicators::ProgressBar>(
+        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::blue},
+        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
+        opt::ShowPercentage{true}, opt::MaxProgress{config_.num_iterations},
+        opt::PrefixText{"Iteration "},
+        opt::FontStyles{
+            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+    auto bar_id = bars_.push_back(std::move(bar));
+
     auto arena = Arena<Game, Model>(config_);
 
     auto model = std::make_shared<Model>(model_config);
@@ -34,7 +58,6 @@ class AlphaZero {
         model->parameters(), torch::optim::AdamOptions(0.001));
 
     for (auto i : std::views::iota(0, config_.num_iterations)) {
-      std::println("Iteration: {}", i + 1);
       auto memory = Memory{config_, gen_};
 
       generate_self_play_data(memory, model);
@@ -46,15 +69,19 @@ class AlphaZero {
 
       auto did_win =
           wins + draws >
-          0.7 * static_cast<double>(config_.num_model_evaluation_iterations);
+          0.7 * static_cast<float32_t>(config_.num_model_evaluation_iterations);
 
-      if (did_win)
+      if (did_win) {
         best_model = clone_model(model, config_.device);
+        save_model(model, std::format("models/model_{}.pt", i));
+      }
 
       std::println(
           "Trained model {} against the best model with {} wins, {} draws, "
           "and {} losses.",
           did_win ? "won" : "lost", wins, draws, losses);
+
+      bars_[bar_id].tick();
     }
 
     return best_model;
@@ -65,15 +92,24 @@ class AlphaZero {
              std::shared_ptr<torch::optim::Optimizer> optimizer) -> void {
     namespace F = torch::nn::functional;
 
+    auto bar = std::make_unique<indicators::ProgressBar>(
+        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::white},
+        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
+        opt::ShowPercentage{true},
+        opt::MaxProgress{config_.num_self_play_iterations_per_actor},
+        opt::PrefixText{"Training Epoch "},
+        opt::FontStyles{
+            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+    auto bar_id = bars_.push_back(std::move(bar));
+
     if (memory.size() % config_.batch_size == 1)
       memory.pop();
-
-    std::println("Memory size {}", memory.size());
 
     model->train();
     model->to(config_.device);
     memory.shuffle();
     for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
+      auto epoch_loss = 0.;
       for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
         auto [feature, target_value, target_policy] = memory.sample_batch(i);
         auto [out_value, out_policy] = model->forward(feature);
@@ -84,13 +120,27 @@ class AlphaZero {
         optimizer->zero_grad();
         loss.backward();
         optimizer->step();
-      }
-    }
 
-    std::println("Done!");
+        epoch_loss += loss.template item<float32_t>();
+      }
+
+      bars_[bar_id].tick();
+    }
   }
 
-  auto run_actor(Memory& memory, std::shared_ptr<Model> model) -> void {
+  auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t actor_id)
+      -> void {
+    auto color = colors[actor_id % config_.num_actors];
+    auto bar = std::make_unique<indicators::ProgressBar>(
+        opt::BarWidth{50}, opt::ForegroundColor{color},
+        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
+        opt::ShowPercentage{true},
+        opt::MaxProgress{config_.num_self_play_iterations_per_actor},
+        opt::PrefixText{std::format("Thread {} ", actor_id)},
+        opt::FontStyles{
+            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+    auto bar_id = bars_.push_back(std::move(bar));
+
     auto mcts = MCTS<Game, Model>{config_};
 
     auto num_iterations = config_.num_self_play_iterations_per_actor;
@@ -101,7 +151,6 @@ class AlphaZero {
     auto random_playout_indices = torch::randint(num_iterations, {n});
 
     for (auto i : std::views::iota(0, num_iterations)) {
-      std::println("{}", i);
       auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
       auto state = Game::initial_state();
       while (true) {
@@ -140,16 +189,22 @@ class AlphaZero {
 
         state = std::move(new_state);
       }
+
+      bars_[bar_id].tick();
     }
+
+    bars_[bar_id].mark_as_completed();
   }
 
   auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model)
       -> void {
     auto threads = std::vector<std::thread>();
+
     model->eval();
-    for (auto _ : std::views::iota(0, config_.num_actors)) {
+
+    for (auto i : std::views::iota(0, config_.num_actors)) {
       threads.emplace_back(
-          [this, &memory, model] { run_actor(memory, model); });
+          [this, &memory, model, i] { run_actor(memory, model, i); });
     }
 
     for (auto& thread : threads) {
@@ -158,6 +213,7 @@ class AlphaZero {
   }
 
  private:
+  indicators::DynamicProgress<indicators::ProgressBar> bars_;
   Config config_;
   std::mt19937& gen_;
 };

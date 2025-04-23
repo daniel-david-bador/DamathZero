@@ -52,11 +52,11 @@ auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
 }
 
 template <Concepts::Model Model>
-auto save_model(std::shared_ptr<Model> model, int checkpoint) -> void {
+auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   torch::serialize::OutputArchive output_model_archive;
   model->to(torch::kCPU);
   model->save(output_model_archive);
-  output_model_archive.save_to(std::format("models/model_{}.pt", checkpoint));
+  output_model_archive.save_to(std::string(path));
 };
 
 template <Concepts::Model Model>
