@@ -7,6 +7,7 @@ project(AlphaZero LANGUAGES CXX)
 
 find_package(GTest REQUIRED)
 find_package(Torch REQUIRED)
+find_package(SDL3 REQUIRED)
 
 include(cmake/indicators.cmake)
 
@@ -31,8 +32,14 @@ target_link_libraries(AlphaZero PUBLIC torch)
 add_executable(TicTacToeZero "src/games/tictactoe.cpp")
 target_link_libraries(TicTacToeZero PRIVATE AlphaZero)
 
-add_executable(DamathZero "src/games/damath.cpp")
-target_link_libraries(DamathZero PRIVATE AlphaZero)
+add_executable(DamathZero "src/games/damath/main.cpp")
+target_sources(DamathZero PRIVATE FILE_SET CXX_MODULES FILES
+  src/games/damath/agent.cpp
+  src/games/damath/damathzero.cpp
+  src/games/damath/game.cpp
+  src/games/damath/model.cpp
+)
+target_link_libraries(DamathZero PRIVATE AlphaZero SDL3::SDL3)
 
 add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf

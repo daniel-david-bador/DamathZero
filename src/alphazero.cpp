@@ -39,16 +39,6 @@ class AlphaZero {
   }
 
   auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
-    namespace opt = indicators::option;
-    auto bar = std::make_unique<indicators::ProgressBar>(
-        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::blue},
-        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
-        opt::ShowPercentage{true}, opt::MaxProgress{config_.num_iterations},
-        opt::PrefixText{"Iteration "},
-        opt::FontStyles{
-            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
-    auto bar_id = bars_.push_back(std::move(bar));
-
     auto arena = Arena<Game, Model>(config_);
 
     auto model = std::make_shared<Model>(model_config);
@@ -76,12 +66,7 @@ class AlphaZero {
         save_model(model, std::format("models/model_{}.pt", i));
       }
 
-      std::println(
-          "Trained model {} against the best model with {} wins, {} draws, "
-          "and {} losses.",
-          did_win ? "won" : "lost", wins, draws, losses);
-
-      bars_[bar_id].tick();
+      std::print("[Iteration {}] WDL - {}:{}:{}", i, wins, draws, losses);
     }
 
     return best_model;
@@ -96,7 +81,7 @@ class AlphaZero {
         opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::white},
         opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
         opt::ShowPercentage{true},
-        opt::MaxProgress{config_.num_self_play_iterations_per_actor},
+        opt::MaxProgress{config_.num_training_epochs},
         opt::PrefixText{"Training Epoch "},
         opt::FontStyles{
             std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
@@ -108,6 +93,7 @@ class AlphaZero {
     model->train();
     model->to(config_.device);
     memory.shuffle();
+
     for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
       auto epoch_loss = 0.;
       for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
@@ -126,6 +112,8 @@ class AlphaZero {
 
       bars_[bar_id].tick();
     }
+
+    bars_[bar_id].mark_as_completed();
   }
 
   auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t actor_id)

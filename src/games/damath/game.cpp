@@ -1,10 +1,13 @@
+module;
+
 #include <torch/torch.h>
+
+export module damathzero:game;
 
 import std;
 import alphazero;
-import alphazero.model.transformer;
 
-struct Damath {
+export struct Damath {
   using Action = AZ::Action;
   using Player = AZ::Player;
 
@@ -31,15 +34,15 @@ struct Damath {
 
     std::array<std::array<Board::Piece, 8>, 8> pieces{{
         // clang-format off
-      {{{0,0,0,0,0},{1,0,0,1,11},{0,0,0,0,0},{1,0,0,0,8},{0,0,0,0,0},{1,0,0,1,5},{0,0,0,0,0},{1,0,0,0,2}}},
-      {{{1,0,0,0,0},{0,0,0,0,0},{1,0,0,1,3},{0,0,0,0,0},{1,0,0,0,10},{0,0,0,0,0},{1,0,0,1,7},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{1,0,0,1,9},{0,0,0,0,0},{1,0,0,0,6},{0,0,0,0,0},{1,0,0,1,1},{0,0,0,0,0},{1,0,0,0,4}}},
-      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
-      {{{1,1,0,0,4},{0,0,0,0,0},{1,1,0,1,1},{0,0,0,0,0},{1,1,0,0,6},{0,0,0,0,0},{1,1,0,1,9},{0,0,0,0,0}}},
-      {{{0,0,0,0,0},{1,1,0,1,7},{0,0,0,0,0},{1,1,0,0,10},{0,0,0,0,0},{1,1,0,1,3},{0,0,0,0,0},{1,1,0,0,0}}},
-      {{{1,1,0,0,2},{0,0,0,0,0},{1,1,0,1,5},{0,0,0,0,0},{1,1,0,0,8},{0,0,0,0,0},{1,1,0,1,11},{0,0,0,0,0}}},
-    }};  // clang-format on
+        {{{0,0,0,0,0},{1,0,0,1,11},{0,0,0,0,0},{1,0,0,0,8},{0,0,0,0,0},{1,0,0,1,5},{0,0,0,0,0},{1,0,0,0,2}}},
+        {{{1,0,0,0,0},{0,0,0,0,0},{1,0,0,1,3},{0,0,0,0,0},{1,0,0,0,10},{0,0,0,0,0},{1,0,0,1,7},{0,0,0,0,0}}},
+        {{{0,0,0,0,0},{1,0,0,1,9},{0,0,0,0,0},{1,0,0,0,6},{0,0,0,0,0},{1,0,0,1,1},{0,0,0,0,0},{1,0,0,0,4}}},
+        {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
+        {{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}}},
+        {{{1,1,0,0,4},{0,0,0,0,0},{1,1,0,1,1},{0,0,0,0,0},{1,1,0,0,6},{0,0,0,0,0},{1,1,0,1,9},{0,0,0,0,0}}},
+        {{{0,0,0,0,0},{1,1,0,1,7},{0,0,0,0,0},{1,1,0,0,10},{0,0,0,0,0},{1,1,0,1,3},{0,0,0,0,0},{1,1,0,0,0}}},
+        {{{1,1,0,0,2},{0,0,0,0,0},{1,1,0,1,5},{0,0,0,0,0},{1,1,0,0,8},{0,0,0,0,0},{1,1,0,1,11},{0,0,0,0,0}}},
+      }};  // clang-format on
   };
 
   struct State {
@@ -52,15 +55,15 @@ struct Damath {
   static constexpr auto flip(const Board& board) -> Board {
     auto new_board = Board{
         .pieces =  // clang-format off
-            {{{{board.pieces[7][7], board.pieces[7][6], board.pieces[7][5], board.pieces[7][4], board.pieces[7][3], board.pieces[7][2], board.pieces[7][1], board.pieces[7][0]}},
-              {{board.pieces[6][7], board.pieces[6][6], board.pieces[6][5], board.pieces[6][4], board.pieces[6][3], board.pieces[6][2], board.pieces[6][1], board.pieces[6][0]}},
-              {{board.pieces[5][7], board.pieces[5][6], board.pieces[5][5], board.pieces[5][4], board.pieces[5][3], board.pieces[5][2], board.pieces[5][1], board.pieces[5][0]}},
-              {{board.pieces[4][7], board.pieces[4][6], board.pieces[4][5], board.pieces[4][4], board.pieces[4][3], board.pieces[4][2], board.pieces[4][1], board.pieces[4][0]}},
-              {{board.pieces[3][7], board.pieces[3][6], board.pieces[3][5], board.pieces[3][4], board.pieces[3][3], board.pieces[3][2], board.pieces[3][1], board.pieces[3][0]}},
-              {{board.pieces[2][7], board.pieces[2][6], board.pieces[2][5], board.pieces[2][4], board.pieces[2][3], board.pieces[2][2], board.pieces[2][1], board.pieces[2][0]}},
-              {{board.pieces[1][7], board.pieces[1][6], board.pieces[1][5], board.pieces[1][4], board.pieces[1][3], board.pieces[1][2], board.pieces[1][1], board.pieces[1][0]}},
-              {{board.pieces[0][7], board.pieces[0][6], board.pieces[0][5], board.pieces[0][4], board.pieces[0][3], board.pieces[0][2], board.pieces[0][1], board.pieces[0][0]}}
-            }},  // clang-format on
+              {{{{board.pieces[7][7], board.pieces[7][6], board.pieces[7][5], board.pieces[7][4], board.pieces[7][3], board.pieces[7][2], board.pieces[7][1], board.pieces[7][0]}},
+                {{board.pieces[6][7], board.pieces[6][6], board.pieces[6][5], board.pieces[6][4], board.pieces[6][3], board.pieces[6][2], board.pieces[6][1], board.pieces[6][0]}},
+                {{board.pieces[5][7], board.pieces[5][6], board.pieces[5][5], board.pieces[5][4], board.pieces[5][3], board.pieces[5][2], board.pieces[5][1], board.pieces[5][0]}},
+                {{board.pieces[4][7], board.pieces[4][6], board.pieces[4][5], board.pieces[4][4], board.pieces[4][3], board.pieces[4][2], board.pieces[4][1], board.pieces[4][0]}},
+                {{board.pieces[3][7], board.pieces[3][6], board.pieces[3][5], board.pieces[3][4], board.pieces[3][3], board.pieces[3][2], board.pieces[3][1], board.pieces[3][0]}},
+                {{board.pieces[2][7], board.pieces[2][6], board.pieces[2][5], board.pieces[2][4], board.pieces[2][3], board.pieces[2][2], board.pieces[2][1], board.pieces[2][0]}},
+                {{board.pieces[1][7], board.pieces[1][6], board.pieces[1][5], board.pieces[1][4], board.pieces[1][3], board.pieces[1][2], board.pieces[1][1], board.pieces[1][0]}},
+                {{board.pieces[0][7], board.pieces[0][6], board.pieces[0][5], board.pieces[0][4], board.pieces[0][3], board.pieces[0][2], board.pieces[0][1], board.pieces[0][0]}}
+              }},  // clang-format on
     };
 
     for (auto& row : new_board.pieces)
@@ -550,158 +553,3 @@ struct Damath {
 };
 
 static_assert(AZ::Concepts::Game<Damath>);
-
-using namespace AZ::Models::Transformer;
-namespace nn = torch::nn;
-
-struct Model : torch::nn::Module {
-  struct Config {
-    int32_t action_size;
-    int32_t num_blocks;
-    int32_t num_attention_head;
-    int32_t embedding_dim;
-    int32_t mlp_hidden_size;
-    float32_t mlp_dropout_prob;
-  };
-
-  Model(Config config) : config(config) {
-    encoder = register_module(
-        "encoder",
-        std::make_shared<Encoder>(
-            config.num_blocks, config.embedding_dim, config.num_attention_head,
-            config.mlp_hidden_size, config.mlp_dropout_prob));
-
-    embedding = register_module(
-        "embedding",
-        std::make_shared<Embedding>(config.embedding_dim, /*feature_width=*/8,
-                                    /*feature_height=*/8, /*num_channels=*/6));
-
-    wdl_head = register_module("wdl_head", nn::Linear(config.embedding_dim, 3));
-    policy_head = register_module(
-        "policy_head", nn::Linear(config.embedding_dim, config.action_size));
-  }
-
-  auto forward(torch::Tensor x) -> std::tuple<torch::Tensor, torch::Tensor> {
-    namespace F = torch::nn::functional;
-
-    x = embedding->forward(x);
-    auto [out, _] = encoder->forward(x, /*output_attention=*/false);
-
-    auto wdl = F::softmax(wdl_head->forward(out), 1);
-    auto policy = policy_head->forward(out);
-    return {wdl, policy};
-  }
-
-  Config config;
-
-  std::shared_ptr<Encoder> encoder{nullptr};
-  std::shared_ptr<Embedding> embedding{nullptr};
-
-  nn::Linear wdl_head{nullptr};
-  nn::Linear policy_head{nullptr};
-};
-
-static_assert(AZ::Concepts::Model<Model>);
-
-struct Agent {
-  auto on_move(const Damath::State& state) -> AZ::Action {
-    Damath::print(state);
-
-    auto get_action = [&](auto action) {
-      auto distance = (action / (8 * 8 * 4)) + 1;
-      auto direction = (action % (8 * 8 * 4)) / (8 * 8);
-      auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
-      auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
-      return std::make_tuple(x, y, direction, distance);
-    };
-
-    auto legal_actions = Damath::legal_actions(state).nonzero();
-    for (int i = 0; i < legal_actions.size(0); i++) {
-      auto action = legal_actions[i].item<int>();
-      auto [x, y, direction, distance] = get_action(action);
-      std::println("[{}] ({}, {}) {} {} {}", action, x, y,
-                   direction < 2 ? "up" : "down", distance,
-                   direction == 0 or direction == 2 ? "left" : "right");
-    }
-
-    int input = 0;
-    std::cout << "Enter action: ";
-    std::cin >> input;
-    return static_cast<AZ::Action>(input);
-  }
-
-  auto on_model_move(const Damath::State& state, torch::Tensor probs,
-                     AZ::Action) -> void {
-    Damath::print(state);
-    auto feature = torch::unsqueeze(Damath::encode_state(state), 0);
-
-    auto legal_actions = Damath::legal_actions(state);
-
-    auto [wdl, policy] = model->forward(feature);
-    policy = torch::softmax(torch::squeeze(policy, 0), -1);
-    policy *= legal_actions;
-    policy /= policy.sum();
-
-    std::cout << "Legal actions: " << legal_actions.nonzero().transpose(0, 1)
-              << "\n";
-    std::cout << "Policy: "
-              << policy.index({legal_actions.nonzero()}).transpose(0, 1)
-              << "\n";
-    std::cout << "MCTS: "
-              << probs.index({legal_actions.nonzero()}).transpose(0, 1) << "\n";
-    std::cout << "Win-Draw-Loss: " << wdl << "\n";
-  }
-
-  auto on_game_end(const Damath::State& state, AZ::GameOutcome result) -> void {
-    auto new_state = state;
-
-    // flip the player before printing it>
-    new_state.player = player;
-    Damath::print(new_state);
-
-    if (result == AZ::GameOutcome::Win) {
-      std::println("You won!");
-    } else if (result == AZ::GameOutcome::Loss) {
-      std::println("You lost!");
-    } else {
-      std::println("Draw!");
-    }
-  }
-
-  std::shared_ptr<Model> model;
-  static constexpr auto player = AZ::Player::First;
-};
-
-static_assert(AZ::Concepts::Agent<Agent, Damath>);
-
-auto main() -> int {
-  auto config = AZ::Config{
-      .num_iterations = 10,
-      .num_simulations = 10,
-      .num_self_play_iterations_per_actor = 10,
-      .num_actors = 5,
-      .num_model_evaluation_simulations = 100,
-      .device = torch::kCPU,
-  };
-  auto gen = std::mt19937{};
-
-  auto alpha_zero = AZ::AlphaZero<Damath, Model>{
-      config,
-      gen,
-  };
-
-  auto model = alpha_zero.learn({
-      .action_size = Damath::ActionSize,
-      .num_blocks = 2,
-      .num_attention_head = 4,
-      .embedding_dim = 64,
-      .mlp_hidden_size = 128,
-      .mlp_dropout_prob = 0.1,
-  });
-
-  auto arena = AZ::Arena<Damath, Model>(config);
-  arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},
-                        AZ::Player::Second);
-
-  return 0;
-}
