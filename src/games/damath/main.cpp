@@ -8,8 +8,9 @@ import std;
 import alphazero;
 import damathzero;
 
-SDL_FRect rects[32];
 SDL_FRect info;
+SDL_FRect rects[32];
+SDL_FRect circs[8][8];
 
 auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
   *appstate = new DamathZero;
@@ -45,7 +46,8 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       gen,
   };
 
-  app.model = alpha_zero.learn({
+  //   app.model = alpha_zero.learn({
+  app.model = std::make_shared<Model>(Model::Config{
       .action_size = Damath::ActionSize,
       .num_blocks = 2,
       .num_attention_head = 4,
@@ -54,11 +56,15 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       .mlp_dropout_prob = 0.1,
   });
 
+  app.state = Damath::initial_state();
+
   int index = 0;
-  for (int i = 0; i < 8; i++)
-    for (int j = 0; j < 8; j++)
-      if (i % 2 == j % 2 and (i % 2 == 0 or j % 2 == 1))
-        rects[index++] = {i * 100.0f, j * 100.0f, 100, 100};
+  for (int j = 0; j < 8; j++)
+    for (int i = 0; i < 8; i++)
+      if (i % 2 != j % 2) {
+        circs[j][i] = {i * 100.0f + 25.0f, (7 - j) * 100.0f + 25.0f, 50, 50};
+        rects[index++] = {i * 100.0f, (7 - j) * 100.0f, 100, 100};
+      }
 
   info = {800, 0, 500, 800};
 
@@ -81,11 +87,29 @@ auto SDL_AppIterate(void* appstate) -> SDL_AppResult {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
   SDL_RenderClear(renderer);
 
+  SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
+  SDL_RenderFillRect(renderer, &info);
+
   SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
   SDL_RenderFillRects(renderer, rects, 32);
 
-  SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
-  SDL_RenderFillRect(renderer, &info);
+  for (auto j = 0; j < 8; j++) {
+    for (auto i = 0; i < 8; i++) {
+      auto& piece = app.state.board.pieces[j][i];
+
+      if (not piece.occup)
+        continue;
+
+      if (piece.enemy)
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+      else
+        SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
+
+      SDL_RenderFillRect(renderer, &circs[j][i]);
+
+      SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+    }
+  }
 
   SDL_RenderPresent(renderer);
 
