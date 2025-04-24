@@ -36,7 +36,8 @@ target_sources(DamathZero PRIVATE FILE_SET CXX_MODULES FILES
   src/games/damath/agent.cpp
   src/games/damath/damathzero.cpp
   src/games/damath/game.cpp
-  src/games/damath/model.cpp)
+  src/games/damath/model.cpp
+  src/games/damath/board.cpp)
 target_link_libraries(DamathZero PRIVATE AlphaZero raylib)
 
 add_custom_command(

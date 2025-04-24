@@ -54,13 +54,12 @@ auto Render(const dz::Game::State& state) -> void {
       if (i % 2 != j % 2)
         DrawRectangle(i * 100, (7 - j) * 100, 100, 100, WHITE);
 
-      auto piece = state.board.pieces[j][i];
-      if (piece.occup) {
+      auto cell = state.board[i, j];
+      if (cell.occup) {
         DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 25,
-                   piece.enemy ? BLACK : MAROON);
-        DrawText(
-            std::format("{}", piece.ngtve ? -piece.value : piece.value).c_str(),
-            i * 100 + 40, (7 - j) * 100 + 30, 20, WHITE);
+                   cell.enemy ? BLACK : MAROON);
+        DrawText(std::to_string(static_cast<int32_t>(cell.get_value())).c_str(),
+                 i * 100 + 40, (7 - j) * 100 + 30, 20, WHITE);
       } else {
         DrawText(std::format("{}", state.board.operators[j][i]).c_str(),
                  i * 100 + 40, (7 - j) * 100 + 40, 20, BLACK);
