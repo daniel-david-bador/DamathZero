@@ -2,11 +2,11 @@ module;
 
 #include <torch/torch.h>
 
+export module az:transformer;
+
 import std;
 
-export module alphazero.model.transformer;
-
-namespace AZ::Models::Transformer {
+namespace az::models {
 
 namespace nn = torch::nn;
 namespace F = nn::functional;
@@ -147,10 +147,10 @@ struct Block : public nn::Module {
   std::shared_ptr<Attention> attention;
 };
 
-export struct Encoder : public nn::Module {
-  Encoder(int32_t num_blocks, int32_t embedding_dim,
-          int32_t num_attention_heads, int32_t mlp_hidden_size,
-          float32_t mlp_dropout_prob) {
+export struct TransformerEncoder : public nn::Module {
+  TransformerEncoder(int32_t num_blocks, int32_t embedding_dim,
+                     int32_t num_attention_heads, int32_t mlp_hidden_size,
+                     float32_t mlp_dropout_prob) {
     assert(embedding_dim % num_attention_heads == 0);
 
     blocks = register_module("blocks", nn::ModuleList());
@@ -185,4 +185,4 @@ export struct Encoder : public nn::Module {
   nn::ModuleList blocks{nullptr};
 };
 
-};  // namespace AZ::Models::Transformer
+};  // namespace az::models

@@ -2,14 +2,14 @@ module;
 
 #include <torch/torch.h>
 
-export module alphazero:memory;
+export module az:memory;
 
 import std;
 
 import :config;
 import :game;
 
-namespace AZ {
+namespace az {
 
 export using Feature = torch::Tensor;
 export using Policy = torch::Tensor;
@@ -76,4 +76,4 @@ export class Memory {
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };
 
-}  // namespace AZ
+}  // namespace az

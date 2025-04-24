@@ -5,7 +5,7 @@ module;
 #include <indicators/dynamic_progress.hpp>
 #include <indicators/progress_bar.hpp>
 
-export module alphazero;
+export module az;
 
 import std;
 
@@ -27,14 +27,16 @@ static constexpr auto colors = std::array<indicators::Color, 8>{
     indicators::Color::white,   indicators::Color::grey,
 };
 
-namespace AZ {
+namespace az {
 
-export template <Concepts::Game Game, Concepts::Model Model>
+export template <concepts::Game Game, concepts::Model Model>
 class AlphaZero {
   using State = Game::State;
 
  public:
-  AlphaZero(Config config, std::mt19937& gen) : config_(config), gen_(gen) {
+  AlphaZero(Config&& config,
+            std::mt19937&& gen = std::mt19937{std::random_device{}()})
+      : config_(std::move(config)), gen_(std::move(gen)) {
     bars_.set_option(opt::HideBarWhenComplete{true});
   }
 
@@ -203,7 +205,7 @@ class AlphaZero {
  private:
   indicators::DynamicProgress<indicators::ProgressBar> bars_;
   Config config_;
-  std::mt19937& gen_;
+  std::mt19937 gen_;
 };
 
-}  // namespace AZ
+}  // namespace az

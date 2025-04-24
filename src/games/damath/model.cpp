@@ -2,13 +2,14 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:model;
+export module dz:model;
 
+import az;
 import std;
-import alphazero;
-import alphazero.model.transformer;
 
-using namespace AZ::Models::Transformer;
+namespace dz {
+
+using namespace az::models;
 namespace nn = torch::nn;
 
 export struct Model : torch::nn::Module {
@@ -24,7 +25,7 @@ export struct Model : torch::nn::Module {
   Model(Config config) : config(config) {
     encoder = register_module(
         "encoder",
-        std::make_shared<Encoder>(
+        std::make_shared<TransformerEncoder>(
             config.num_blocks, config.embedding_dim, config.num_attention_head,
             config.mlp_hidden_size, config.mlp_dropout_prob));
 
@@ -51,11 +52,13 @@ export struct Model : torch::nn::Module {
 
   Config config;
 
-  std::shared_ptr<Encoder> encoder{nullptr};
+  std::shared_ptr<TransformerEncoder> encoder{nullptr};
   std::shared_ptr<Embedding> embedding{nullptr};
 
   nn::Linear wdl_head{nullptr};
   nn::Linear policy_head{nullptr};
 };
 
-static_assert(AZ::Concepts::Model<Model>);
+static_assert(az::concepts::Model<Model>);
+
+};  // namespace dz

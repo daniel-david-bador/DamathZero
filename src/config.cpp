@@ -2,11 +2,11 @@ module;
 
 #include <torch/torch.h>
 
-export module alphazero:config;
+export module az:config;
 
 import std;
 
-namespace AZ {
+namespace az {
 
 export struct Config {
   int32_t num_iterations = 10;
@@ -33,4 +33,4 @@ export struct Config {
   torch::DeviceType device;
 };
 
-}  // namespace AZ
+}  // namespace az

@@ -2,7 +2,7 @@ module;
 
 #include <assert.h>
 
-export module alphazero:storage;
+export module az:storage;
 
 import std;
 
@@ -10,7 +10,7 @@ import :config;
 import :game;
 import :node;
 
-namespace AZ {
+namespace az {
 
 export class NodeStorage {
   struct NodeRef {
@@ -64,4 +64,4 @@ export class NodeStorage {
   std::vector<Node> nodes_;
 };
 
-}  // namespace AZ
+}  // namespace az

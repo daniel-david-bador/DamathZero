@@ -1,19 +1,18 @@
-module;
-
-#include <SDL3/SDL.h>
-
-export module damathzero;
+export module dz;
 
 export import :model;
 export import :game;
 export import :agent;
 
-import std;
+import az;
 
-export struct DamathZero {
-  SDL_Window* window;
-  SDL_Renderer* renderer;
-  std::shared_ptr<Model> model;
+namespace dz {
 
-  Damath::State state;
-};
+export using Action = az::Action;
+export using Config = az::Config;
+export using Player = az::Player;
+export using GameOutcome = az::GameOutcome;
+
+export using DamathZero = az::AlphaZero<dz::Game, dz::Model>;
+
+};  // namespace dz

@@ -3,9 +3,7 @@ module;
 #include <assert.h>
 #include <torch/torch.h>
 
-export module alphazero:mcts;
-
-import std;
+export module az:mcts;
 
 import :model;
 import :config;
@@ -13,9 +11,11 @@ import :node;
 import :storage;
 import :game;
 
-namespace AZ {
+import std;
 
-export template <Concepts::Game Game, Concepts::Model Model>
+namespace az {
+
+export template <concepts::Game Game, concepts::Model Model>
 class MCTS {
  public:
   MCTS(Config config) : config_(config) {}
@@ -181,4 +181,4 @@ class MCTS {
   Config config_;
 };
 
-}  // namespace AZ
+}  // namespace az

@@ -1,36 +1,14 @@
+#include <raylib.h>
 #include <torch/torch.h>
 
-#define SDL_MAIN_USE_CALLBACKS
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-
+import dz;
 import std;
-import alphazero;
-import damathzero;
 
-SDL_FRect info;
-SDL_FRect rects[32];
-SDL_FRect circs[8][8];
+auto Update(dz::Game::State&) -> void;
+auto Render(const dz::Game::State&) -> void;
 
-auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
-  *appstate = new DamathZero;
-
-  auto& app = *static_cast<DamathZero*>(*appstate);
-
-  SDL_SetAppMetadata("DamathZero", "1.0", "com.bads.damathzero");
-
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
-  }
-
-  if (!SDL_CreateWindowAndRenderer("DamathZero", 1300, 800, 0, &app.window,
-                                   &app.renderer)) {
-    SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
-  }
-
-  auto config = AZ::Config{
+auto main(int, char*[]) -> int {
+  auto damathzero = dz::DamathZero{dz::Config{
       .num_iterations = 1,
       .num_simulations = 10,
       .num_self_play_iterations_per_actor = 10,
@@ -38,17 +16,10 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       .num_model_evaluation_iterations = 5,
       .num_model_evaluation_simulations = 100,
       .device = torch::kCPU,
-  };
-  auto gen = std::mt19937{};
+  }};
 
-  auto alpha_zero = AZ::AlphaZero<Damath, Model>{
-      config,
-      gen,
-  };
-
-  //   app.model = alpha_zero.learn({
-  app.model = std::make_shared<Model>(Model::Config{
-      .action_size = Damath::ActionSize,
+  auto model = std::make_shared<dz::Model>(dz::Model::Config{
+      .action_size = dz::Game::ActionSize,
       .num_blocks = 2,
       .num_attention_head = 4,
       .embedding_dim = 64,
@@ -56,67 +27,46 @@ auto SDL_AppInit(void** appstate, int, char*[]) -> SDL_AppResult {
       .mlp_dropout_prob = 0.1,
   });
 
-  app.state = Damath::initial_state();
+  auto state = dz::Game::initial_state();
 
-  int index = 0;
-  for (int j = 0; j < 8; j++)
-    for (int i = 0; i < 8; i++)
-      if (i % 2 != j % 2) {
-        circs[j][i] = {i * 100.0f + 25.0f, (7 - j) * 100.0f + 25.0f, 50, 50};
-        rects[index++] = {i * 100.0f, (7 - j) * 100.0f, 100, 100};
+  InitWindow(1300, 800, "DamathZero");
+  SetTargetFPS(60);
+
+  while (not WindowShouldClose()) {
+    Update(state);
+    Render(state);
+  }
+
+  return 0;
+}
+
+auto Update(dz::Game::State&) -> void {}
+
+auto Render(const dz::Game::State& state) -> void {
+  BeginDrawing();
+
+  ClearBackground(BLACK);
+
+  DrawRectangle(800, 0, 500, 800, MAROON);
+
+  for (auto i = 0; i < 8; i++) {
+    for (auto j = 0; j < 8; j++) {
+      if (i % 2 != j % 2)
+        DrawRectangle(i * 100, (7 - j) * 100, 100, 100, WHITE);
+
+      auto piece = state.board.pieces[j][i];
+      if (piece.occup) {
+        DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 25,
+                   piece.enemy ? BLACK : MAROON);
+        DrawText(
+            std::format("{}", piece.ngtve ? -piece.value : piece.value).c_str(),
+            i * 100 + 40, (7 - j) * 100 + 30, 20, WHITE);
+      } else {
+        DrawText(std::format("{}", state.board.operators[j][i]).c_str(),
+                 i * 100 + 40, (7 - j) * 100 + 40, 20, BLACK);
       }
-
-  info = {800, 0, 500, 800};
-
-  return SDL_APP_CONTINUE;
-}
-
-auto SDL_AppEvent(void* appstate, SDL_Event* event) -> SDL_AppResult {
-  auto& _ = *static_cast<DamathZero*>(appstate);
-
-  if (event->type == SDL_EVENT_QUIT)
-    return SDL_APP_SUCCESS;
-
-  return SDL_APP_CONTINUE;
-}
-
-auto SDL_AppIterate(void* appstate) -> SDL_AppResult {
-  auto& app = *static_cast<DamathZero*>(appstate);
-  auto& renderer = app.renderer;
-
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-  SDL_RenderClear(renderer);
-
-  SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
-  SDL_RenderFillRect(renderer, &info);
-
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-  SDL_RenderFillRects(renderer, rects, 32);
-
-  for (auto j = 0; j < 8; j++) {
-    for (auto i = 0; i < 8; i++) {
-      auto& piece = app.state.board.pieces[j][i];
-
-      if (not piece.occup)
-        continue;
-
-      if (piece.enemy)
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-      else
-        SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
-
-      SDL_RenderFillRect(renderer, &circs[j][i]);
-
-      SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     }
   }
 
-  SDL_RenderPresent(renderer);
-
-  return SDL_APP_CONTINUE;
-}
-
-auto SDL_AppQuit(void* appstate, SDL_AppResult) -> void {
-  auto* app = static_cast<DamathZero*>(appstate);
-  delete app;
+  EndDrawing();
 }

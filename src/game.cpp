@@ -2,18 +2,18 @@ module;
 
 #include <torch/torch.h>
 
-export module alphazero:game;
+export module az:game;
 
 import std;
 
-namespace AZ {
+namespace az {
 
 export using Action = int;
 
 export class GameOutcome;
 export class Player;
 
-namespace Concepts {
+namespace concepts {
 
 export template <typename G>
 concept Game = requires(const G::State& state, Action action) {
@@ -34,7 +34,7 @@ concept Game = requires(const G::State& state, Action action) {
   { G::encode_state(state) } -> std::same_as<torch::Tensor>;
 };
 
-}  // namespace Concepts
+}  // namespace concepts
 
 export class Player {
  public:
@@ -93,4 +93,4 @@ inline constexpr auto GameOutcome::Win = GameOutcome(1);
 inline constexpr auto GameOutcome::Loss = GameOutcome(-1);
 inline constexpr auto GameOutcome::Draw = GameOutcome(0);
 
-}  // namespace AZ
+}  // namespace az

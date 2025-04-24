@@ -2,17 +2,19 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:agent;
+export module dz:agent;
 
 import :game;
 import :model;
 
+import az;
 import std;
-import alphazero;
+
+namespace dz {
 
 export struct Agent {
-  auto on_move(const Damath::State& state) -> AZ::Action {
-    Damath::print(state);
+  auto on_move(const dz::Game::State& state) -> az::Action {
+    dz::Game::print(state);
 
     auto get_action = [&](auto action) {
       auto distance = (action / (8 * 8 * 4)) + 1;
@@ -22,7 +24,7 @@ export struct Agent {
       return std::make_tuple(x, y, direction, distance);
     };
 
-    auto legal_actions = Damath::legal_actions(state).nonzero();
+    auto legal_actions = dz::Game::legal_actions(state).nonzero();
     for (int i = 0; i < legal_actions.size(0); i++) {
       auto action = legal_actions[i].item<int>();
       auto [x, y, direction, distance] = get_action(action);
@@ -34,15 +36,15 @@ export struct Agent {
     int input = 0;
     std::cout << "Enter action: ";
     std::cin >> input;
-    return static_cast<AZ::Action>(input);
+    return static_cast<az::Action>(input);
   }
 
-  auto on_model_move(const Damath::State& state, torch::Tensor probs,
-                     AZ::Action) -> void {
-    Damath::print(state);
-    auto feature = torch::unsqueeze(Damath::encode_state(state), 0);
+  auto on_model_move(const dz::Game::State& state, torch::Tensor probs,
+                     az::Action) -> void {
+    dz::Game::print(state);
+    auto feature = torch::unsqueeze(dz::Game::encode_state(state), 0);
 
-    auto legal_actions = Damath::legal_actions(state);
+    auto legal_actions = dz::Game::legal_actions(state);
 
     auto [wdl, policy] = model->forward(feature);
     policy = torch::softmax(torch::squeeze(policy, 0), -1);
@@ -59,16 +61,17 @@ export struct Agent {
     std::cout << "Win-Draw-Loss: " << wdl << "\n";
   }
 
-  auto on_game_end(const Damath::State& state, AZ::GameOutcome result) -> void {
+  auto on_game_end(const dz::Game::State& state, az::GameOutcome result)
+      -> void {
     auto new_state = state;
 
     // flip the player before printing it>
     new_state.player = player;
-    Damath::print(new_state);
+    dz::Game::print(new_state);
 
-    if (result == AZ::GameOutcome::Win) {
+    if (result == az::GameOutcome::Win) {
       std::println("You won!");
-    } else if (result == AZ::GameOutcome::Loss) {
+    } else if (result == az::GameOutcome::Loss) {
       std::println("You lost!");
     } else {
       std::println("Draw!");
@@ -76,7 +79,9 @@ export struct Agent {
   }
 
   std::shared_ptr<Model> model;
-  static constexpr auto player = AZ::Player::First;
+  static constexpr auto player = az::Player::First;
 };
 
-static_assert(AZ::Concepts::Agent<Agent, Damath>);
+};  // namespace dz
+
+static_assert(az::concepts::Agent<dz::Agent, dz::Game>);

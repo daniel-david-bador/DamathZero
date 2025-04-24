@@ -2,14 +2,16 @@ module;
 
 #include <torch/torch.h>
 
-export module damathzero:game;
+export module dz:game;
 
+import az;
 import std;
-import alphazero;
 
-export struct Damath {
-  using Action = AZ::Action;
-  using Player = AZ::Player;
+namespace dz {
+
+export struct Game {
+  using Action = az::Action;
+  using Player = az::Player;
 
   static constexpr auto ActionSize = 8 * 8 * 4 * 7;
 
@@ -447,9 +449,9 @@ export struct Damath {
   }
 
   static constexpr auto get_outcome(const State& state, Action action)
-      -> std::optional<AZ::GameOutcome> {
+      -> std::optional<az::GameOutcome> {
     if (state.draw_count >= 80)
-      return AZ::GameOutcome::Draw;
+      return az::GameOutcome::Draw;
 
     if (legal_actions(state).sum(0).item<double>() == 0.0) {
       auto distance = (action / (8 * 8 * 4)) + 1;
@@ -484,11 +486,11 @@ export struct Damath {
 
       auto [first, second] = canonical_state.scores;
       if (first > second)
-        return not piece.enemy ? AZ::GameOutcome::Win : AZ::GameOutcome::Loss;
+        return not piece.enemy ? az::GameOutcome::Win : az::GameOutcome::Loss;
       else if (first < second)
-        return not piece.enemy ? AZ::GameOutcome::Loss : AZ::GameOutcome::Win;
+        return not piece.enemy ? az::GameOutcome::Loss : az::GameOutcome::Win;
       else
-        return AZ::GameOutcome::Draw;
+        return az::GameOutcome::Draw;
     } else
       return {};
   }
@@ -552,4 +554,6 @@ export struct Damath {
   }
 };
 
-static_assert(AZ::Concepts::Game<Damath>);
+};  // namespace dz
+
+static_assert(az::concepts::Game<dz::Game>);

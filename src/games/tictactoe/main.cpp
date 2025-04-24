@@ -1,7 +1,7 @@
 #include <torch/torch.h>
 
+import az;
 import std;
-import alphazero;
 
 struct Network : public torch::nn::Module {
   Network()
@@ -28,7 +28,7 @@ struct Network : public torch::nn::Module {
   torch::nn::BatchNorm1d bn1, bn2;
 };
 
-static_assert(AZ::Concepts::Network<Network>);
+static_assert(az::concepts::Network<Network>);
 
 struct TicTacToe {
   static constexpr auto ActionSize = 9;
@@ -37,14 +37,14 @@ struct TicTacToe {
 
   struct State {
     Board board;
-    AZ::Player player;
+    az::Player player;
   };
 
   static constexpr auto initial_state() -> State {
-    return State(std::vector<int>(9, 0), AZ::Player::First);
+    return State(std::vector<int>(9, 0), az::Player::First);
   }
 
-  static constexpr auto apply_action(const State& state, AZ::Action action)
+  static constexpr auto apply_action(const State& state, az::Action action)
       -> State {
     auto new_state = state;
     new_state.board[action] = state.player.is_first() ? 1 : -1;
@@ -62,7 +62,7 @@ struct TicTacToe {
     return legal_actions;
   }
 
-  static constexpr auto check_win(const State& state, AZ::Action action)
+  static constexpr auto check_win(const State& state, az::Action action)
       -> bool {
     if (action < 0)
       return false;
@@ -87,12 +87,12 @@ struct TicTacToe {
             state.board[6] == piece);
   }
 
-  static constexpr auto get_outcome(const State& state, AZ::Action action)
-      -> std::optional<AZ::GameOutcome> {
+  static constexpr auto get_outcome(const State& state, az::Action action)
+      -> std::optional<az::GameOutcome> {
     if (check_win(state, action))
-      return AZ::GameOutcome::Win;
+      return az::GameOutcome::Win;
     else if (legal_actions(state).sum(0).item<double>() == 0.0)
-      return AZ::GameOutcome::Draw;
+      return az::GameOutcome::Draw;
     else
       return {};
   }
@@ -119,14 +119,14 @@ struct TicTacToe {
   }
 };
 
-static_assert(AZ::Concepts::Game<TicTacToe>);
+static_assert(az::concepts::Game<TicTacToe>);
 
 struct Agent {
-  static constexpr auto player = AZ::Player::First;
+  static constexpr auto player = az::Player::First;
 
   Agent(std::shared_ptr<Network> model) : model(model) {}
 
-  auto on_move(const TicTacToe::State& state) -> AZ::Action {
+  auto on_move(const TicTacToe::State& state) -> az::Action {
     TicTacToe::print(state);
 
     std::cout << TicTacToe::legal_actions(state).nonzero().transpose(0, 1)
@@ -135,11 +135,11 @@ struct Agent {
     int input = 0;
     std::cout << "Enter action: ";
     std::cin >> input;
-    return static_cast<AZ::Action>(input);
+    return static_cast<az::Action>(input);
   }
 
   auto on_model_move(const TicTacToe::State& state, torch::Tensor probs,
-                     AZ::Action _) -> void {
+                     az::Action _) -> void {
     auto feature = torch::unsqueeze(TicTacToe::encode_state(state), 0);
 
     auto [wdl, policy] = model->forward(feature);
@@ -152,7 +152,7 @@ struct Agent {
     std::cout << "Win-Draw-Loss: " << wdl << "\n";
   }
 
-  auto on_game_end(const TicTacToe::State& state, AZ::GameOutcome result)
+  auto on_game_end(const TicTacToe::State& state, az::GameOutcome result)
       -> void {
     auto new_state = state;
 
@@ -160,9 +160,9 @@ struct Agent {
     new_state.player = player;
     TicTacToe::print(new_state);
 
-    if (result == AZ::GameOutcome::Win) {
+    if (result == az::GameOutcome::Win) {
       std::println("You won!");
-    } else if (result == AZ::GameOutcome::Loss) {
+    } else if (result == az::GameOutcome::Loss) {
       std::println("You lost!");
     } else {
       std::println("Draw!");
@@ -172,10 +172,10 @@ struct Agent {
   std::shared_ptr<Network> model;
 };
 
-static_assert(AZ::Concepts::Agent<Agent, TicTacToe>);
+static_assert(az::concepts::Agent<Agent, TicTacToe>);
 
 auto main() -> int {
-  auto config = AZ::Config{
+  auto config = az::Config{
       .num_iterations = 1,
       .num_simulations = 60,
       .num_self_play_iterations_per_actor = 100,
@@ -185,16 +185,16 @@ auto main() -> int {
 
   auto gen = std::mt19937{};
 
-  auto alpha_zero = AZ::AlphaZero<TicTacToe, Network>{
+  auto alpha_zero = az::AlphaZero<TicTacToe, Network>{
       config,
       gen,
   };
 
   auto model = alpha_zero.learn();
 
-  auto arena = AZ::Arena<TicTacToe, Network>(config);
+  auto arena = az::Arena<TicTacToe, Network>(config);
   arena.play_with_model(model, /*num_simulations=*/1000, Agent{model},
-                        AZ::Player::Second);
+                        az::Player::Second);
 
   return 0;
 }

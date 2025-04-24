@@ -2,13 +2,15 @@ module;
 
 #include <torch/torch.h>
 
+export module az:model;
+
+export import :transformer;
+
 import std;
 
-export module alphazero:model;
+namespace az {
 
-namespace AZ {
-
-namespace Concepts {
+namespace concepts {
 
 export template <typename M>
 concept Model = std::is_base_of_v<torch::nn::Module, M> and
@@ -23,9 +25,9 @@ concept Model = std::is_base_of_v<torch::nn::Module, M> and
                     m.forward(x)
                   } -> std::same_as<std::tuple<torch::Tensor, torch::Tensor>>;
                 };
-}  // namespace Concepts
+}  // namespace concepts
 
-template <Concepts::Model Model>
+template <concepts::Model Model>
 auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
     -> std::shared_ptr<Model> {
   auto cloned = std::make_shared<Model>(model->config);
@@ -51,7 +53,7 @@ auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
   return cloned;
 }
 
-template <Concepts::Model Model>
+template <concepts::Model Model>
 auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   torch::serialize::OutputArchive output_model_archive;
   model->to(torch::kCPU);
@@ -59,7 +61,7 @@ auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   output_model_archive.save_to(std::string(path));
 };
 
-template <Concepts::Model Model>
+template <concepts::Model Model>
 auto read_model(int checkpoint, torch::DeviceType device,
                 typename Model::Config config) -> std::shared_ptr<Model> {
   torch::serialize::InputArchive input_archive;
@@ -70,4 +72,4 @@ auto read_model(int checkpoint, torch::DeviceType device,
   return model;
 }
 
-}  // namespace AZ
+}  // namespace az

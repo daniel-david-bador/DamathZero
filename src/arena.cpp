@@ -2,30 +2,31 @@ module;
 
 #include <torch/torch.h>
 
-export module alphazero:arena;
+export module az:arena;
 
-import std;
 import :model;
 import :game;
 import :mcts;
 import :config;
 
-namespace AZ {
+import std;
 
-namespace Concepts {
+namespace az {
+
+namespace concepts {
 
 export template <typename C, typename G>
 concept Agent =
-    Concepts::Game<G> and requires(C c, G::State state, torch::Tensor probs,
+    concepts::Game<G> and requires(C c, G::State state, torch::Tensor probs,
                                    GameOutcome outcome, Action action) {
       { c.on_move(state) } -> std::same_as<Action>;
       { c.on_model_move(state, probs, action) } -> std::same_as<void>;
       { c.on_game_end(state, outcome) } -> std::same_as<void>;
     };
 
-}  // namespace Concepts
+}  // namespace concepts
 
-export template <Concepts::Game Game, Concepts::Model Model>
+export template <concepts::Game Game, concepts::Model Model>
 class Arena {
   using State = Game::State;
 
@@ -39,7 +40,7 @@ class Arena {
   Arena(Config config) : config_(config) {}
 
   auto play_with_model(std::shared_ptr<Model> model, int num_model_simulations,
-                       Concepts::Agent<Game> auto controller,
+                       concepts::Agent<Game> auto controller,
                        Player human_player) -> void {
     auto mcts = MCTS<Game, Model>(config_);
 
@@ -121,4 +122,4 @@ class Arena {
   Config config_;
 };
 
-};  // namespace AZ
+};  // namespace az
