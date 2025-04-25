@@ -163,7 +163,7 @@ export struct Game {
 
     auto can_eat_more =
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
-    if (not action_info.should_be_knighted and can_eat_more) {
+    if (action_info.should_be_knighted and can_eat_more) {
       return {new_state, action_info};
     }
 
