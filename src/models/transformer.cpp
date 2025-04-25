@@ -185,4 +185,4 @@ export struct TransformerEncoder : public nn::Module {
   nn::ModuleList blocks{nullptr};
 };
 
-};  // namespace az::models
+}  // namespace az::models

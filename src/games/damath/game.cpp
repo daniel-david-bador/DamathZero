@@ -297,8 +297,6 @@ export struct Game {
       auto canonical_state = state;
       canonical_state.board = state.board.flip();
       canonical_state.player = state.player.next();
-      canonical_state.scores.first = state.scores.second;
-      canonical_state.scores.second = state.scores.first;
 
       auto piece = canonical_state.board[new_x, new_y];
 
@@ -317,6 +315,8 @@ export struct Game {
     auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
+        encoded_state[x][y][0] = state.scores.first;
+        encoded_state[x][y][1] = state.scores.second;
         if (state.player.is_first()) {
           encoded_state[x][y][0] = state.scores.first;
           encoded_state[x][y][1] = state.scores.second;
@@ -372,6 +372,6 @@ export struct Game {
   }
 };
 
-};  // namespace dz
+}  // namespace dz
 
 static_assert(az::concepts::Game<dz::Game>);

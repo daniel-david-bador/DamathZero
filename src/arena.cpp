@@ -122,4 +122,4 @@ class Arena {
   Config config_;
 };
 
-};  // namespace az
+}  // namespace az

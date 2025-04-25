@@ -61,4 +61,4 @@ export struct Model : torch::nn::Module {
 
 static_assert(az::concepts::Model<Model>);
 
-};  // namespace dz
+}  // namespace dz

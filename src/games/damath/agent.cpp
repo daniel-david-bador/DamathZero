@@ -82,6 +82,6 @@ export struct Agent {
   static constexpr auto player = az::Player::First;
 };
 
-};  // namespace dz
+}  // namespace dz
 
 static_assert(az::concepts::Agent<dz::Agent, dz::Game>);
