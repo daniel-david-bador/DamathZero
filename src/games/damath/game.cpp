@@ -39,7 +39,6 @@ export struct Game {
     Position new_position;
 
     bool should_be_knighted;
-    bool can_eat_more;
 
     float32_t new_score;
 
@@ -133,7 +132,6 @@ export struct Game {
 
     const auto should_be_knighted =
         not state.board[origin_x, origin_y].queen and new_y == 7;
-    const auto can_eat_more = get_max_eats(state, action) > 1;
 
     return {
         .distance = distance,
@@ -141,7 +139,6 @@ export struct Game {
         .original_position = Position(origin_x, origin_y),
         .new_position = Position(new_x, new_y),
         .should_be_knighted = should_be_knighted,
-        .can_eat_more = can_eat_more,
         .new_score = new_score,
         .eaten_enemy_position = eaten_enemy_position,
     };
@@ -157,14 +154,16 @@ export struct Game {
     auto [new_x, new_y] = action_info.new_position;
 
     new_state.board[new_x, new_y] = state.board[origin_x, origin_y];
-    new_state.board[origin_x, origin_y] = {0, 0, 0, 0, 0};
+    new_state.board[origin_x, origin_y] = Board::EmptyCell;
 
     if (auto eaten_enemy_position = action_info.eaten_enemy_position) {
       auto [x, y] = *eaten_enemy_position;
-      new_state.board[x, y] = {0, 0, 0, 0, 0};
+      new_state.board[x, y] = Board::EmptyCell;
     }
 
-    if (not action_info.should_be_knighted and action_info.can_eat_more) {
+    auto can_eat_more =
+        not new_state.board.get_eatable_actions(new_x, new_y).empty();
+    if (not action_info.should_be_knighted and can_eat_more) {
       return {new_state, action_info};
     }
 

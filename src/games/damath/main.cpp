@@ -28,6 +28,7 @@ auto main(int, char*[]) -> int {
   });
 
   auto state = dz::Game::initial_state();
+  std::cout << dz::Game::legal_actions(state).nonzero();
 
   InitWindow(1300, 800, "DamathZero");
   SetTargetFPS(60);

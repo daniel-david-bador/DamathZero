@@ -23,6 +23,8 @@ export struct Board {
     }
   };
 
+  static constexpr auto EmptyCell = Cell{0, 0, 0, 0, 0};
+
   static constexpr std::array<std::array<const char, 8>, 8> operators{
       {{' ', '+', ' ', '-', ' ', '/', ' ', '*'},
        {'-', ' ', '+', ' ', '*', ' ', '/', ' '},
@@ -33,6 +35,9 @@ export struct Board {
        {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
        {'*', ' ', '/', ' ', '-', ' ', '+', ' '}}};
 
+  // TODO:
+  // Use the same concept above to create a constexpr constructor and create a
+  // board easily.
   std::array<std::array<Cell, 8>, 8> cells{{
       // clang-format off
         {{{0,0,0,0,0},{1,0,0,1,11},{0,0,0,0,0},{1,0,0,0,8},{0,0,0,0,0},{1,0,0,1,5},{0,0,0,0,0},{1,0,0,0,2}}},
