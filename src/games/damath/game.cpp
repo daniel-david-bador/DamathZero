@@ -77,7 +77,7 @@ export struct Game {
         new_score += opponent_value > 0 ? (player_value / opponent_value) : 0;
       }
 
-      eaten_enemy_position = Position{enemy_y, enemy_y};
+      eaten_enemy_position = Position{enemy_x, enemy_y};
     };
 
     if (direction == 0) {  // move diagonally to the upper left
