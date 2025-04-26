@@ -62,6 +62,8 @@ export struct Game {
         state.player.is_first() ? state.scores.first : state.scores.second;
 
     auto eat = [&](auto enemy_x, auto enemy_y) {
+      assert((state.board[enemy_x, enemy_y].occup));
+
       auto op = state.board.operators[new_y][new_x];
 
       auto player_value = state.board[origin_x, origin_y].get_value();
@@ -146,38 +148,47 @@ export struct Game {
 
   static auto inspect_and_apply_action(const State& state, Action action)
       -> std::pair<State, ActionInfo> {
+    const auto action_info = decode_action(state, action);
+
+    const auto [origin_x, origin_y] = action_info.original_position;
+    const auto [new_x, new_y] = action_info.new_position;
+
     auto new_state = state;
-
-    auto action_info = decode_action(state, action);
-
-    auto [origin_x, origin_y] = action_info.original_position;
-    auto [new_x, new_y] = action_info.new_position;
-
+    // Move the piece to its new position.
     new_state.board[new_x, new_y] = state.board[origin_x, origin_y];
     new_state.board[origin_x, origin_y] = Board::EmptyCell;
 
+    // If the action resulted to an piece being captured, register it.
     if (auto eaten_enemy_position = action_info.eaten_enemy_position) {
       auto [x, y] = *eaten_enemy_position;
       new_state.board[x, y] = Board::EmptyCell;
+
+      // Update the score if this move triggered an eat.
+      if (state.player.is_first()) {
+        new_state.scores.first = action_info.new_score;
+      } else {
+        new_state.scores.second = action_info.new_score;
+      }
     }
 
-    auto can_eat_more =
+    const auto can_eat_more =
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
-    if (action_info.should_be_knighted and can_eat_more) {
-      return {new_state, action_info};
-    }
 
     if (action_info.should_be_knighted) {
       new_state.board[new_x, new_y].queen = 1;
+      // If the piece just got promoted and it can eat more, it can't continue
+      // eating.
+      if (can_eat_more) {
+        new_state.board = new_state.board.flip();
+        new_state.player = new_state.player.next();
+        return {new_state, action_info};
+      }
     }
 
-    new_state.board = new_state.board.flip();
-    new_state.player = state.player.next();
-
-    if (state.player.is_first()) {
-      new_state.scores.first = action_info.new_score;
-    } else {
-      new_state.scores.second = action_info.new_score;
+    // If the piece cannot eat more, then change the perspective othe player.
+    if (not can_eat_more) {
+      new_state.board = new_state.board.flip();
+      new_state.player = new_state.player.next();
     }
 
     return {new_state, action_info};
@@ -271,70 +282,46 @@ export struct Game {
     if (state.draw_count >= 80)
       return az::GameOutcome::Draw;
 
-    if (legal_actions(state).sum(0).item<float64_t>() == 0.0) {
-      auto distance = (action / (8 * 8 * 4)) + 1;
-      auto direction = (action % (8 * 8 * 4)) / (8 * 8);
-      auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
-      auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
-
-      auto new_x = x;
-      auto new_y = y;
-
-      if (direction == 0) {  // move diagonally to the upper left
-        new_x -= distance;
-        new_y += distance;
-      } else if (direction == 1) {  // move diagonally to the upper right
-        new_x += distance;
-        new_y += distance;
-      } else if (direction == 2) {  // move diagonally to the lower left
-        new_x -= distance;
-        new_y -= distance;
-      } else if (direction == 3) {  // move diagonally to the lower right
-        new_x += distance;
-        new_y -= distance;
-      }
-
-      auto canonical_state = state;
-      canonical_state.board = state.board.flip();
-      canonical_state.player = state.player.next();
-
-      auto piece = canonical_state.board[new_x, new_y];
-
-      auto [first, second] = canonical_state.scores;
-      if (first > second)
-        return not piece.enemy ? az::GameOutcome::Win : az::GameOutcome::Loss;
-      else if (first < second)
-        return not piece.enemy ? az::GameOutcome::Loss : az::GameOutcome::Win;
-      else
-        return az::GameOutcome::Draw;
-    } else
+    if (legal_actions(state).nonzero().numel() > 0) {
       return {};
+    }
+
+    auto action_info = decode_action(state, action);
+    auto canonical_state = state;
+    canonical_state.board = state.board.flip();
+    canonical_state.player = state.player.next();
+
+    auto piece =
+        canonical_state
+            .board[action_info.new_position.x, action_info.new_position.y];
+
+    auto [first, second] = canonical_state.scores;
+    if (first > second)
+      return not piece.enemy ? az::GameOutcome::Win : az::GameOutcome::Loss;
+    else if (first < second)
+      return not piece.enemy ? az::GameOutcome::Loss : az::GameOutcome::Win;
+    else
+      return az::GameOutcome::Draw;
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
     auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
-        encoded_state[x][y][0] = state.scores.first;
-        encoded_state[x][y][1] = state.scores.second;
-        if (state.player.is_first()) {
-          encoded_state[x][y][0] = state.scores.first;
-          encoded_state[x][y][1] = state.scores.second;
-          if (state.board.cells[y][x].occup) {
-            auto& piece = state.board.cells[y][x];
-            auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            encoded_state[x][y][(not piece.enemy ? 2 : 4) +
-                                (piece.queen ? 1 : 0)] = value;
-          }
-        } else {
-          encoded_state[x][y][0] = state.scores.second;
-          encoded_state[x][y][1] = state.scores.first;
-          if (state.board.cells[y][x].occup) {
-            auto& piece = state.board.cells[y][x];
-            auto value = (piece.ngtve ? -1 : 1) * piece.value;
-            encoded_state[x][y][(piece.enemy ? 2 : 4) + (piece.queen ? 1 : 0)] =
-                value;
-          }
+        auto [score1, score2] = state.scores;
+        if (state.player.is_second()) {
+          std::swap(score1, score2);
+        }
+
+        encoded_state[x][y][0] = score1;
+        encoded_state[x][y][1] = score2;
+
+        if (state.board[x, y].occup) {
+          const auto piece = state.board[x, y];
+          const auto value = piece.get_value();
+
+          encoded_state[x][y][(not piece.enemy ? 2 : 4) +
+                              (piece.queen ? 1 : 0)] = value;
         }
       }
     }

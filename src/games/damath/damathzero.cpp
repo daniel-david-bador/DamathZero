@@ -124,12 +124,12 @@ export struct Application {
     state = Game::apply_action(state, action);
     outcome = Game::get_outcome(state, action);
 
-    // while (not outcome and state.player.is_second()) {
-    //   auto probs = mcts.search(state, model, 100);
-    //   auto action = torch::argmax(probs).item<Action>();
-    //   state = Game::apply_action(state, action);
-    //   outcome = Game::get_outcome(state, action);
-    // }
+    while (not outcome and state.player.is_second()) {
+      auto probs = mcts.search(state, model, 100);
+      auto action = torch::argmax(probs).item<Action>();
+      state = Game::apply_action(state, action);
+      outcome = Game::get_outcome(state, action);
+    }
 
     update_valid_moves();
   }
