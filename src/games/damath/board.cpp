@@ -33,6 +33,9 @@ export struct Board {
 
   static constexpr auto EmptyCell = Cell{0, 0, 0, 0, 0};
 
+  static constexpr std::array<std::array<int, 2>, 4> directions{
+      {{-1, 1}, {1, 1}, {-1, -1}, {1, -1}}};
+
   static constexpr std::array<std::array<const char, 8>, 8> operators{
       {{' ', '+', ' ', '-', ' ', '/', ' ', '*'},
        {'-', ' ', '+', ' ', '*', ' ', '/', ' '},
@@ -47,9 +50,6 @@ export struct Board {
   //   int8_t x;
   //   int8_t y;
   // };
-
-  // static constexpr std::array<Direction, 4> directions{
-  //     {-1, 1}, {1, 1}, {-1, -1}, {1, -1}};
 
   // TODO:
   // Use the same concept above to create a constexpr constructor and create a
@@ -70,6 +70,10 @@ export struct Board {
     return cells[y][x];
   }
   constexpr auto operator[](int8_t x, int8_t y) -> Cell& { return cells[y][x]; }
+
+  static constexpr auto validate(int x, int y) -> bool {
+    return x >= 0 and x < 8 and y >= 0 and y < 8;
+  };
 
   constexpr auto flip() const -> Board {
     return {
@@ -92,51 +96,20 @@ export struct Board {
     auto piece = cells[y][x];
     assert(piece.is_occupied);
 
-    for (auto distance = 1; x - distance >= 0 and y + distance < 8;
-         distance++) {
-      if (not piece.is_knighted and distance > 1)
-        break;
+    for (auto direction = 0; direction < 4; direction++) {
+      auto dx, dy = directions[direction];
+      for (auto distance = 1; validate(x + distance * dx, y + distance * dx);
+           distance++) {
+        if (not piece.is_knighted and distance > 1)
+          break;
 
-      if (cells[y + distance][x - distance].is_occupied)
-        break;
+        if (cells[y + distance * dx][x + distance * dx].is_occupied)
+          break;
 
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 0) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    for (auto distance = 1; x + distance < 8 and y + distance < 8; distance++) {
-      if (not piece.is_knighted and distance > 1)
-        break;
-
-      if (cells[y + distance][x + distance].is_occupied)
-        break;
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 1) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    for (auto distance = 1; x - distance >= 0 and y - distance >= 0;
-         distance++) {
-      if (not piece.is_knighted and distance > 1)
-        break;
-
-      if (cells[y - distance][x - distance].is_occupied)
-        break;
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 2) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    for (auto distance = 1; x + distance < 8 and y - distance >= 0;
-         distance++) {
-      if (not piece.is_knighted and distance > 1)
-        break;
-
-      if (cells[y - distance][x + distance].is_occupied)
-        break;
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 3) + (8 * y) + x;
-      actions.push_back(action);
+        auto action =
+            (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + x;
+        actions.push_back(action);
+      }
     }
 
     return actions;
@@ -149,85 +122,27 @@ export struct Board {
     auto piece = cells[y][x];
     assert(piece.is_occupied);
 
-    for (auto distance = 1, enemy_seen = 0;
-         x - distance >= 0 and y + distance < 8; distance++) {
-      if (not piece.is_knighted and distance > 2)
-        break;
-
-      if (enemy_seen > 1)
-        break;
-
-      auto cell = cells[y + distance][x - distance];
-      if (cell.is_occupied) {
-        if (cell.has_same_owner(piece))
-          break;
-        enemy_seen++;
-      }
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 0) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    // Check diagonal up-right
-    for (auto distance = 1, enemy_seen = 0;
-         x + distance < 8 and y + distance < 8; distance++) {
-      if (not piece.is_knighted and distance > 2)
-        break;
-
-      if (enemy_seen > 1)
-        break;
-
-      auto cell = cells[y - distance][x - distance];
-      if (cell.is_occupied) {
-        if (cell.has_same_owner(piece))
-          break;
-        enemy_seen++;
-      }
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 1) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    // Check diagonal down-left
-    for (auto distance = 1, enemy_seen = 0;
-         x - distance >= 0 and y - distance >= 0; distance++) {
-      if (not piece.is_knighted and distance > 2)
-        break;
-
-      if (enemy_seen > 1)
-        break;
-
-      auto cell = cells[y - distance][x - distance];
-      if (cell.is_occupied) {
-        if (cell.has_same_owner(piece))
+    for (auto direction = 0; direction < 4; direction++) {
+      auto dx, dy = directions[direction];
+      for (auto distance = 1, enemy_seen = 0;
+           validate(x + distance * dx, y + distance * dx); distance++) {
+        if (not piece.is_knighted and distance > 2)
           break;
 
-        enemy_seen++;
-      }
-
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 2) + (8 * y) + x;
-      actions.push_back(action);
-    }
-
-    // Check diagonal down-right
-    for (auto distance = 1, enemy_seen = 0;
-         x + distance < 8 and y - distance >= 0; distance++) {
-      if (not piece.is_knighted and distance > 2)
-        break;
-
-      if (enemy_seen > 1)
-        break;
-
-      auto cell = cells[y - distance][x + distance];
-      if (cell.is_occupied) {
-        if (cell.has_same_owner(piece))
+        if (enemy_seen > 1)
           break;
 
-        enemy_seen++;
-      }
+        auto cell = cells[y + distance * dy][x + distance * dx];
+        if (cell.is_occupied) {
+          if (cell.has_same_owner(piece))
+            break;
+          enemy_seen++;
+        }
 
-      auto action = (8 * 8 * 4 * (distance - 1)) + (8 * 8 * 3) + (8 * y) + x;
-      actions.push_back(action);
+        auto action =
+            (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + x;
+        actions.push_back(action);
+      }
     }
 
     return actions;
