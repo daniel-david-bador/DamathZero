@@ -30,6 +30,8 @@ export struct Application {
   Game::State state;
   std::optional<GameOutcome> outcome;
 
+  std::vector<Game::State> history;
+
   std::optional<Action> action_map[8][8][8][8];
 
   bool destinations[8][8];
@@ -66,7 +68,8 @@ export struct Application {
             .mlp_dropout_prob = 0.1,
         })},
         state{Game::initial_state()},
-        outcome{std::nullopt} {
+        outcome{std::nullopt},
+        history{Game::initial_state()} {
     model->to(torch::kCPU);
     update_valid_moves();
   }
@@ -140,7 +143,17 @@ export struct Application {
       outcome = Game::get_outcome(state, action);
     }
 
+    history.push_back(state);
     update_valid_moves();
+  }
+
+  auto undo_move() -> void {
+    if (history.size() > 1) {
+      history.pop_back();
+      state = history.back();
+      outcome = std::nullopt;
+      update_valid_moves();
+    }
   }
 
   auto reset_game() -> void {

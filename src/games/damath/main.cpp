@@ -34,8 +34,13 @@ auto Update(dz::Application& app) -> void {
         app.unselect_piece();
     }
 
-    if (mousePosition.x < 1300 and mousePosition.x > 925 and
-        mousePosition.y < 800 and mousePosition.y > 650) {
+    if (mousePosition.x > 825 and mousePosition.x < 1025 and
+        mousePosition.y > 650 and mousePosition.y < 700) {
+      app.undo_move();
+    }
+
+    if (mousePosition.x > 1075 and mousePosition.x < 1175 and
+        mousePosition.y > 650 and mousePosition.y < 700) {
       app.reset_game();
     }
   }
@@ -113,10 +118,11 @@ auto Render(const dz::Application& app) -> void {
                  std::format("Player 2: {:7.2f}", app.state.scores.second),
                  1050, 200, 250, 100, 20, 3, WHITE);
 
-  DrawRectangle(925, 650, 250, 50, GREEN);
-  DrawTextCenter(GetFontDefault(),
-                 std::format("Reset Game", app.state.scores.second), 925, 650,
-                 250, 50, 40, 3, WHITE);
+  DrawRectangle(825, 650, 200, 50, GREEN);
+  DrawTextCenter(GetFontDefault(), "Undo", 825, 650, 200, 50, 40, 3, WHITE);
+
+  DrawRectangle(1075, 650, 200, 50, GREEN);
+  DrawTextCenter(GetFontDefault(), "Reset", 1075, 650, 200, 50, 40, 3, WHITE);
 
   EndDrawing();
 }
