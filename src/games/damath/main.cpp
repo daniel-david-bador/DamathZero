@@ -61,8 +61,12 @@ auto Render(const dz::Application& app) -> void {
       if (i % 2 != j % 2)
         DrawRectangle(i * 100, (7 - j) * 100, 100, 100, WHITE);
 
-      if (app.moveable_pieces[i][j] or app.destinations[i][j])
+      if (app.moveable_pieces[i][j])
         DrawRectangle(i * 100, (7 - j) * 100, 100, 100, Fade(YELLOW, 0.25));
+
+      if (app.destinations[i][j]) {
+        DrawRectangle(i * 100, (7 - j) * 100, 100, 100, Fade(YELLOW, 0.25));
+      }
 
       auto cell = app.state.board[i, j];
       if (cell.is_occupied) {
@@ -71,12 +75,32 @@ auto Render(const dz::Application& app) -> void {
         DrawTextCenter(GetFontDefault(), std::format("{}", cell.get_value()),
                        i * 100, (7 - j) * 100, 100, 100, 20, 3, WHITE);
       } else {
-        DrawTextCenter(GetFontDefault(),
-                       std::format("{}", app.state.board.operators[j][i]),
-                       i * 100, (7 - j) * 100, 100, 100, 20, 3, BLACK);
+        DrawTextCenter(
+            GetFontDefault(),
+            app.destinations[i][j]
+                ? std::format(
+                      "{:.2f}",
+                      app.predicted_action_probs
+                          [app.action_map[app.selected_piece.value().first]
+                                         [app.selected_piece.value().second][i]
+                                         [j]
+                                             .value()]
+                              .item<float>())
+                : std::format("{}", app.state.board.operators[j][i]),
+            i * 100, (7 - j) * 100, 100, 100, 20, 3, BLACK);
       }
     }
   }
+
+  auto predicted_win = app.predicted_wdl[0].item<float>() * 800;
+  auto predicted_draw = app.predicted_wdl[1].item<float>() * 800;
+  auto predicted_loss = app.predicted_wdl[2].item<float>() * 800;
+
+  DrawLineEx({800, 0}, {800, predicted_loss * 800}, 30, BLUE);
+  DrawLineEx({800, predicted_loss}, {800, predicted_loss + predicted_draw}, 30,
+             GRAY);
+  DrawLineEx({800, predicted_loss + predicted_draw},
+             {800, predicted_loss + predicted_draw + predicted_win}, 30, GREEN);
 
   DrawRectangle(800, 0, 500, 800, MAROON);
   DrawTextCenter(GetFontDefault(), "DamathZero", 800, 0, 500, 100, 40, 3,

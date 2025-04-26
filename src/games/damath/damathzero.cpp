@@ -38,6 +38,9 @@ export struct Application {
   std::optional<std::pair<int, int>> selected_piece;
   std::vector<std::pair<int, int>> next_moves[8][8];
 
+  torch::Tensor predicted_wdl{};
+  torch::Tensor predicted_action_probs{};
+
   Application()
       : damathzero{dz::Config{
             .num_iterations = 1,
@@ -69,6 +72,12 @@ export struct Application {
   }
 
   auto update_valid_moves() -> void {
+    std::tie(predicted_wdl, predicted_action_probs) =
+        model->forward(Game::encode_state(state).unsqueeze(0));
+
+    predicted_wdl = predicted_wdl.squeeze(0);
+    predicted_action_probs = predicted_action_probs.squeeze(0).reshape({-1});
+
     std::memset(action_map, {}, sizeof(action_map));
     std::memset(destinations, {}, sizeof(destinations));
     std::memset(moveable_pieces, {}, sizeof(moveable_pieces));
