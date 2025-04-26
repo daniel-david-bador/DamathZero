@@ -171,25 +171,19 @@ export struct Game {
       }
     }
 
+    new_state.board[new_x, new_y].queen = action_info.should_be_knighted;
+
+    const auto has_eaten = action_info.eaten_enemy_position.has_value();
     const auto can_eat_more =
+        has_eaten and
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
 
-    if (action_info.should_be_knighted) {
-      new_state.board[new_x, new_y].queen = 1;
-      // If the piece just got promoted and it can eat more, it can't continue
-      // eating.
-      if (can_eat_more) {
-        new_state.board = new_state.board.flip();
-        new_state.player = new_state.player.next();
-        return {new_state, action_info};
-      }
+    if (can_eat_more) {
+      return {new_state, action_info};
     }
 
-    // If the piece cannot eat more, then change the perspective othe player.
-    if (not can_eat_more) {
-      new_state.board = new_state.board.flip();
-      new_state.player = new_state.player.next();
-    }
+    new_state.board = new_state.board.flip();
+    new_state.player = new_state.player.next();
 
     return {new_state, action_info};
   }
