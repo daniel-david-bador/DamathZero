@@ -172,7 +172,8 @@ export struct Game {
       }
     }
 
-    new_state.board[new_x, new_y].is_knighted = action_info.should_be_knighted;
+    if (action_info.should_be_knighted)
+      new_state.board[new_x, new_y].is_knighted = true;
 
     const auto has_eaten = action_info.eaten_enemy_position.has_value();
     const auto can_eat_more =
