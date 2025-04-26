@@ -17,10 +17,13 @@ export struct Board {
     }
 
     constexpr auto is_owned_by(az::Player player) const -> bool {
+      assert(is_occupied);
       return player.is_first() == is_owned_by_first_player;
     }
 
     constexpr auto has_same_owner(Cell other) const -> bool {
+      assert(is_occupied);
+      assert(other.is_occupied);
       return is_owned_by_first_player == other.is_owned_by_first_player;
     }
 
@@ -33,7 +36,7 @@ export struct Board {
 
   static constexpr auto EmptyCell = Cell{0, 0, 0, 0, 0};
 
-  static constexpr std::array<std::array<int, 2>, 4> directions{
+  static constexpr std::array<std::pair<int, int>, 4> directions{
       {{-1, 1}, {1, 1}, {-1, -1}, {1, -1}}};
 
   static constexpr std::array<std::array<const char, 8>, 8> operators{
@@ -91,19 +94,21 @@ export struct Board {
   }
 
   auto get_jump_actions(int x, int y) const -> std::vector<az::Action> {
-    auto actions = std::vector<az::Action>{};
+    assert((x >= 0 and x < 8));
+    assert((y >= 0 and y < 8));
 
-    auto piece = cells[y][x];
+    const auto piece = cells[y][x];
     assert(piece.is_occupied);
 
+    auto actions = std::vector<az::Action>{};
     for (auto direction = 0; direction < 4; direction++) {
-      auto dx, dy = directions[direction];
-      for (auto distance = 1; validate(x + distance * dx, y + distance * dx);
+      const auto [dx, dy] = directions[direction];
+      for (auto distance = 1; validate(x + distance * dx, y + distance * dy);
            distance++) {
         if (not piece.is_knighted and distance > 1)
           break;
 
-        if (cells[y + distance * dx][x + distance * dx].is_occupied)
+        if (cells[y + distance * dy][x + distance * dx].is_occupied)
           break;
 
         auto action =
@@ -117,15 +122,17 @@ export struct Board {
 
   auto get_eatable_actions(int32_t x, int32_t y) const
       -> std::vector<az::Action> {
-    auto actions = std::vector<az::Action>{};
+    assert((x >= 0 and x < 8));
+    assert((y >= 0 and y < 8));
 
-    auto piece = cells[y][x];
+    const auto piece = cells[y][x];
     assert(piece.is_occupied);
 
+    auto actions = std::vector<az::Action>{};
     for (auto direction = 0; direction < 4; direction++) {
-      auto dx, dy = directions[direction];
+      const auto [dx, dy] = directions[direction];
       for (auto distance = 1, enemy_seen = 0;
-           validate(x + distance * dx, y + distance * dx); distance++) {
+           validate(x + distance * dx, y + distance * dy); distance++) {
         if (not piece.is_knighted and distance > 2)
           break;
 
@@ -139,9 +146,11 @@ export struct Board {
           enemy_seen++;
         }
 
-        auto action =
-            (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + x;
-        actions.push_back(action);
+        if (enemy_seen == 1) {
+          auto action =
+              (8 * 8 * 4 * (distance - 1)) + (8 * 8 * direction) + (8 * y) + x;
+          actions.push_back(action);
+        }
       }
     }
 

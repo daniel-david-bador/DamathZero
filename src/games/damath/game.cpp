@@ -133,7 +133,8 @@ export struct Game {
     }
 
     const auto should_be_knighted =
-        not state.board[origin_x, origin_y].is_knighted and new_y == 7;
+        not state.board[origin_x, origin_y].is_knighted and
+        (state.player.is_first() ? new_y == 7 : new_y == 0);
 
     return {
         .distance = distance,
@@ -208,6 +209,7 @@ export struct Game {
       for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
         stack.push_back({action, new_state, height + 1});
       }
+      // std::println("Here!: {} {}", new_x, new_y);
     }
     return max_height;
   }
@@ -219,7 +221,7 @@ export struct Game {
     for (int8_t y = 0; y < 8; y++) {
       for (int8_t x = 0; x < 8; x++) {
         auto cell = state.board[x, y];
-        if (cell.is_owned_by(state.player)) {
+        if (cell.is_occupied and cell.is_owned_by(state.player)) {
           positions.push_back({x, y});
         }
       }
