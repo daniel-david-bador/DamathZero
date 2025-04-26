@@ -103,6 +103,15 @@ export struct Board {
     auto actions = std::vector<az::Action>{};
     for (auto direction = 0; direction < 4; direction++) {
       const auto [dx, dy] = directions[direction];
+
+      if (not piece.is_knighted) {
+        if (piece.is_owned_by_first_player and dy == -1)
+          continue;
+
+        if (not piece.is_owned_by_first_player and dy == 1)
+          continue;
+      }
+
       for (auto distance = 1; validate(x + distance * dx, y + distance * dy);
            distance++) {
         if (not piece.is_knighted and distance > 1)
@@ -144,6 +153,7 @@ export struct Board {
           if (cell.has_same_owner(piece))
             break;
           enemy_seen++;
+          continue;
         }
 
         if (enemy_seen == 1) {

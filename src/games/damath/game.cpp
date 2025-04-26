@@ -176,7 +176,7 @@ export struct Game {
 
     const auto has_eaten = action_info.eaten_enemy_position.has_value();
     const auto can_eat_more =
-        has_eaten and
+        has_eaten and not action_info.should_be_knighted and
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
 
     if (can_eat_more) {
