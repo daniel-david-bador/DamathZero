@@ -85,11 +85,11 @@ auto Render(const dz::Application& app) -> void {
                  WHITE);
   DrawTextCenter(GetFontDefault(), "Scores", 800, 100, 500, 100, 40, 3, WHITE);
   DrawTextCenter(GetFontDefault(),
-                 std::format("Player 1: {}", app.state.scores.first), 800, 200,
-                 250, 100, 40, 3, WHITE);
+                 std::format("Player 1: {:7.2f}", app.state.scores.first), 800,
+                 200, 250, 100, 20, 3, WHITE);
   DrawTextCenter(GetFontDefault(),
-                 std::format("Player 2: {}", app.state.scores.second), 1050,
-                 200, 250, 100, 40, 3, WHITE);
+                 std::format("Player 2: {:7.2f}", app.state.scores.second),
+                 1050, 200, 250, 100, 20, 3, WHITE);
 
   DrawRectangle(925, 650, 250, 50, GREEN);
   DrawTextCenter(GetFontDefault(),
