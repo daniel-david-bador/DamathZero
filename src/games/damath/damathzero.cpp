@@ -133,6 +133,12 @@ export struct Application {
 
     update_valid_moves();
   }
+
+  auto reset_game() -> void {
+    state = Game::initial_state();
+    outcome = std::nullopt;
+    update_valid_moves();
+  }
 };
 
 }  // namespace dz

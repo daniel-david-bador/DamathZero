@@ -33,16 +33,22 @@ auto Update(dz::Application& app) -> void {
       else
         app.unselect_piece();
     }
+
+    if (mousePosition.x < 1300 and mousePosition.x > 925 and
+        mousePosition.y < 800 and mousePosition.y > 650) {
+      app.reset_game();
+    }
   }
 }
 
-auto DrawTextCenter(Font font, const char* text, int x, int y, int width,
+auto DrawTextCenter(Font font, std::string_view text, int x, int y, int width,
                     int height, float fontSize, float spacing, Color tint)
     -> void {
-  auto [textWidth, textHeight] = MeasureTextEx(font, text, fontSize, 0);
+  auto [textWidth, textHeight] =
+      MeasureTextEx(font, text.data(), fontSize, spacing);
   auto textX = x + (width - textWidth) / 2;
   auto textY = y + (height - textHeight) / 2;
-  DrawTextEx(font, text, Vector2{textX, textY}, fontSize, spacing, tint);
+  DrawTextEx(font, text.data(), Vector2{textX, textY}, fontSize, spacing, tint);
 }
 
 auto Render(const dz::Application& app) -> void {
@@ -64,19 +70,31 @@ auto Render(const dz::Application& app) -> void {
                    cell.enemy ? BLACK : MAROON);
         DrawTextCenter(GetFontDefault(),
                        std::format("{}", cell.get_value()).c_str(), i * 100,
-                       (7 - j) * 100, 100, 100, 20, 0, WHITE);
+                       (7 - j) * 100, 100, 100, 20, 3, WHITE);
       } else {
         DrawTextCenter(
             GetFontDefault(),
             std::format("{}", app.state.board.operators[j][i]).c_str(), i * 100,
-            (7 - j) * 100, 100, 100, 20, 0, BLACK);
+            (7 - j) * 100, 100, 100, 20, 3, BLACK);
       }
     }
   }
 
   DrawRectangle(800, 0, 500, 800, MAROON);
-  DrawTextCenter(GetFontDefault(), "DamathZero", 800, 0, 500, 100, 40, 1,
+  DrawTextCenter(GetFontDefault(), "DamathZero", 800, 0, 500, 100, 40, 3,
                  WHITE);
+  DrawTextCenter(GetFontDefault(), "Scores", 800, 100, 500, 100, 40, 3, WHITE);
+  DrawTextCenter(GetFontDefault(),
+                 std::format("Player 1: {}", app.state.scores.first), 800, 200,
+                 250, 100, 40, 3, WHITE);
+  DrawTextCenter(GetFontDefault(),
+                 std::format("Player 2: {}", app.state.scores.second), 1050,
+                 200, 250, 100, 40, 3, WHITE);
+
+  DrawRectangle(925, 650, 250, 50, GREEN);
+  DrawTextCenter(GetFontDefault(),
+                 std::format("Reset Game", app.state.scores.second), 925, 650,
+                 250, 50, 40, 3, WHITE);
 
   EndDrawing();
 }
