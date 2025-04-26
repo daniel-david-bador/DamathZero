@@ -62,7 +62,7 @@ export struct Game {
         state.player.is_first() ? state.scores.first : state.scores.second;
 
     auto eat = [&](auto enemy_x, auto enemy_y) {
-      assert((state.board[enemy_x, enemy_y].occup));
+      assert((state.board[enemy_x, enemy_y].is_occupied));
 
       auto op = state.board.operators[new_y][new_x];
 
@@ -89,7 +89,7 @@ export struct Game {
       [&] {
         for (int8_t enemy_y = origin_y + 1; enemy_y < new_y; enemy_y++)
           for (int8_t enemy_x = origin_x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board[enemy_x, enemy_y].occup) {
+            if (state.board[enemy_x, enemy_y].is_occupied) {
               eat(enemy_x, enemy_y);
               return;
             }
@@ -101,7 +101,7 @@ export struct Game {
       [&] {
         for (int8_t enemy_y = origin_y + 1; enemy_y < new_y; enemy_y++)
           for (int8_t enemy_x = origin_x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board[enemy_x, enemy_y].occup) {
+            if (state.board[enemy_x, enemy_y].is_occupied) {
               eat(enemy_x, enemy_y);
               return;
             }
@@ -113,7 +113,7 @@ export struct Game {
       [&] {
         for (int8_t enemy_y = origin_y - 1; enemy_y > new_y; enemy_y--)
           for (int8_t enemy_x = origin_x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board[enemy_x, enemy_y].occup) {
+            if (state.board[enemy_x, enemy_y].is_occupied) {
               eat(enemy_x, enemy_y);
               return;
             }
@@ -125,7 +125,7 @@ export struct Game {
       [&] {
         for (int8_t enemy_y = origin_y - 1; enemy_y > new_y; enemy_y--)
           for (int8_t enemy_x = origin_x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board[enemy_x, enemy_y].occup) {
+            if (state.board[enemy_x, enemy_y].is_occupied) {
               eat(enemy_x, enemy_y);
               return;
             }
@@ -133,7 +133,7 @@ export struct Game {
     }
 
     const auto should_be_knighted =
-        not state.board[origin_x, origin_y].queen and new_y == 7;
+        not state.board[origin_x, origin_y].is_knighted and new_y == 7;
 
     return {
         .distance = distance,
@@ -171,7 +171,7 @@ export struct Game {
       }
     }
 
-    new_state.board[new_x, new_y].queen = action_info.should_be_knighted;
+    new_state.board[new_x, new_y].is_knighted = action_info.should_be_knighted;
 
     const auto has_eaten = action_info.eaten_enemy_position.has_value();
     const auto can_eat_more =
@@ -182,7 +182,6 @@ export struct Game {
       return {new_state, action_info};
     }
 
-    new_state.board = new_state.board.flip();
     new_state.player = new_state.player.next();
 
     return {new_state, action_info};
@@ -220,7 +219,7 @@ export struct Game {
     for (int8_t y = 0; y < 8; y++) {
       for (int8_t x = 0; x < 8; x++) {
         auto cell = state.board[x, y];
-        if (cell.occup and not cell.enemy) {
+        if (cell.is_owned_by(state.player)) {
           positions.push_back({x, y});
         }
       }
@@ -280,20 +279,38 @@ export struct Game {
       return {};
     }
 
-    auto action_info = decode_action(state, action);
-    auto canonical_state = state;
-    canonical_state.board = state.board.flip();
-    canonical_state.player = state.player.next();
+    auto distance = (action / (8 * 8 * 4)) + 1;
+    auto direction = (action % (8 * 8 * 4)) / (8 * 8);
+    auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
+    auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
 
-    auto piece =
-        canonical_state
-            .board[action_info.new_position.x, action_info.new_position.y];
+    auto new_x = x;
+    auto new_y = y;
 
-    auto [first, second] = canonical_state.scores;
+    if (direction == 0) {  // move diagonally to the upper left
+      new_x -= distance;
+      new_y += distance;
+    } else if (direction == 1) {  // move diagonally to the upper right
+      new_x += distance;
+      new_y += distance;
+    } else if (direction == 2) {  // move diagonally to the lower left
+      new_x -= distance;
+      new_y -= distance;
+    } else if (direction == 3) {  // move diagonally to the lower right
+      new_x += distance;
+      new_y -= distance;
+    }
+
+    auto action_played_by_first_player =
+        state.board[new_x, new_y].is_owned_by(state.player);
+
+    auto [first, second] = state.scores;
     if (first > second)
-      return not piece.enemy ? az::GameOutcome::Win : az::GameOutcome::Loss;
+      return action_played_by_first_player ? az::GameOutcome::Win
+                                           : az::GameOutcome::Loss;
     else if (first < second)
-      return not piece.enemy ? az::GameOutcome::Loss : az::GameOutcome::Win;
+      return action_played_by_first_player ? az::GameOutcome::Loss
+                                           : az::GameOutcome::Win;
     else
       return az::GameOutcome::Draw;
   }
@@ -310,12 +327,14 @@ export struct Game {
         encoded_state[x][y][0] = score1;
         encoded_state[x][y][1] = score2;
 
-        if (state.board[x, y].occup) {
+        if (state.board[x, y].is_occupied) {
           const auto piece = state.board[x, y];
           const auto value = piece.get_value();
 
-          encoded_state[x][y][(not piece.enemy ? 2 : 4) +
-                              (piece.queen ? 1 : 0)] = value;
+          const auto channel_index = (piece.is_owned_by(state.player) ? 2 : 4) +
+                                     (piece.is_knighted ? 1 : 0);
+
+          encoded_state[x][y][channel_index] = value;
         }
       }
     }
@@ -323,34 +342,7 @@ export struct Game {
     return encoded_state;
   }
 
-  static auto print(const State& state) -> void {
-    auto& board = state.board;
-    auto [first, second] = state.scores;
-    std::print("Score: {:.5f} {:.5f}\n", first, second);
-    for (int i = 7; i >= 0; i--) {
-      std::print(" {: ^3} ", i);
-      for (int j = 0; j < 8; j++) {
-        if (board.cells[i][j].occup) {
-          if (board.cells[i][j].queen)
-            std::cout << "\033[1m";  // bold
-          std::cout << (board.cells[i][j].enemy ? "\033[31m"
-                                                : "\033[34m");  // blue
-          std::print(" {: ^3} ", (board.cells[i][j].ngtve ? -1 : 1) *
-                                     board.cells[i][j].value);
-          std::cout << "\033[0m";  // reset color
-        } else {
-          std::print(" {: ^3} ", board.operators[i][j]);
-        }
-      }
-      std::println();
-    }
-
-    std::print("     ");
-    for (int i = 0; i < 8; i++) {
-      std::print(" {: ^3} ", i);
-    }
-    std::println();
-  }
+  static auto print(const State&) -> void {}
 };
 
 }  // namespace dz

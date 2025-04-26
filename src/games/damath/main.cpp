@@ -65,17 +65,15 @@ auto Render(const dz::Application& app) -> void {
         DrawRectangle(i * 100, (7 - j) * 100, 100, 100, Fade(YELLOW, 0.25));
 
       auto cell = app.state.board[i, j];
-      if (cell.occup) {
+      if (cell.is_occupied) {
         DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 25,
-                   cell.enemy ? BLACK : MAROON);
-        DrawTextCenter(GetFontDefault(),
-                       std::format("{}", cell.get_value()).c_str(), i * 100,
-                       (7 - j) * 100, 100, 100, 20, 3, WHITE);
+                   cell.is_owned_by(app.state.player) ? MAROON : BLACK);
+        DrawTextCenter(GetFontDefault(), std::format("{}", cell.get_value()),
+                       i * 100, (7 - j) * 100, 100, 100, 20, 3, WHITE);
       } else {
-        DrawTextCenter(
-            GetFontDefault(),
-            std::format("{}", app.state.board.operators[j][i]).c_str(), i * 100,
-            (7 - j) * 100, 100, 100, 20, 3, BLACK);
+        DrawTextCenter(GetFontDefault(),
+                       std::format("{}", app.state.board.operators[j][i]),
+                       i * 100, (7 - j) * 100, 100, 100, 20, 3, BLACK);
       }
     }
   }
