@@ -34,8 +34,8 @@ class AlphaZero {
   using State = Game::State;
 
  public:
-  AlphaZero(Config&& config,
-            std::mt19937&& gen = std::mt19937{std::random_device{}()})
+  AlphaZero(Config config,
+            std::mt19937 gen = std::mt19937{std::random_device{}()})
       : config_(std::move(config)), gen_(std::move(gen)) {
     bars_.set_option(opt::HideBarWhenComplete{true});
   }

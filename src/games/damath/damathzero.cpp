@@ -14,7 +14,6 @@ import az;
 namespace dz {
 
 export using Action = az::Action;
-export using Config = az::Config;
 export using Player = az::Player;
 export using GameOutcome = az::GameOutcome;
 
@@ -22,51 +21,10 @@ export using MCTS = az::MCTS<Game, Model>;
 export using DamathZero = az::AlphaZero<Game, Model>;
 
 export struct Application {
-  DamathZero damathzero;
-  MCTS mcts;
-
-  std::shared_ptr<Model> model;
-
-  Game::State state;
-  std::optional<GameOutcome> outcome;
-
-  std::vector<Game::State> history;
-
-  std::optional<Action> action_map[8][8][8][8];
-
-  bool destinations[8][8];
-  bool moveable_pieces[8][8];
-
-  std::optional<std::pair<int, int>> selected_piece;
-  std::vector<std::pair<int, int>> next_moves[8][8];
-
-  torch::Tensor predicted_wdl{};
-  torch::Tensor predicted_action_probs{};
-
-  Application()
-      : damathzero{dz::Config{
-            .num_iterations = 1,
-            .num_simulations = 10,
-            .num_self_play_iterations_per_actor = 10,
-            .num_actors = 5,
-            .num_model_evaluation_iterations = 5,
-            .num_model_evaluation_simulations = 100,
-            .device = torch::kCPU,
-        }},
-        mcts{dz::Config{
-            .num_simulations = 100,
-            .num_model_evaluation_iterations = 5,
-            .num_model_evaluation_simulations = 100,
-            .device = torch::kCPU,
-        }},
-        model{damathzero.learn({
-            .action_size = dz::Game::ActionSize,
-            .num_blocks = 2,
-            .num_attention_head = 4,
-            .embedding_dim = 64,
-            .mlp_hidden_size = 128,
-            .mlp_dropout_prob = 0.1,
-        })},
+  Application(az::Config config, std::shared_ptr<Model> model)
+      : damathzero{config},
+        mcts{config},
+        model{model},
         state{Game::initial_state()},
         outcome{std::nullopt},
         history{Game::initial_state()} {
@@ -161,6 +119,27 @@ export struct Application {
     outcome = std::nullopt;
     update_valid_moves();
   }
+
+  DamathZero damathzero;
+  MCTS mcts;
+
+  std::shared_ptr<Model> model;
+
+  Game::State state;
+  std::optional<GameOutcome> outcome;
+
+  std::vector<Game::State> history;
+
+  std::optional<Action> action_map[8][8][8][8];
+
+  bool destinations[8][8];
+  bool moveable_pieces[8][8];
+
+  std::optional<std::pair<int, int>> selected_piece;
+  std::vector<std::pair<int, int>> next_moves[8][8];
+
+  torch::Tensor predicted_wdl{};
+  torch::Tensor predicted_action_probs{};
 };
 
 }  // namespace dz

@@ -1,14 +1,40 @@
 #include <raylib.h>
+#include <torch/torch.h>
 
+import az;
 import dz;
 import std;
 
 auto Update(dz::Application&) -> void;
 auto Render(const dz::Application&) -> void;
 
-auto main(int, char**) -> int {
-  auto app = dz::Application{};
+auto main(int argc, char** argv) -> int {
+  if (argc < 2) {
+    std::println(std::cerr, "Expected model path as the first argument.");
+    return -1;
+  }
 
+  auto model_config = dz::Model::Config{
+      .action_size = dz::Game::ActionSize,
+      .num_blocks = 2,
+      .num_attention_head = 4,
+      .embedding_dim = 64,
+      .mlp_hidden_size = 128,
+      .mlp_dropout_prob = 0.1,
+  };
+
+  auto model = az::read_model<dz::Model>(argv[1], model_config);
+  auto alphazero_config = az::Config{
+      .num_iterations = 1,
+      .num_simulations = 10,
+      .num_self_play_iterations_per_actor = 10,
+      .num_actors = 5,
+      .num_model_evaluation_iterations = 5,
+      .num_model_evaluation_simulations = 100,
+      .device = torch::kCPU,
+  };
+
+  auto app = dz::Application{alphazero_config, model};
   InitWindow(1300, 800, "DamathZero");
   SetTargetFPS(60);
 
@@ -77,7 +103,7 @@ auto Render(const dz::Application& app) -> void {
       if (cell.is_occupied) {
         DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 25,
                    cell.is_owned_by(app.state.player) ? MAROON : BLACK);
-        DrawTextCenter(GetFontDefault(), std::format("{}", cell.get_value()),
+        DrawTextCenter(GetFontDefault(), std::format("{}", cell.value()),
                        i * 100, (7 - j) * 100, 100, 100, 20, 3, WHITE);
       } else {
         DrawTextCenter(
