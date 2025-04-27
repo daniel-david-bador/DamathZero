@@ -32,7 +32,8 @@ export struct Model : torch::nn::Module {
     embedding = register_module(
         "embedding",
         std::make_shared<Embedding>(config.embedding_dim, /*feature_width=*/8,
-                                    /*feature_height=*/8, /*num_channels=*/6));
+                                    /*feature_height=*/8,
+                                    /*num_channels=*/7));
 
     wdl_head = register_module("wdl_head", nn::Linear(config.embedding_dim, 3));
     policy_head = register_module(

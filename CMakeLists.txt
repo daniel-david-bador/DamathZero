@@ -32,8 +32,7 @@ target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/games/damath/damathzero.cpp
   src/games/damath/game.cpp
   src/games/damath/model.cpp
-  src/games/damath/board.cpp
-)
+  src/games/damath/board.cpp)
 target_link_libraries(DamathZero PUBLIC AlphaZero)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
 

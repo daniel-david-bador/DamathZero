@@ -267,22 +267,18 @@ export struct Game {
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros({8, 8, 6}, torch::kFloat32);
+    auto encoded_state = torch::zeros({8, 8, 7}, torch::kFloat32);
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
-        auto [score1, score2] = state.scores;
-        if (state.player.is_second()) {
-          std::swap(score1, score2);
-        }
-
-        encoded_state[x][y][0] = score1;
-        encoded_state[x][y][1] = score2;
+        encoded_state[x][y][0] = state.player.is_first() ? 0.0 : 1.0;
+        encoded_state[x][y][1] = state.scores.first;
+        encoded_state[x][y][2] = state.scores.second;
 
         if (state.board[x, y].is_occupied) {
           const auto piece = state.board[x, y];
           const auto value = piece.value();
 
-          const auto channel_index = (piece.is_owned_by(state.player) ? 2 : 4) +
+          const auto channel_index = (piece.is_owned_by_first_player ? 3 : 5) +
                                      (piece.is_knighted ? 1 : 0);
 
           encoded_state[x][y][channel_index] = value;
