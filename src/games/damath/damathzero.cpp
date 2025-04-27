@@ -28,6 +28,15 @@ export struct Application {
         outcome{std::nullopt},
         history{Game::initial_state()} {
     model->to(torch::kCPU);
+    model->eval();
+
+    while (state.player.is_second()) {
+      auto probs = mcts.search(state, model, 100);
+      auto action = torch::argmax(probs).item<Action>();
+      state = Game::apply_action(state, action);
+      outcome = Game::get_outcome(state, action);
+    }
+
     update_valid_moves();
   }
 
@@ -130,6 +139,14 @@ export struct Application {
   auto reset_game() -> void {
     state = Game::initial_state();
     outcome = std::nullopt;
+
+    while (state.player.is_second()) {
+      auto probs = mcts.search(state, model, 100);
+      auto action = torch::argmax(probs).item<Action>();
+      state = Game::apply_action(state, action);
+      outcome = Game::get_outcome(state, action);
+    }
+
     update_valid_moves();
   }
 

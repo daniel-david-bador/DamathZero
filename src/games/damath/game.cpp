@@ -45,7 +45,13 @@ export struct Game {
     std::optional<Position> eaten_enemy_position;
   };
 
-  static constexpr auto initial_state() -> State { return State{}; }
+  static constexpr auto initial_state() -> State {
+    return State{
+        .player = std::mt19937{std::random_device{}()}() % 2 == 0
+                      ? Player::First
+                      : Player::Second,
+    };
+  }
 
   static auto decode_action(const State& state, Action action) -> ActionInfo {
     const int8_t distance = (action / (8 * 8 * 4)) + 1;
