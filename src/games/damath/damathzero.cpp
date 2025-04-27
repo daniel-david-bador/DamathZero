@@ -59,7 +59,7 @@ export struct Application {
             .num_model_evaluation_simulations = 100,
             .device = torch::kCPU,
         }},
-        model{std::make_shared<Model>(Model::Config{
+        model{damathzero.learn({
             .action_size = dz::Game::ActionSize,
             .num_blocks = 2,
             .num_attention_head = 4,
