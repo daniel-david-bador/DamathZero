@@ -16,14 +16,14 @@ auto main(int argc, char** argv) -> int {
 
   auto model_config = dz::Model::Config{
       .action_size = dz::Game::ActionSize,
-      .num_blocks = 2,
+      .num_blocks = 10,
       .num_attention_head = 4,
       .embedding_dim = 64,
       .mlp_hidden_size = 128,
       .mlp_dropout_prob = 0.1,
   };
 
-  auto model = az::read_model<dz::Model>(argv[1], model_config);
+  auto model = az::utils::read_model<dz::Model>(argv[1], model_config);
   auto alphazero_config = az::Config{
       .num_iterations = 1,
       .num_simulations = 10,

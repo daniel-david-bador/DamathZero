@@ -2,26 +2,26 @@ module;
 
 #include <torch/torch.h>
 
-export module az:transformer;
+export module dz:vit;
 
 import std;
-
-namespace az::models {
 
 namespace nn = torch::nn;
 namespace F = nn::functional;
 
-// Position vs Vector Embedding
-export struct Embedding : public nn::Module {
-  Embedding(int32_t embedding_dim, int32_t feature_width,
-            int32_t feature_height, int32_t num_channels) {
-    auto opts =
-        nn::LinearOptions(feature_width * feature_height, embedding_dim);
-    projection = register_module("projection", nn::Linear(opts));
+namespace dz::vit {
+
+// Patch and positional embeddings
+struct Embedding : public nn::Module {
+  Embedding(int32_t patch_size, int32_t embedding_dim, int32_t num_channels) {
+    const auto opts = nn::Conv2dOptions(num_channels, embedding_dim, patch_size)
+                          .stride(patch_size);
+
+    projection = register_module("projection", nn::Conv2d(opts));
 
     // Create positional embedding add one for the CLS token.
     positional_embedding =
-        register_parameter("positional_encoding",
+        register_parameter("positional_embedding",
                            torch::randn({1, num_channels + 1, embedding_dim}));
     cls_token =
         register_parameter("cls_token", torch::randn({1, 1, embedding_dim}));
@@ -33,10 +33,8 @@ export struct Embedding : public nn::Module {
 
     // (N, H, W, C) -> (N, C, H, W)
     x = x.permute({0, 3, 1, 2});
-    // (N, C, H, W) -> (N, C, H * W)
-    x = x.flatten(2);
-    // (N, C, H * W) -> (N, C, embedding_dim)
     x = projection->forward(x);
+    x = x.flatten(2).transpose(1, 2);
 
     auto batch_size = x.size(0);
     auto cls = cls_token.expand({batch_size, -1, -1});
@@ -44,10 +42,11 @@ export struct Embedding : public nn::Module {
     // Concatanete the cls token at the beginning
     // (N, C, embedding_dim) -> (N, C+1, embedding_dim)
     x = torch::cat({cls, x}, /*dim=*/1);
-    return x + positional_embedding;
+
+    return x;
   };
 
-  nn::Linear projection{nullptr};
+  nn::Conv2d projection{nullptr};
   torch::Tensor positional_embedding;
   torch::Tensor cls_token;
 };
@@ -147,10 +146,10 @@ struct Block : public nn::Module {
   std::shared_ptr<Attention> attention;
 };
 
-export struct TransformerEncoder : public nn::Module {
-  TransformerEncoder(int32_t num_blocks, int32_t embedding_dim,
-                     int32_t num_attention_heads, int32_t mlp_hidden_size,
-                     float32_t mlp_dropout_prob) {
+struct Encoder : public nn::Module {
+  Encoder(int32_t num_blocks, int32_t embedding_dim,
+          int32_t num_attention_heads, int32_t mlp_hidden_size,
+          float32_t mlp_dropout_prob) {
     assert(embedding_dim % num_attention_heads == 0);
 
     blocks = register_module("blocks", nn::ModuleList());
@@ -185,4 +184,4 @@ export struct TransformerEncoder : public nn::Module {
   nn::ModuleList blocks{nullptr};
 };
 
-}  // namespace az::models
+}  // namespace dz::vit

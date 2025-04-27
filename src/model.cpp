@@ -4,8 +4,6 @@ module;
 
 export module az:model;
 
-export import :transformer;
-
 import std;
 
 namespace az {
@@ -26,6 +24,8 @@ concept Model = std::is_base_of_v<torch::nn::Module, M> and
                   } -> std::same_as<std::tuple<torch::Tensor, torch::Tensor>>;
                 };
 }  // namespace concepts
+
+namespace utils {
 
 export template <concepts::Model Model>
 auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
@@ -72,5 +72,7 @@ auto read_model(std::string_view path, typename Model::Config config,
   model->to(device);
   return model;
 }
+
+}  // namespace utils
 
 }  // namespace az

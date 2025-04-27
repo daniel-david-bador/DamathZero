@@ -60,8 +60,8 @@ class AlphaZero {
           0.7 * static_cast<float32_t>(config_.num_model_evaluation_iterations);
 
       if (did_win) {
-        best_model = clone_model(model, config_.device);
-        save_model(model, std::format("models/model_{}.pt", i));
+        best_model = utils::clone_model(model, config_.device);
+        utils::save_model(model, std::format("models/model_{}.pt", i));
       }
 
       std::println("[Iteration {}] WDL - {}:{}:{}", i, wins, draws, losses);
@@ -187,7 +187,7 @@ class AlphaZero {
         opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
         opt::ShowPercentage{true},
         opt::MaxProgress{config_.num_self_play_iterations_per_actor},
-        opt::PrefixText{std::format("Actor {}", actor_id)},
+        opt::PrefixText{std::format("Actor {} ", actor_id)},
         opt::FontStyles{
             std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
     auto bar_id = bars_.push_back(std::move(bar));
@@ -255,7 +255,7 @@ class AlphaZero {
         opt::ShowRemainingTime{true}, opt::ShowPercentage{true},
         opt::MaxProgress{config_.num_self_play_iterations_per_actor *
                          config_.num_actors},
-        opt::PrefixText{"Generating Self-Play Data"},
+        opt::PrefixText{"Generating Self-Play Data "},
         opt::FontStyles{
             std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
     auto bar_id = bars_.push_back(std::move(bar));

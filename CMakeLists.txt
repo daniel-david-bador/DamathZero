@@ -20,8 +20,7 @@ target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/mcts.cpp
   src/node.cpp
   src/storage.cpp
-  src/models/transformer.cpp
-  src/models/model.cpp)
+  src/model.cpp)
 target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_compile_features(AlphaZero PUBLIC cxx_std_23)
 target_link_libraries(AlphaZero PRIVATE indicators::indicators) 
@@ -32,6 +31,7 @@ target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/games/damath/damathzero.cpp
   src/games/damath/game.cpp
   src/games/damath/model.cpp
+  src/games/damath/vit.cpp
   src/games/damath/board.cpp)
 target_link_libraries(DamathZero PUBLIC AlphaZero)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
