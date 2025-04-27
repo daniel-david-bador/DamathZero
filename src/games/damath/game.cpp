@@ -305,7 +305,7 @@ export struct Game {
     }
 
     auto action_played_by_first_player =
-        state.board[new_x, new_y].is_owned_by(state.player);
+        state.board[new_x, new_y].is_owned_by_first_player;
 
     auto [first, second] = state.scores;
     if (first > second)
