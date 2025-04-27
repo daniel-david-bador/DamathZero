@@ -112,11 +112,11 @@ auto Render(const dz::Application& app) -> void {
                  WHITE);
   DrawTextCenter(GetFontDefault(), "Scores", 800, 100, 500, 100, 40, 3, WHITE);
   DrawTextCenter(GetFontDefault(),
-                 std::format("Player 1: {:7.2f}", app.state.scores.first), 800,
-                 200, 250, 100, 20, 3, WHITE);
+                 std::format("You: {:7.2f}", app.state.scores.first), 800, 200,
+                 250, 100, 20, 3, WHITE);
   DrawTextCenter(GetFontDefault(),
-                 std::format("Player 2: {:7.2f}", app.state.scores.second),
-                 1050, 200, 250, 100, 20, 3, WHITE);
+                 std::format("AI: {:7.2f}", app.state.scores.second), 1050, 200,
+                 250, 100, 20, 3, WHITE);
 
   DrawRectangle(825, 650, 200, 50, GREEN);
   DrawTextCenter(GetFontDefault(), "Undo", 825, 650, 200, 50, 40, 3, WHITE);
