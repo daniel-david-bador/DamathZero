@@ -20,7 +20,6 @@ target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/mcts.cpp
   src/node.cpp
   src/storage.cpp
-  src/arena.cpp
   src/models/transformer.cpp
   src/models/model.cpp)
 target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
@@ -28,12 +27,8 @@ target_compile_features(AlphaZero PUBLIC cxx_std_23)
 target_link_libraries(AlphaZero PRIVATE indicators::indicators) 
 target_link_libraries(AlphaZero PUBLIC torch)
 
-add_executable(TicTacToeZero "src/games/tictactoe/main.cpp")
-target_link_libraries(TicTacToeZero PRIVATE AlphaZero)
-
 add_library(DamathZero SHARED)
 target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
-  src/games/damath/agent.cpp
   src/games/damath/damathzero.cpp
   src/games/damath/game.cpp
   src/games/damath/model.cpp

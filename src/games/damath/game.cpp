@@ -50,19 +50,27 @@ export struct Game {
   static auto decode_action(const State& state, Action action) -> ActionInfo {
     const int8_t distance = (action / (8 * 8 * 4)) + 1;
     const int8_t direction = (action % (8 * 8 * 4)) / (8 * 8);
+
     const int8_t origin_y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
     const int8_t origin_x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
 
-    auto new_x = origin_x;
-    auto new_y = origin_y;
+    const auto [dx, dy] = Board::directions[direction];
+
+    const int8_t new_x = origin_x + dx * distance;
+    const int8_t new_y = origin_y + dy * distance;
 
     std::optional<Position> eaten_enemy_position = std::nullopt;
 
     auto new_score =
         state.player.is_first() ? state.scores.first : state.scores.second;
 
-    auto eat = [&](auto enemy_x, auto enemy_y) {
-      assert((state.board[enemy_x, enemy_y].is_occupied));
+    for (auto enemy_distance = distance - 1; enemy_distance > 0;
+         enemy_distance--) {
+      const int8_t enemy_x = origin_x + dx * enemy_distance;
+      const int8_t enemy_y = origin_y + dy * enemy_distance;
+
+      if (not state.board[enemy_x, enemy_y].is_occupied)
+        continue;
 
       auto op = state.board.operators[new_y][new_x];
 
@@ -80,56 +88,7 @@ export struct Game {
       }
 
       eaten_enemy_position = Position{enemy_x, enemy_y};
-    };
-
-    if (direction == 0) {  // move diagonally to the upper left
-      new_x -= distance;
-      new_y += distance;
-
-      [&] {
-        for (int8_t enemy_y = origin_y + 1; enemy_y < new_y; enemy_y++)
-          for (int8_t enemy_x = origin_x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board[enemy_x, enemy_y].is_occupied) {
-              eat(enemy_x, enemy_y);
-              return;
-            }
-      }();
-    } else if (direction == 1) {  // move diagonally to the upper right
-      new_x += distance;
-      new_y += distance;
-
-      [&] {
-        for (int8_t enemy_y = origin_y + 1; enemy_y < new_y; enemy_y++)
-          for (int8_t enemy_x = origin_x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board[enemy_x, enemy_y].is_occupied) {
-              eat(enemy_x, enemy_y);
-              return;
-            }
-      }();
-    } else if (direction == 2) {  // move diagonally to the lower left
-      new_x -= distance;
-      new_y -= distance;
-
-      [&] {
-        for (int8_t enemy_y = origin_y - 1; enemy_y > new_y; enemy_y--)
-          for (int8_t enemy_x = origin_x - 1; enemy_x > new_x; enemy_x--)
-            if (state.board[enemy_x, enemy_y].is_occupied) {
-              eat(enemy_x, enemy_y);
-              return;
-            }
-      }();
-    } else if (direction == 3) {  // move diagonally to the lower right
-      new_x += distance;
-      new_y -= distance;
-
-      [&] {
-        for (int8_t enemy_y = origin_y - 1; enemy_y > new_y; enemy_y--)
-          for (int8_t enemy_x = origin_x + 1; enemy_x < new_x; enemy_x++)
-            if (state.board[enemy_x, enemy_y].is_occupied) {
-              eat(enemy_x, enemy_y);
-              return;
-            }
-      }();
+      break;
     }
 
     const auto should_be_knighted =
@@ -282,36 +241,25 @@ export struct Game {
       return {};
     }
 
-    auto distance = (action / (8 * 8 * 4)) + 1;
-    auto direction = (action % (8 * 8 * 4)) / (8 * 8);
-    auto y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
-    auto x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
+    const int8_t distance = (action / (8 * 8 * 4)) + 1;
+    const int8_t direction = (action % (8 * 8 * 4)) / (8 * 8);
 
-    auto new_x = x;
-    auto new_y = y;
+    const int8_t origin_y = ((action % (8 * 8 * 4)) % (8 * 8)) / 8;
+    const int8_t origin_x = ((action % (8 * 8 * 4)) % (8 * 8)) % 8;
 
-    if (direction == 0) {  // move diagonally to the upper left
-      new_x -= distance;
-      new_y += distance;
-    } else if (direction == 1) {  // move diagonally to the upper right
-      new_x += distance;
-      new_y += distance;
-    } else if (direction == 2) {  // move diagonally to the lower left
-      new_x -= distance;
-      new_y -= distance;
-    } else if (direction == 3) {  // move diagonally to the lower right
-      new_x += distance;
-      new_y -= distance;
-    }
+    auto [dx, dy] = Board::directions[direction];
 
-    auto action_played_by_first_player =
+    const int8_t new_x = origin_x + dx * distance;
+    const int8_t new_y = origin_y + dy * distance;
+
+    const auto action_played_by_first_player =
         state.board[new_x, new_y].is_owned_by_first_player;
 
-    auto [first, second] = state.scores;
-    if (first > second)
+    const auto [first_player_score, second_player_score] = state.scores;
+    if (first_player_score > second_player_score)
       return action_played_by_first_player ? az::GameOutcome::Win
                                            : az::GameOutcome::Loss;
-    else if (first < second)
+    else if (first_player_score < second_player_score)
       return action_played_by_first_player ? az::GameOutcome::Loss
                                            : az::GameOutcome::Win;
     else

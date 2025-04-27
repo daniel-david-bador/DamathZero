@@ -6,7 +6,6 @@ export module dz;
 
 export import :model;
 export import :game;
-export import :agent;
 export import :board;
 
 import az;

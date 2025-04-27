@@ -10,7 +10,6 @@ export module az;
 import std;
 
 export import :model;
-export import :arena;
 export import :config;
 export import :game;
 export import :memory;
@@ -41,8 +40,6 @@ class AlphaZero {
   }
 
   auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
-    auto arena = Arena<Game, Model>(config_);
-
     auto model = std::make_shared<Model>(model_config);
     auto best_model = std::make_shared<Model>(model_config);
 
@@ -55,9 +52,8 @@ class AlphaZero {
       generate_self_play_data(memory, model);
 
       train(memory, model, optimizer);
-      auto [wins, draws, losses] = arena.play(
-          model, best_model, config_.num_model_evaluation_iterations,
-          /*num_simulations=*/config_.num_model_evaluation_simulations);
+
+      auto [wins, draws, losses] = evaluate(model, best_model);
 
       auto did_win =
           wins + draws >
@@ -84,7 +80,7 @@ class AlphaZero {
         opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
         opt::ShowPercentage{true},
         opt::MaxProgress{config_.num_training_epochs},
-        opt::PrefixText{"Training Epoch "},
+        opt::PrefixText{"Training Epoch"},
         opt::FontStyles{
             std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
     auto bar_id = bars_.push_back(std::move(bar));
@@ -118,15 +114,80 @@ class AlphaZero {
     bars_[bar_id].mark_as_completed();
   }
 
-  auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t actor_id)
-      -> void {
+  auto evaluate(std::shared_ptr<Model> current_model,
+                std::shared_ptr<Model> best_model)
+      -> std::tuple<int32_t, int32_t, int32_t> {
+    auto bar = std::make_unique<indicators::ProgressBar>(
+        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::white},
+        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
+        opt::ShowPercentage{true},
+        opt::MaxProgress{config_.num_model_evaluation_iterations},
+        opt::PrefixText{"Evaluating Model"},
+        opt::FontStyles{
+            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+    auto bar_id = bars_.push_back(std::move(bar));
+
+    current_model->to(config_.device);
+    current_model->eval();
+
+    best_model->to(config_.device);
+    best_model->eval();
+
+    auto wins = 0;
+    auto draws = 0;
+    auto losses = 0;
+
+    auto mcts = MCTS<Game, Model>(config_);
+
+    for (auto _ :
+         std::views::iota(0, config_.num_model_evaluation_iterations)) {
+      auto state = Game::initial_state();
+
+      while (true) {
+        auto model = state.player.is_first() ? current_model : best_model;
+        auto action_probs =
+            mcts.search(state, model, config_.num_model_evaluation_simulations);
+
+        auto action = torch::argmax(action_probs).template item<Action>();
+
+        auto new_state = Game::apply_action(state, action);
+
+        if (auto outcome = Game::get_outcome(new_state, action)) {
+          // outcome from the perspective of model1
+          auto flipped_outcome =
+              state.player.is_first() ? *outcome : outcome->flip();
+
+          if (flipped_outcome == GameOutcome::Win) {
+            wins += 1;
+          } else if (flipped_outcome == GameOutcome::Draw) {
+            draws += 1;
+          } else if (flipped_outcome == GameOutcome::Loss) {
+            losses += 1;
+          }
+
+          break;
+        }
+
+        state = std::move(new_state);
+      }
+
+      bars_[bar_id].tick();
+    }
+
+    bars_[bar_id].mark_as_completed();
+
+    return {wins, draws, losses};
+  }
+
+  auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t actor_id,
+                 int32_t main_bar_id) -> void {
     auto color = colors[actor_id % config_.num_actors];
     auto bar = std::make_unique<indicators::ProgressBar>(
         opt::BarWidth{50}, opt::ForegroundColor{color},
         opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
         opt::ShowPercentage{true},
         opt::MaxProgress{config_.num_self_play_iterations_per_actor},
-        opt::PrefixText{std::format("Thread {} ", actor_id)},
+        opt::PrefixText{std::format("Actor {}", actor_id)},
         opt::FontStyles{
             std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
     auto bar_id = bars_.push_back(std::move(bar));
@@ -181,6 +242,7 @@ class AlphaZero {
       }
 
       bars_[bar_id].tick();
+      bars_[main_bar_id].tick();
     }
 
     bars_[bar_id].mark_as_completed();
@@ -188,18 +250,31 @@ class AlphaZero {
 
   auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model)
       -> void {
+    auto bar = std::make_unique<indicators::ProgressBar>(
+        opt::BarWidth{50}, opt::ShowElapsedTime{true},
+        opt::ShowRemainingTime{true}, opt::ShowPercentage{true},
+        opt::MaxProgress{config_.num_self_play_iterations_per_actor *
+                         config_.num_actors},
+        opt::PrefixText{"Generating Self-Play Data"},
+        opt::FontStyles{
+            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+    auto bar_id = bars_.push_back(std::move(bar));
+
     auto threads = std::vector<std::thread>();
 
     model->eval();
 
     for (auto i : std::views::iota(0, config_.num_actors)) {
-      threads.emplace_back(
-          [this, &memory, model, i] { run_actor(memory, model, i); });
+      threads.emplace_back([this, &memory, model, i, bar_id] {
+        run_actor(memory, model, i, bar_id);
+      });
     }
 
     for (auto& thread : threads) {
       thread.join();
     }
+
+    bars_[bar_id].mark_as_completed();
   }
 
  private:
