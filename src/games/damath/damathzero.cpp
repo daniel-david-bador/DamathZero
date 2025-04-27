@@ -100,6 +100,20 @@ export struct Application {
       outcome = Game::get_outcome(state, action);
     }
 
+    if (outcome) {
+      auto& [first_player_score, second_player_score] = state.scores;
+
+      for (const auto row : state.board.cells) {
+        for (const auto cell : row) {
+          if (cell.is_occupied) {
+            const auto cell_value = cell.value() * (cell.is_knighted ? 2 : 1);
+            cell.is_owned_by_first_player ? first_player_score += cell_value
+                                          : second_player_score += cell_value;
+          }
+        }
+      }
+    }
+
     history.push_back(state);
     update_valid_moves();
   }

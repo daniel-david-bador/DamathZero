@@ -77,14 +77,26 @@ export struct Game {
       auto player_value = state.board[origin_x, origin_y].value();
       auto opponent_value = state.board[enemy_x, enemy_y].value();
 
+      auto multiplier = 1.0;
+
+      if (state.board[origin_x, origin_y].is_knighted or
+          state.board[enemy_x, enemy_y].is_knighted) {
+        multiplier = 2.0;
+      }
+
+      if (state.board[origin_x, origin_y].is_knighted and
+          state.board[enemy_x, enemy_y].is_knighted) {
+        multiplier = 4.0;
+      }
+
       if (op == '+') {
-        new_score += (player_value + opponent_value);
+        new_score += (player_value + opponent_value) * multiplier;
       } else if (op == '-') {
-        new_score += (player_value - opponent_value);
+        new_score += (player_value - opponent_value) * multiplier;
       } else if (op == '*') {
-        new_score += (player_value * opponent_value);
-      } else if (op == '/') {
-        new_score += opponent_value > 0 ? (player_value / opponent_value) : 0;
+        new_score += (player_value * opponent_value) * multiplier;
+      } else if (op == '/' and opponent_value != 0) {
+        new_score += (player_value / opponent_value) * multiplier;
       }
 
       eaten_enemy_position = Position{enemy_x, enemy_y};
@@ -169,7 +181,6 @@ export struct Game {
       for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
         stack.push_back({action, new_state, height + 1});
       }
-      // std::println("Here!: {} {}", new_x, new_y);
     }
     return max_height;
   }
@@ -255,7 +266,18 @@ export struct Game {
     const auto action_played_by_first_player =
         state.board[new_x, new_y].is_owned_by_first_player;
 
-    const auto [first_player_score, second_player_score] = state.scores;
+    auto [first_player_score, second_player_score] = state.scores;
+
+    for (const auto row : state.board.cells) {
+      for (const auto cell : row) {
+        if (cell.is_occupied) {
+          const auto cell_value = cell.value() * (cell.is_knighted ? 2 : 1);
+          cell.is_owned_by_first_player ? first_player_score += cell_value
+                                        : second_player_score += cell_value;
+        }
+      }
+    }
+
     if (first_player_score > second_player_score)
       return action_played_by_first_player ? az::GameOutcome::Win
                                            : az::GameOutcome::Loss;
