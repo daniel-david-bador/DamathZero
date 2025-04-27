@@ -11,9 +11,9 @@ namespace dz {
 
 export struct Board {
   struct Cell {
-    constexpr auto get_value() const -> float {
+    constexpr auto value() const -> float {
       assert(is_occupied);
-      return is_negative ? -value : value;
+      return is_negative ? -unsigned_value : unsigned_value;
     }
 
     constexpr auto is_owned_by(az::Player player) const -> bool {
@@ -31,8 +31,10 @@ export struct Board {
     uint8_t is_owned_by_first_player : 1;
     uint8_t is_knighted : 1;
     uint8_t is_negative : 1;
-    uint8_t value : 4;
+    uint8_t unsigned_value : 4;
   };
+
+  static_assert(sizeof(Cell) == 1);
 
   static constexpr auto EmptyCell = Cell{0, 0, 0, 0, 0};
 
@@ -93,7 +95,7 @@ export struct Board {
     };
   }
 
-  auto get_jump_actions(int x, int y) const -> std::vector<az::Action> {
+  auto get_jump_actions(int8_t x, int8_t y) const -> std::vector<az::Action> {
     assert((x >= 0 and x < 8));
     assert((y >= 0 and y < 8));
 
@@ -129,7 +131,7 @@ export struct Board {
     return actions;
   }
 
-  auto get_eatable_actions(int32_t x, int32_t y) const
+  auto get_eatable_actions(int8_t x, int8_t y) const
       -> std::vector<az::Action> {
     assert((x >= 0 and x < 8));
     assert((y >= 0 and y < 8));

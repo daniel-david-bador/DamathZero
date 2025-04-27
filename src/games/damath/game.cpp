@@ -66,8 +66,8 @@ export struct Game {
 
       auto op = state.board.operators[new_y][new_x];
 
-      auto player_value = state.board[origin_x, origin_y].get_value();
-      auto opponent_value = state.board[enemy_x, enemy_y].get_value();
+      auto player_value = state.board[origin_x, origin_y].value();
+      auto opponent_value = state.board[enemy_x, enemy_y].value();
 
       if (op == '+') {
         new_score += (player_value + opponent_value);
@@ -264,10 +264,10 @@ export struct Game {
       return legal_actions_tensor;
     }
 
-    for (auto& [x, y] : positions)
+    for (auto [x, y] : positions)
       legal_actions.append_range(state.board.get_jump_actions(x, y));
 
-    for (auto& action : legal_actions)
+    for (auto action : legal_actions)
       legal_actions_tensor[action] = 1.0;
 
     return legal_actions_tensor;
@@ -332,7 +332,7 @@ export struct Game {
 
         if (state.board[x, y].is_occupied) {
           const auto piece = state.board[x, y];
-          const auto value = piece.get_value();
+          const auto value = piece.value();
 
           const auto channel_index = (piece.is_owned_by(state.player) ? 2 : 4) +
                                      (piece.is_knighted ? 1 : 0);

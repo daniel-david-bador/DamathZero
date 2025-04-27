@@ -31,14 +31,22 @@ target_link_libraries(AlphaZero PUBLIC torch)
 add_executable(TicTacToeZero "src/games/tictactoe/main.cpp")
 target_link_libraries(TicTacToeZero PRIVATE AlphaZero)
 
-add_executable(DamathZero "src/games/damath/main.cpp")
-target_sources(DamathZero PRIVATE FILE_SET CXX_MODULES FILES
+add_library(DamathZero SHARED)
+target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/games/damath/agent.cpp
   src/games/damath/damathzero.cpp
   src/games/damath/game.cpp
   src/games/damath/model.cpp
-  src/games/damath/board.cpp)
-target_link_libraries(DamathZero PRIVATE AlphaZero raylib)
+  src/games/damath/board.cpp
+)
+target_link_libraries(DamathZero PUBLIC AlphaZero)
+target_compile_features(DamathZero PUBLIC cxx_std_23)
+
+add_executable(DamathZeroApp "src/games/damath/app.cpp")
+target_link_libraries(DamathZeroApp PRIVATE raylib DamathZero)
+
+add_executable(DamathZeroTrainer "src/games/damath/trainer.cpp")
+target_link_libraries(DamathZeroTrainer PRIVATE DamathZero)
 
 add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf

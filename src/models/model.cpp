@@ -27,7 +27,7 @@ concept Model = std::is_base_of_v<torch::nn::Module, M> and
                 };
 }  // namespace concepts
 
-template <concepts::Model Model>
+export template <concepts::Model Model>
 auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
     -> std::shared_ptr<Model> {
   auto cloned = std::make_shared<Model>(model->config);
@@ -53,7 +53,7 @@ auto clone_model(std::shared_ptr<Model> model, torch::DeviceType device)
   return cloned;
 }
 
-template <concepts::Model Model>
+export template <concepts::Model Model>
 auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   torch::serialize::OutputArchive output_model_archive;
   model->to(torch::kCPU);
@@ -61,11 +61,11 @@ auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   output_model_archive.save_to(std::string(path));
 };
 
-template <concepts::Model Model>
-auto read_model(int checkpoint, torch::DeviceType device,
+export template <concepts::Model Model>
+auto read_model(std::string_view path, torch::DeviceType device,
                 typename Model::Config config) -> std::shared_ptr<Model> {
   torch::serialize::InputArchive input_archive;
-  input_archive.load_from(std::format("models/model_{}.pt", checkpoint));
+  input_archive.load_from(std::string(path));
   auto model = std::make_shared<Model>(config);
   model->load(input_archive);
   model->to(device);

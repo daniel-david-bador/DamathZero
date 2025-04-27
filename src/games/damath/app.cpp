@@ -6,7 +6,7 @@ import std;
 auto Update(dz::Application&) -> void;
 auto Render(const dz::Application&) -> void;
 
-auto main(int, char*[]) -> int {
+auto main(int, char**) -> int {
   auto app = dz::Application{};
 
   InitWindow(1300, 800, "DamathZero");
