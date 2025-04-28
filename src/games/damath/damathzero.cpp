@@ -136,13 +136,13 @@ export struct Application {
   }
 
   auto undo_move() -> void {
-    if (history.size() > 1) {
+    do {
       history.pop_back();
       state = history.back();
       outcome = std::nullopt;
+    } while (state.player.is_second() and history.size() > 1);
 
-      update_valid_moves();
-    }
+    update_valid_moves();
   }
 
   auto reset_game() -> void {
