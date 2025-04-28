@@ -19,16 +19,17 @@ export struct Game {
 
   using Board = Board;
 
+  struct Position {
+    int8_t x;
+    int8_t y;
+  };
+
   struct State {
     Board board = Board{};
     Player player = Player::First;
     std::pair<float32_t, float32_t> scores{0.0, 0.0};
     int draw_count = 0;
-  };
-
-  struct Position {
-    int8_t x;
-    int8_t y;
+    std::optional<Position> last_piece_moved = std::nullopt;
   };
 
   struct ActionInfo {
@@ -133,6 +134,7 @@ export struct Game {
 
     auto new_state = state;
     new_state.draw_count += 1;
+
     // Move the piece to its new position.
     new_state.board[new_x, new_y] = state.board[origin_x, origin_y];
     new_state.board[origin_x, origin_y] = Board::EmptyCell;
@@ -148,6 +150,7 @@ export struct Game {
       } else {
         new_state.scores.second = action_info.new_score;
       }
+
       new_state.draw_count = 0;
     }
 
@@ -160,11 +163,12 @@ export struct Game {
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
 
     if (can_eat_more) {
+      new_state.last_piece_moved = action_info.new_position;
       return {new_state, action_info};
     }
 
     new_state.player = new_state.player.next();
-
+    new_state.last_piece_moved = std::nullopt;
     return {new_state, action_info};
   }
 
@@ -184,24 +188,30 @@ export struct Game {
       max_height = std::max(height, max_height);
 
       auto [new_state, action_info] = inspect_and_apply_action(state, action);
-      auto [new_x, new_y] = action_info.new_position;
+      if (new_state.last_piece_moved) {
+        auto [new_x, new_y] = action_info.new_position;
 
-      for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
-        stack.push_back({action, new_state, height + 1});
+        for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
+          stack.push_back({action, new_state, height + 1});
+        }
       }
     }
     return max_height;
   }
 
   static auto legal_actions(const State& state) -> torch::Tensor {
-    // Get positions of the pieces in the board from the perspective of
-    // state.player.
+    // If last piece moved is not empty, get positions of the pieces in the
+    // board from the perspective of state.player.
     auto positions = std::vector<Position>{};
-    for (int8_t y = 0; y < 8; y++) {
-      for (int8_t x = 0; x < 8; x++) {
-        auto cell = state.board[x, y];
-        if (cell.is_occupied and cell.is_owned_by(state.player)) {
-          positions.push_back({x, y});
+    if (state.last_piece_moved) {
+      positions.push_back(*state.last_piece_moved);
+    } else {
+      for (int8_t y = 0; y < 8; y++) {
+        for (int8_t x = 0; x < 8; x++) {
+          auto cell = state.board[x, y];
+          if (cell.is_occupied and cell.is_owned_by(state.player)) {
+            positions.push_back({x, y});
+          }
         }
       }
     }
@@ -297,23 +307,48 @@ export struct Game {
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros({8, 8, 7}, torch::kFloat32);
+    auto encoded_state = torch::zeros({8, 8, 9}, torch::kFloat32);
 
-    encoded_state.select(0, 0).fill_(state.player.is_first() ? 1.0 : -1.0);
-    encoded_state.select(0, 1).fill_(state.scores.first);
-    encoded_state.select(0, 2).fill_(state.scores.second);
+    encoded_state.select(2, 0).fill_(state.player.is_first() ? 1.0 : -1.0);
+    encoded_state.select(2, 1).fill_(
+        state.player.is_first() ? (state.scores.first - state.scores.second)
+                                : (state.scores.second - state.scores.first));
+    encoded_state.select(2, 2).fill_(state.draw_count / 80.0);
 
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
+        switch (state.board.operators[y][x]) {
+          case '+':
+            encoded_state[x][y][3] = 1.0;
+            break;
+          case '-':
+            encoded_state[x][y][3] = 2.0;
+            break;
+          case '*':
+            encoded_state[x][y][3] = 3.0;
+            break;
+          case '/':
+            encoded_state[x][y][3] = 4.0;
+            break;
+          default:
+            break;
+        }
+
         if (state.board[x, y].is_occupied) {
           const auto piece = state.board[x, y];
+          const auto value = piece.value();
 
-          const auto channel_index = (piece.is_owned_by_first_player ? 3 : 5) +
-                                     (piece.is_knighted ? 1 : 0);
-
-          encoded_state[x][y][channel_index] = piece.value();
+          if (piece.is_owned_by(state.player))
+            encoded_state[x][y][piece.is_knighted ? 5 : 4] = value;
+          else
+            encoded_state[x][y][piece.is_knighted ? 7 : 6] = value;
         }
       }
+    }
+
+    if (state.last_piece_moved) {
+      const auto [x, y] = *state.last_piece_moved;
+      encoded_state[x][y][8] = 1.0;
     }
 
     return encoded_state;
