@@ -36,13 +36,13 @@ export auto load_model(std::string_view path, Model::Config config)
 
 export struct Application {
   Application(Config config, Model::Config model_config, std::string_view path)
-      : config{config},
-        damathzero{config},
-        mcts{config},
+      : mcts{config},
+        config{config},
         model{load_model(path, model_config)},
         state{Game::initial_state()},
         outcome{std::nullopt},
         history{Game::initial_state()} {
+    model->eval();
     update_valid_moves();
   }
 
@@ -74,13 +74,10 @@ export struct Application {
       action_map[origin_x][origin_y][new_x][new_y] = action;
     }
 
-    model->eval();
-    std::tie(predicted_wdl, predicted_action_probs) =
-        model->forward(Game::encode_state(state).unsqueeze(0));
+    auto [wdl, policy] = model->forward(Game::encode_state(state).unsqueeze(0));
 
-    predicted_wdl = predicted_wdl.value().squeeze(0);
-    predicted_action_probs =
-        predicted_action_probs.value().squeeze(0).reshape({-1});
+    predicted_wdl = wdl.squeeze(0);
+    predicted_action_probs = policy.squeeze(0).reshape({-1});
   }
 
   auto select_piece(int x, int y) -> void {
@@ -205,11 +202,8 @@ export struct Application {
     return max_action_probs;
   }
 
-  Config config;
-
-  DamathZero damathzero;
   MCTS mcts;
-
+  Config config;
   std::shared_ptr<Model> model;
 
   Game::State state;
