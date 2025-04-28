@@ -53,8 +53,6 @@ export struct Application {
     std::memset(next_moves, {}, sizeof(next_moves));
 
     selected_piece = std::nullopt;
-    predicted_wdl = std::nullopt;
-    predicted_action_probs = std::nullopt;
   }
 
   auto update_valid_moves() -> void {
@@ -76,7 +74,9 @@ export struct Application {
 
     auto [wdl, policy] = model->forward(Game::encode_state(state).unsqueeze(0));
 
-    predicted_wdl = wdl.squeeze(0);
+    if (state.player.is_first())
+      predicted_wdl = wdl.squeeze(0);
+
     predicted_action_probs = policy.squeeze(0).reshape({-1});
   }
 
@@ -158,18 +158,7 @@ export struct Application {
       return std::nullopt;
 
     auto wdl = predicted_wdl.value();
-    std::array<float, 3> result;
-    if (state.player.is_first()) {
-      result[0] = wdl[0].item<float>();
-      result[1] = wdl[1].item<float>();
-      result[2] = wdl[2].item<float>();
-    } else {
-      result[0] = wdl[2].item<float>();
-      result[1] = wdl[1].item<float>();
-      result[2] = wdl[0].item<float>();
-    }
-
-    return result;
+    return {{wdl[0].item<float>(), wdl[1].item<float>(), wdl[2].item<float>()}};
   }
 
   auto action_probs(int i, int j) const -> float {
