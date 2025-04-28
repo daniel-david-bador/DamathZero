@@ -62,7 +62,7 @@ auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
 };
 
 export template <concepts::Model Model>
-auto read_model(std::string_view path, typename Model::Config config,
+auto load_model(std::string_view path, typename Model::Config config,
                 torch::DeviceType device = torch::kCPU)
     -> std::shared_ptr<Model> {
   torch::serialize::InputArchive input_archive;

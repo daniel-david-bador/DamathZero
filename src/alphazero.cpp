@@ -35,9 +35,7 @@ class AlphaZero {
  public:
   AlphaZero(Config config,
             std::mt19937 gen = std::mt19937{std::random_device{}()})
-      : config_(std::move(config)), gen_(std::move(gen)) {
-    bars_.set_option(opt::HideBarWhenComplete{true});
-  }
+      : config_(std::move(config)), gen_(std::move(gen)) {}
 
   auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
     auto model = std::make_shared<Model>(model_config);
@@ -47,13 +45,30 @@ class AlphaZero {
         model->parameters(), torch::optim::AdamOptions(0.001));
 
     for (auto i : std::views::iota(0, config_.num_iterations)) {
+      auto iteration_bar = std::make_unique<indicators::ProgressBar>(
+          opt::BarWidth{50}, opt::ForegroundColor{colors[i % 6]},
+          opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
+          opt::ShowPercentage{true},
+          opt::MaxProgress{config_.num_self_play_iterations_per_actor *
+                               config_.num_actors +
+                           config_.num_training_epochs +
+                           config_.num_model_evaluation_iterations},
+          opt::PrefixText{
+              std::format("Iteration {}/{} ", i + 1, config_.num_iterations)},
+          opt::FontStyles{
+              std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
+      auto bar_id = bars_.push_back(std::move(iteration_bar));
+
       auto memory = Memory{config_, gen_};
 
-      generate_self_play_data(memory, model);
+      bars_[bar_id].set_option(opt::PostfixText{"Generating Self-Play Data"});
+      generate_self_play_data(memory, model, bar_id);
 
-      train(memory, model, optimizer);
+      bars_[bar_id].set_option(opt::PostfixText{"Training Model"});
+      auto average_loss = train(memory, model, optimizer, bar_id);
 
-      auto [wins, draws, losses] = evaluate(model, best_model);
+      bars_[bar_id].set_option(opt::PostfixText{"Evaluating Model"});
+      auto [wins, draws, losses] = evaluate(model, best_model, bar_id);
 
       auto did_win =
           wins + draws >
@@ -64,7 +79,11 @@ class AlphaZero {
         utils::save_model(model, std::format("models/model_{}.pt", i));
       }
 
-      std::println("[Iteration {}] WDL - {}:{}:{}", i, wins, draws, losses);
+      bars_[bar_id].set_option(opt::PostfixText{std::format(
+          "Average Loss: {:.6f} - Wins: {} - Draws: {} - Losses: {}",
+          average_loss, wins, draws, losses)});
+
+      bars_[bar_id].mark_as_completed();
     }
 
     return best_model;
@@ -72,18 +91,9 @@ class AlphaZero {
 
  private:
   auto train(Memory& memory, std::shared_ptr<Model> model,
-             std::shared_ptr<torch::optim::Optimizer> optimizer) -> void {
+             std::shared_ptr<torch::optim::Optimizer> optimizer, int32_t bar_id)
+      -> float32_t {
     namespace F = torch::nn::functional;
-
-    auto bar = std::make_unique<indicators::ProgressBar>(
-        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::white},
-        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
-        opt::ShowPercentage{true},
-        opt::MaxProgress{config_.num_training_epochs},
-        opt::PrefixText{"Training Epoch"},
-        opt::FontStyles{
-            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
-    auto bar_id = bars_.push_back(std::move(bar));
 
     if (memory.size() % config_.batch_size == 1)
       memory.pop();
@@ -92,10 +102,13 @@ class AlphaZero {
     model->to(config_.device);
     memory.shuffle();
 
-    for (auto _ : std::views::iota(0, config_.num_training_epochs)) {
+    auto total_loss = 0.;
+    for (auto i : std::views::iota(0, config_.num_training_epochs)) {
       auto epoch_loss = 0.;
-      for (size_t i = 0; i < memory.size(); i += config_.batch_size) {
-        auto [feature, target_value, target_policy] = memory.sample_batch(i);
+      for (size_t batch = 0; batch < memory.size();
+           batch += config_.batch_size) {
+        auto [feature, target_value, target_policy] =
+            memory.sample_batch(batch);
         auto [out_value, out_policy] = model->forward(feature);
 
         auto loss = F::cross_entropy(out_value, target_value) +
@@ -105,28 +118,24 @@ class AlphaZero {
         loss.backward();
         optimizer->step();
 
-        epoch_loss += loss.template item<float32_t>();
+        epoch_loss += loss.template item<double>();
+
+        bars_[bar_id].set_option(opt::PostfixText{
+            std::format("Epoch {}/{}: Batch Loss: {:.6f} - Total Loss: {:.6f}",
+                        i + 1, config_.num_training_epochs,
+                        loss.template item<double>(), epoch_loss)});
+        bars_[bar_id].tick();
       }
 
-      bars_[bar_id].tick();
+      total_loss += epoch_loss;
     }
 
-    bars_[bar_id].mark_as_completed();
+    return total_loss / static_cast<float32_t>(config_.num_training_epochs);
   }
 
   auto evaluate(std::shared_ptr<Model> current_model,
-                std::shared_ptr<Model> best_model)
+                std::shared_ptr<Model> best_model, int32_t bar_id)
       -> std::tuple<int32_t, int32_t, int32_t> {
-    auto bar = std::make_unique<indicators::ProgressBar>(
-        opt::BarWidth{50}, opt::ForegroundColor{indicators::Color::white},
-        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
-        opt::ShowPercentage{true},
-        opt::MaxProgress{config_.num_model_evaluation_iterations},
-        opt::PrefixText{"Evaluating Model"},
-        opt::FontStyles{
-            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
-    auto bar_id = bars_.push_back(std::move(bar));
-
     current_model->to(config_.device);
     current_model->eval();
 
@@ -174,24 +183,11 @@ class AlphaZero {
       bars_[bar_id].tick();
     }
 
-    bars_[bar_id].mark_as_completed();
-
     return {wins, draws, losses};
   }
 
-  auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t actor_id,
-                 int32_t main_bar_id) -> void {
-    auto color = colors[actor_id % config_.num_actors];
-    auto bar = std::make_unique<indicators::ProgressBar>(
-        opt::BarWidth{50}, opt::ForegroundColor{color},
-        opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
-        opt::ShowPercentage{true},
-        opt::MaxProgress{config_.num_self_play_iterations_per_actor},
-        opt::PrefixText{std::format("Actor {} ", actor_id)},
-        opt::FontStyles{
-            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
-    auto bar_id = bars_.push_back(std::move(bar));
-
+  auto run_actor(Memory& memory, std::shared_ptr<Model> model, int32_t bar_id)
+      -> void {
     auto mcts = MCTS<Game, Model>{config_};
 
     auto num_iterations = config_.num_self_play_iterations_per_actor;
@@ -242,39 +238,22 @@ class AlphaZero {
       }
 
       bars_[bar_id].tick();
-      bars_[main_bar_id].tick();
     }
-
-    bars_[bar_id].mark_as_completed();
   }
 
-  auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model)
-      -> void {
-    auto bar = std::make_unique<indicators::ProgressBar>(
-        opt::BarWidth{50}, opt::ShowElapsedTime{true},
-        opt::ShowRemainingTime{true}, opt::ShowPercentage{true},
-        opt::MaxProgress{config_.num_self_play_iterations_per_actor *
-                         config_.num_actors},
-        opt::PrefixText{"Generating Self-Play Data "},
-        opt::FontStyles{
-            std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
-    auto bar_id = bars_.push_back(std::move(bar));
-
-    auto threads = std::vector<std::thread>();
-
+  auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model,
+                               int32_t bar_id) -> void {
     model->eval();
 
-    for (auto i : std::views::iota(0, config_.num_actors)) {
-      threads.emplace_back([this, &memory, model, i, bar_id] {
-        run_actor(memory, model, i, bar_id);
-      });
+    auto threads = std::vector<std::thread>();
+    for (auto _ : std::views::iota(0, config_.num_actors)) {
+      threads.emplace_back(
+          [this, &memory, model, bar_id] { run_actor(memory, model, bar_id); });
     }
 
     for (auto& thread : threads) {
       thread.join();
     }
-
-    bars_[bar_id].mark_as_completed();
   }
 
  private:

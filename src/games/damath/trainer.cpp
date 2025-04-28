@@ -1,23 +1,19 @@
-#include <torch/torch.h>
-
-import std;
 import dz;
-import az;
 
 auto main() -> int {
-  auto damathzero = dz::DamathZero{{
+  auto damathzero = dz::DamathZero{dz::Config{
       .num_iterations = 2,
       .num_simulations = 10,
       .num_self_play_iterations_per_actor = 100,
       .num_actors = 5,
       .num_model_evaluation_iterations = 5,
       .num_model_evaluation_simulations = 100,
-      .device = torch::kCPU,
+      .device = dz::DeviceType::CPU,
   }};
 
   auto model_config = dz::Model::Config{
       .action_size = dz::Game::ActionSize,
-      .num_blocks = 10,
+      .num_blocks = 2,
       .num_attention_head = 4,
       .embedding_dim = 64,
       .mlp_hidden_size = 128,
@@ -26,5 +22,5 @@ auto main() -> int {
 
   auto model = damathzero.learn(model_config);
 
-  az::utils::save_model(model, "models/best_model.pt");
+  dz::save_model(model, "models/best_model.pt");
 }

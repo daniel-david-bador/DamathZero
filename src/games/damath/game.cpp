@@ -132,6 +132,8 @@ export struct Game {
     const auto [new_x, new_y] = action_info.new_position;
 
     auto new_state = state;
+    new_state.draw_count = +1;
+
     // Move the piece to its new position.
     new_state.board[new_x, new_y] = state.board[origin_x, origin_y];
     new_state.board[origin_x, origin_y] = Board::EmptyCell;
@@ -147,6 +149,8 @@ export struct Game {
       } else {
         new_state.scores.second = action_info.new_score;
       }
+
+      new_state.draw_count = 0;
     }
 
     if (action_info.should_be_knighted)
