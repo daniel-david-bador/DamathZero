@@ -51,45 +51,6 @@ struct Embedding : public nn::Module {
   torch::Tensor cls_token;
 };
 
-struct Attention : public nn::Module {
-  Attention(int32_t embedding_dim, int32_t num_heads) {
-    auto attention_ops =
-        nn::MultiheadAttentionOptions(embedding_dim, num_heads);
-
-    attention =
-        register_module("attention", nn::MultiheadAttention(attention_ops));
-
-    query = register_module("query", nn::Linear(embedding_dim, embedding_dim));
-    key = register_module("key", nn::Linear(embedding_dim, embedding_dim));
-    value = register_module("value", nn::Linear(embedding_dim, embedding_dim));
-  }
-
-  auto forward(torch::Tensor x, bool output_attention = false)
-      -> std::tuple<torch::Tensor, std::optional<torch::Tensor>> {
-    // x is of shape (N, L, H, W) but MultiheadAttention expects (L, N, H, W)
-    auto x_t = x.transpose(0, 1);
-
-    auto q = query->forward(x_t);
-    auto k = key->forward(x_t);
-    auto v = value->forward(x_t);
-
-    auto [out, probs] = attention->forward(q, k, v);
-
-    out = out.transpose(0, 1);
-
-    if (not output_attention) {
-      return {out, std::nullopt};
-    }
-
-    return {out, probs.transpose(0, 1)};
-  }
-
-  nn::MultiheadAttention attention{nullptr};
-  nn::Linear query{nullptr};
-  nn::Linear key{nullptr};
-  nn::Linear value{nullptr};
-};
-
 struct MLP : public nn::Module {
   MLP(int32_t embedding_dim, int32_t hidden_size, float32_t dropout_prob) {
     layer1 = register_module("layer1", nn::Linear(embedding_dim, hidden_size));
@@ -114,21 +75,28 @@ struct Block : public nn::Module {
   Block(int32_t embedding_dim, int32_t num_attention_heads,
         int32_t mlp_hidden_size, float32_t mlp_dropout_prob) {
     auto opts = nn::LayerNormOptions({embedding_dim});
+    auto attention_ops =
+        nn::MultiheadAttentionOptions(embedding_dim, num_attention_heads);
+
+    attention =
+        register_module("attention", nn::MultiheadAttention(attention_ops));
 
     layer_norm1 = register_module("layer_norm1", nn::LayerNorm(opts));
     layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
 
     mlp =
         std::make_shared<MLP>(embedding_dim, mlp_hidden_size, mlp_dropout_prob);
-
-    attention = std::make_shared<Attention>(embedding_dim, num_attention_heads);
   }
 
   auto forward(torch::Tensor x, bool output_attention = false)
       -> std::tuple<torch::Tensor, std::optional<torch::Tensor>> {
-    auto [attention_out, attention_probs] =
-        attention->forward(layer_norm1->forward(x));
-    x = x + attention_out;
+    x = layer_norm1->forward(x);
+    // x is of shape (N, C+1, embedding_dim) but multihead attention expects
+    // (C+1, N, embedding_dim)
+    auto x_t = x.transpose(0, 1);
+    auto [attention_out, attention_probs] = attention->forward(x_t, x_t, x_t);
+    x = x + attention_out.transpose(0, 1);
+
     auto mlp_out = mlp->forward(layer_norm2->forward(x));
     x = x + mlp_out;
 
@@ -139,11 +107,12 @@ struct Block : public nn::Module {
     return {x, attention_probs};
   }
 
+  nn::MultiheadAttention attention{nullptr};
+
   nn::LayerNorm layer_norm1{nullptr};
   nn::LayerNorm layer_norm2{nullptr};
 
   std::shared_ptr<MLP> mlp;
-  std::shared_ptr<Attention> attention;
 };
 
 struct Encoder : public nn::Module {
@@ -156,7 +125,7 @@ struct Encoder : public nn::Module {
     for (auto _ : std::views::iota(0, num_blocks)) {
       auto block = std::make_shared<Block>(embedding_dim, num_attention_heads,
                                            mlp_hidden_size, mlp_dropout_prob);
-      blocks->push_back(block);
+      blocks->push_back(std::move(block));
     }
   }
 

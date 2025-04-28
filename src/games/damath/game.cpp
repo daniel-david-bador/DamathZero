@@ -132,8 +132,7 @@ export struct Game {
     const auto [new_x, new_y] = action_info.new_position;
 
     auto new_state = state;
-    new_state.draw_count = +1;
-
+    new_state.draw_count += 1;
     // Move the piece to its new position.
     new_state.board[new_x, new_y] = state.board[origin_x, origin_y];
     new_state.board[origin_x, origin_y] = Board::EmptyCell;
@@ -149,7 +148,6 @@ export struct Game {
       } else {
         new_state.scores.second = action_info.new_score;
       }
-
       new_state.draw_count = 0;
     }
 
@@ -300,20 +298,20 @@ export struct Game {
 
   static auto encode_state(const State& state) -> torch::Tensor {
     auto encoded_state = torch::zeros({8, 8, 7}, torch::kFloat32);
+
+    encoded_state.select(0, 0).fill_(state.player.is_first() ? 1.0 : -1.0);
+    encoded_state.select(0, 1).fill_(state.scores.first);
+    encoded_state.select(0, 2).fill_(state.scores.second);
+
     for (int x = 0; x < 8; x++) {
       for (int y = 0; y < 8; y++) {
-        encoded_state[x][y][0] = state.player.is_first() ? 0.0 : 1.0;
-        encoded_state[x][y][1] = state.scores.first;
-        encoded_state[x][y][2] = state.scores.second;
-
         if (state.board[x, y].is_occupied) {
           const auto piece = state.board[x, y];
-          const auto value = piece.value();
 
           const auto channel_index = (piece.is_owned_by_first_player ? 3 : 5) +
                                      (piece.is_knighted ? 1 : 0);
 
-          encoded_state[x][y][channel_index] = value;
+          encoded_state[x][y][channel_index] = piece.value();
         }
       }
     }
