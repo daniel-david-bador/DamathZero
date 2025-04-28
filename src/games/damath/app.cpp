@@ -43,7 +43,7 @@ auto main(int argc, char* argv[]) -> int {
 }
 
 auto Update(dz::Application& app) -> void {
-  if (app.state.player.is_second())
+  if (app.state.player.is_second() and not app.outcome.has_value())
     app.let_ai_move();
 
   if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
