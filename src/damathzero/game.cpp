@@ -307,7 +307,7 @@ export struct Game {
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros({8, 8, 9}, torch::kFloat32);
+    auto encoded_state = torch::zeros({8, 8, 10}, torch::kFloat32);
 
     encoded_state.select(2, 0).fill_(state.player.is_first() ? 1.0 : -1.0);
     encoded_state.select(2, 1).fill_(
@@ -348,7 +348,9 @@ export struct Game {
 
     if (state.last_piece_moved) {
       const auto [x, y] = *state.last_piece_moved;
-      encoded_state[x][y][8] = 1.0;
+
+      encoded_state.select(2, 8).fill_(1.0);
+      encoded_state.select(2, 9).fill_(state.board[x, y].value());
     }
 
     return encoded_state;
