@@ -37,9 +37,12 @@ class AlphaZero {
             std::mt19937 gen = std::mt19937{std::random_device{}()})
       : config_(std::move(config)), gen_(std::move(gen)) {}
 
-  auto learn(Model::Config model_config) -> std::shared_ptr<Model> {
-    auto model = std::make_shared<Model>(model_config);
-    auto best_model = std::make_shared<Model>(model_config);
+  auto learn(Model::Config model_config,
+             std::optional<std::shared_ptr<Model>> previous_model =
+                 std::nullopt) -> std::shared_ptr<Model> {
+    auto model = previous_model ? *previous_model
+                                : std::make_shared<Model>(model_config);
+    auto best_model = utils::clone_model<Model>(model, config_.device);
 
     auto optimizer = std::make_shared<torch::optim::Adam>(
         model->parameters(), torch::optim::AdamOptions(0.001));

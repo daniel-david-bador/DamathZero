@@ -1,9 +1,10 @@
+import std;
 import dz;
 
-auto main() -> int {
+auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{dz::Config{
       .num_iterations = 2,
-      .num_simulations = 10,
+      .num_simulations = 60,
       .num_self_play_iterations_per_actor = 100,
       .num_actors = 5,
       .num_model_evaluation_iterations = 5,
@@ -13,14 +14,18 @@ auto main() -> int {
 
   auto model_config = dz::Model::Config{
       .action_size = dz::Game::ActionSize,
-      .num_blocks = 2,
+      .num_blocks = 10,
       .num_attention_head = 4,
       .embedding_dim = 64,
       .mlp_hidden_size = 128,
       .mlp_dropout_prob = 0.1,
   };
 
-  auto model = damathzero.learn(model_config);
+  std::optional<std::shared_ptr<dz::Model>> previous_model = std::nullopt;
+  if (argc > 1) {
+    previous_model = dz::load_model(argv[1], model_config);
+  }
 
+  auto model = damathzero.learn(model_config, previous_model);
   dz::save_model(model, "models/best_model.pt");
 }

@@ -23,7 +23,7 @@ auto main(int argc, char* argv[]) -> int {
                              },
                              dz::Model::Config{
                                  .action_size = dz::Game::ActionSize,
-                                 .num_blocks = 2,
+                                 .num_blocks = 10,
                                  .num_attention_head = 4,
                                  .embedding_dim = 64,
                                  .mlp_hidden_size = 128,
