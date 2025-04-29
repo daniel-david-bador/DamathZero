@@ -309,10 +309,10 @@ export struct Game {
   static auto encode_state(const State& state) -> torch::Tensor {
     auto encoded_state = torch::zeros({8, 8, 10}, torch::kFloat32);
 
-    encoded_state.select(2, 0).fill_(state.player.is_first() ? 1.0 : -1.0);
-    encoded_state.select(2, 1).fill_(
+    encoded_state.select(2, 0).fill_(state.player.is_first() ? 0.0 : 1.0);
+    encoded_state.select(2, 1).fill_(std::tanh(
         state.player.is_first() ? (state.scores.first - state.scores.second)
-                                : (state.scores.second - state.scores.first));
+                                : (state.scores.second - state.scores.first)));
     encoded_state.select(2, 2).fill_(state.draw_count / 80.0);
 
     for (int x = 0; x < 8; x++) {

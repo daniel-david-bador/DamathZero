@@ -99,9 +99,10 @@ export struct Application {
     state = Game::apply_action(state, action);
     outcome = Game::get_outcome(state, action);
 
-    if (outcome.has_value())
+    if (outcome.has_value()) {
+      outcome = outcome->flip();
       update_final_scores();
-    else
+    } else
       update_valid_moves();
 
     history.push_back(state);
