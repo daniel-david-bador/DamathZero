@@ -51,11 +51,6 @@ export struct Board {
        {' ', '/', ' ', '*', ' ', '+', ' ', '-'},
        {'*', ' ', '/', ' ', '-', ' ', '+', ' '}}};
 
-  // struct Direction {
-  //   int8_t x;
-  //   int8_t y;
-  // };
-
   // TODO:
   // Use the same concept above to create a constexpr constructor and create a
   // board easily.

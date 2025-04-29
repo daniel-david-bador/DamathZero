@@ -4,10 +4,10 @@ module;
 
 export module dz:game;
 
+import :board;
+
 import az;
 import std;
-
-import :board;
 
 namespace dz {
 

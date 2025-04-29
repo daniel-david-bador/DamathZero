@@ -4,9 +4,8 @@ module;
 
 export module dz;
 
-export import :model;
 export import :game;
-export import :board;
+export import :model;
 
 import az;
 import std;
@@ -42,6 +41,7 @@ export struct Application {
         state{Game::initial_state()},
         outcome{std::nullopt},
         history{Game::initial_state()} {
+    model->to(config.device);
     model->eval();
     update_valid_moves();
   }

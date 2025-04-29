@@ -106,6 +106,9 @@ auto Render(const dz::Application& app) -> void {
 
       auto cell = app.state.board[i, j];
       if (cell.is_occupied) {
+        if (cell.is_knighted)
+          DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 30, GRAY);
+
         DrawCircle(i * 100 + 50, (7 - j) * 100 + 50, 25,
                    cell.is_owned_by_first_player ? MAROON : BLACK);
         DrawTextCenter(GetFontDefault(), std::format("{}", cell.value()),

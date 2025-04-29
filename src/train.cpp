@@ -1,5 +1,5 @@
-import std;
 import dz;
+import std;
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{dz::Config{
