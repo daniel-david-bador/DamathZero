@@ -216,49 +216,57 @@ export struct Game {
       }
     }
 
-    auto action_and_max_eats = std::vector<std::pair<Action, int32_t>>{};
+    auto eat_actions = std::vector<std::tuple<Position, Action, int32_t>>{};
     for (auto position : positions) {
       for (auto action :
            state.board.get_eatable_actions(position.x, position.y)) {
-        action_and_max_eats.push_back({action, get_max_eats(state, action)});
+        eat_actions.push_back({position, action, get_max_eats(state, action)});
       }
     }
 
-    auto legal_actions = std::vector<Action>{};
+    auto dama_actions = std::vector<Action>{};
+    auto normal_actions = std::vector<Action>{};
+
     auto best_eats = 0;
-    for (auto [action, max_eat] : action_and_max_eats) {
-      if (legal_actions.empty()) {
-        best_eats = max_eat;
-        legal_actions.push_back(action);
-        continue;
-      }
+    for (auto [position, action, max_eat] : eat_actions) {
       if (max_eat < best_eats)
         continue;
+      
       if (max_eat > best_eats) {
         best_eats = max_eat;
-        legal_actions.clear();
+        dama_actions.clear();
+        normal_actions.clear();
       }
-      legal_actions.push_back(action);
+
+      if (state.board[position.x, position.y].is_knighted)
+        dama_actions.push_back(action);
+      else
+        normal_actions.push_back(action);
     }
 
-    auto legal_actions_tensor = torch::zeros(ActionSize, torch::kFloat32);
+    auto legal_actions = torch::zeros(ActionSize, torch::kFloat32);
 
-    // NOTE: legal_actions only contains eat moves, so if it's not empty we
-    // return early because eat moves are mandatory.
-    if (not legal_actions.empty()) {
-      for (auto& action : legal_actions)
-        legal_actions_tensor[action] = 1.0;
+    for (auto& action : dama_actions)
+      legal_actions[action] = 1.0;
 
-      return legal_actions_tensor;
-    }
+    if (not dama_actions.empty())
+      return legal_actions;
+
+    for (auto& action : normal_actions)
+      legal_actions[action] = 1.0;
+
+    if (not normal_actions.empty())
+      return legal_actions;
+
+    auto jump_actions = std::vector<Action>{};
 
     for (auto [x, y] : positions)
-      legal_actions.append_range(state.board.get_jump_actions(x, y));
+      jump_actions.append_range(state.board.get_jump_actions(x, y));
 
-    for (auto action : legal_actions)
-      legal_actions_tensor[action] = 1.0;
+    for (auto action : jump_actions)
+      legal_actions[action] = 1.0;
 
-    return legal_actions_tensor;
+    return legal_actions;
   }
 
   static constexpr auto get_outcome(const State& state, Action action)
