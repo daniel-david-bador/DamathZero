@@ -31,7 +31,7 @@ auto main(int argc, char* argv[]) -> int {
                              },
                              argv[1]};
 
-  InitWindow(1330, 800, "DamathZero");
+  InitWindow(1330, 830, "DamathZero");
   SetTargetFPS(60);
 
   while (not WindowShouldClose()) {
@@ -131,7 +131,12 @@ auto Render(const dz::Application& app) -> void {
     DrawRectangle(800, 0, 30, 800, GRAY);
   }
 
-  DrawRectangle(830, 0, 500, 800, MAROON);
+  auto draw_counter = (app.state.draw_count / 80.0f) * 800;
+  DrawRectangle(0, 800, draw_counter, 30, BLUE);
+
+  DrawRectangle(800, 800, 30, 30, YELLOW);
+
+  DrawRectangle(830, 0, 500, 830, MAROON);
   DrawTextCenter(GetFontDefault(), "DamathZero", 830, 0, 500, 100, 40, 3,
                  WHITE);
 
