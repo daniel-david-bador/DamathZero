@@ -26,10 +26,9 @@ export struct Model : torch::nn::Module {
 
   Model(Config config) : config(config) {
     const auto patch_size = 2;
-    // const auto feature_width = 8;
-    // const auto feature_height = 8;
-    // assert(feature_width % patch_size == 0);
-    // assert(feature_height % patch_size == 0);
+    const auto feature_width = 8;
+
+    assert(feature_width % patch_size == 0);
 
     encoder = register_module(
         "encoder",
@@ -38,9 +37,9 @@ export struct Model : torch::nn::Module {
             config.mlp_hidden_size, config.mlp_dropout_prob));
 
     embedding = register_module(
-        "embedding",
-        std::make_shared<vit::Embedding>(patch_size, config.embedding_dim,
-                                         /*num_channels=*/10));
+        "embedding", std::make_shared<vit::Embedding>(feature_width, patch_size,
+                                                      config.embedding_dim,
+                                                      /*num_channels=*/10));
 
     wdl_head = register_module("wdl_head", nn::Linear(config.embedding_dim, 3));
     policy_head = register_module(

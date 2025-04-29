@@ -13,16 +13,22 @@ namespace dz::vit {
 
 // Patch and positional embeddings
 struct Embedding : public nn::Module {
-  Embedding(int32_t patch_size, int32_t embedding_dim, int32_t num_channels) {
+  Embedding(int32_t image_size, int32_t patch_size, int32_t embedding_dim,
+            int32_t num_channels) {
+    assert(image_size % patch_size == 0);
+
     const auto opts = nn::Conv2dOptions(num_channels, embedding_dim, patch_size)
                           .stride(patch_size);
 
+    const auto num_patches =
+        (image_size / patch_size) * (image_size / patch_size);
+
     projection = register_module("projection", nn::Conv2d(opts));
 
-    // Create positional embedding add one for the CLS token.
+    // Create positional embedding and add one for the CLS token.
     positional_embedding =
         register_parameter("positional_embedding",
-                           torch::randn({1, num_channels + 1, embedding_dim}));
+                           torch::randn({1, num_patches + 1, embedding_dim}));
     cls_token =
         register_parameter("cls_token", torch::randn({1, 1, embedding_dim}));
   }
@@ -42,8 +48,7 @@ struct Embedding : public nn::Module {
     // Concatanete the cls token at the beginning
     // (N, C, embedding_dim) -> (N, C+1, embedding_dim)
     x = torch::cat({cls, x}, /*dim=*/1);
-
-    return x;
+    return x + positional_embedding;
   };
 
   nn::Conv2d projection{nullptr};
@@ -84,8 +89,9 @@ struct Block : public nn::Module {
     layer_norm1 = register_module("layer_norm1", nn::LayerNorm(opts));
     layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
 
-    mlp =
-        register_module("mlp", std::make_shared<MLP>(embedding_dim, mlp_hidden_size, mlp_dropout_prob));
+    mlp = register_module("mlp",
+                          std::make_shared<MLP>(embedding_dim, mlp_hidden_size,
+                                                mlp_dropout_prob));
   }
 
   auto forward(torch::Tensor x, bool output_attention = false)

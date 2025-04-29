@@ -3,7 +3,7 @@ import std;
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{dz::Config{
-      .num_iterations = 2,
+      .num_iterations = 10,
       .num_simulations = 60,
       .num_self_play_iterations_per_actor = 100,
       .num_actors = 5,

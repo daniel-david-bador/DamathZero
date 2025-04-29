@@ -83,8 +83,9 @@ class AlphaZero {
       if (did_win) {
         best_model = utils::clone_model(model);
         best_model->to(config_.device);
-        utils::save_model(model, std::format("models/model_{}.pt", i));
       }
+
+      utils::save_model(model, std::format("models/model_{}.pt", i));
 
       bars_[bar_id].set_option(opt::PostfixText{std::format(
           "Average Loss: {:.6f} - Wins: {} - Draws: {} - Losses: {}",
