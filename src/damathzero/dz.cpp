@@ -34,13 +34,14 @@ export auto load_model(std::string_view path, Model::Config config)
 }
 
 export struct Application {
-  Application(Config config, Model::Config model_config, std::string_view path)
+  Application(Config config, Model::Config model_config, std::string_view path,
+              Game::State initial_state = Game::initial_state())
       : mcts{config},
         config{config},
         model{load_model(path, model_config)},
-        state{Game::initial_state()},
+        state{initial_state},
         outcome{std::nullopt},
-        history{Game::initial_state()} {
+        history{initial_state} {
     model->to(config.device);
     model->eval();
     update_valid_moves();
