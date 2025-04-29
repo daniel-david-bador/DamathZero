@@ -73,12 +73,13 @@ export struct Application {
       action_map[origin_x][origin_y][new_x][new_y] = action;
     }
 
-    auto [wdl, policy] = model->forward(Game::encode_state(state).unsqueeze(0));
+    auto [wdl, policy] = model->forward(
+        Game::encode_state(state).unsqueeze(0).to(config.device));
 
     if (state.player.is_first())
-      predicted_wdl = wdl.squeeze(0);
+      predicted_wdl = wdl.squeeze(0).to(torch::kCPU);
 
-    predicted_action_probs = policy.squeeze(0).reshape({-1});
+    predicted_action_probs = policy.squeeze(0).reshape({-1}).to(torch::kCPU);
   }
 
   auto select_piece(int x, int y) -> void {

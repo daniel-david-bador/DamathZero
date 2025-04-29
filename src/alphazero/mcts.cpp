@@ -109,7 +109,6 @@ class MCTS {
                         std::shared_ptr<Model> model) -> double {
     torch::NoGradGuard no_grad;
 
-    model->to(config_.device);
     auto feature = Game::encode_state(state).to(config_.device);
     auto legal_actions = Game::legal_actions(state).to(config_.device);
 

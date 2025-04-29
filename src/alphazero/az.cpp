@@ -42,7 +42,10 @@ class AlphaZero {
                  std::nullopt) -> std::shared_ptr<Model> {
     auto model = previous_model ? *previous_model
                                 : std::make_shared<Model>(model_config);
-    auto best_model = utils::clone_model<Model>(model, config_.device);
+    auto best_model = utils::clone_model<Model>(model);
+
+    model->to(config_.device);
+    best_model->to(config_.device);
 
     auto optimizer = std::make_shared<torch::optim::Adam>(
         model->parameters(), torch::optim::AdamOptions(0.001));
@@ -78,7 +81,8 @@ class AlphaZero {
           0.7 * static_cast<float32_t>(config_.num_model_evaluation_iterations);
 
       if (did_win) {
-        best_model = utils::clone_model(model, config_.device);
+        best_model = utils::clone_model(model);
+        best_model->to(config_.device);
         utils::save_model(model, std::format("models/model_{}.pt", i));
       }
 
@@ -102,7 +106,6 @@ class AlphaZero {
       memory.pop();
 
     model->train();
-    model->to(config_.device);
     memory.shuffle();
 
     auto total_loss = 0.;

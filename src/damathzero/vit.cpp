@@ -85,7 +85,7 @@ struct Block : public nn::Module {
     layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
 
     mlp =
-        std::make_shared<MLP>(embedding_dim, mlp_hidden_size, mlp_dropout_prob);
+        register_module("mlp", std::make_shared<MLP>(embedding_dim, mlp_hidden_size, mlp_dropout_prob));
   }
 
   auto forward(torch::Tensor x, bool output_attention = false)
