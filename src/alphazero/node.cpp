@@ -6,7 +6,6 @@ export module az:node;
 
 import std;
 
-import :config;
 import :game;
 
 namespace az {

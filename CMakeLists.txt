@@ -14,7 +14,6 @@ include(cmake/indicators.cmake)
 add_library(AlphaZero SHARED)
 target_sources(AlphaZero PUBLIC FILE_SET CXX_MODULES FILES
   src/alphazero/az.cpp
-  src/alphazero/config.cpp
   src/alphazero/game.cpp
   src/alphazero/memory.cpp
   src/alphazero/mcts.cpp

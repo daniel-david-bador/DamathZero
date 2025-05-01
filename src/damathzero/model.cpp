@@ -21,7 +21,7 @@ struct Embedding : public nn::Module {
 
     positional_embedding = register_parameter(
         "positional_embedding",
-        torch::randn({1, feature_height + num_cls_tokens, embedding_dim}));
+        torch::randn({1, num_cls_tokens + feature_height, embedding_dim}));
 
     cls_tokens = register_parameter(
         "cls_tokens", torch::randn({1, num_cls_tokens, embedding_dim}));
@@ -50,8 +50,9 @@ struct Embedding : public nn::Module {
   nn::LayerNorm layer_norm{nullptr};
 };
 
-struct MLP : public nn::Module {
-  MLP(int32_t embedding_dim, int32_t hidden_size, float32_t dropout_prob) {
+struct MultilayerPerceptron : public nn::Module {
+  MultilayerPerceptron(int32_t embedding_dim, int32_t hidden_size,
+                       float32_t dropout_prob) {
     layer1 = register_module("layer1", nn::Linear(embedding_dim, hidden_size));
     layer2 = register_module("layer2", nn::Linear(hidden_size, embedding_dim));
     dropout = register_module("dropout", nn::Dropout(dropout_prob));
@@ -73,19 +74,18 @@ struct MLP : public nn::Module {
 struct Block : public nn::Module {
   Block(int32_t embedding_dim, int32_t num_attention_heads,
         int32_t mlp_hidden_size, float32_t mlp_dropout_prob) {
-    auto opts = nn::LayerNormOptions({embedding_dim});
-    auto attention_ops =
+    auto attention_opts =
         nn::MultiheadAttentionOptions(embedding_dim, num_attention_heads);
-
     attention =
-        register_module("attention", nn::MultiheadAttention(attention_ops));
+        register_module("attention", nn::MultiheadAttention(attention_opts));
 
+    auto opts = nn::LayerNormOptions({embedding_dim});
     layer_norm1 = register_module("layer_norm1", nn::LayerNorm(opts));
     layer_norm2 = register_module("layer_norm2", nn::LayerNorm(opts));
 
-    mlp = register_module("mlp",
-                          std::make_shared<MLP>(embedding_dim, mlp_hidden_size,
-                                                mlp_dropout_prob));
+    mlp = register_module(
+        "mlp", std::make_shared<MultilayerPerceptron>(
+                   embedding_dim, mlp_hidden_size, mlp_dropout_prob));
   }
 
   auto forward(torch::Tensor x, bool output_attention = false)
@@ -111,7 +111,7 @@ struct Block : public nn::Module {
   nn::LayerNorm layer_norm1{nullptr};
   nn::LayerNorm layer_norm2{nullptr};
 
-  std::shared_ptr<MLP> mlp;
+  std::shared_ptr<MultilayerPerceptron> mlp;
 };
 
 struct Encoder : public nn::Module {
@@ -180,7 +180,7 @@ export struct Model : torch::nn::Module {
 
   Model(Config config) : config(config) {
     const auto feature_width = 32;
-    const auto feature_height = 11;
+    const auto feature_height = 24;
     const auto num_cls_tokens = 8;
 
     // assert(feature_width % patch_size == 0);
@@ -220,7 +220,6 @@ export struct Model : torch::nn::Module {
   std::shared_ptr<Encoder> encoder{nullptr};
   std::shared_ptr<Embedding> embedding{nullptr};
 
-  nn::Linear feed_forward{nullptr};
   nn::Linear wdl_head{nullptr};
   nn::Linear policy_head{nullptr};
 };

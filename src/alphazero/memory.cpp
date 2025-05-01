@@ -6,7 +6,6 @@ export module az:memory;
 
 import std;
 
-import :config;
 import :game;
 
 namespace az {
@@ -17,7 +16,7 @@ export using Value = torch::Tensor;
 
 export class Memory {
  public:
-  Memory(Config config, std::mt19937& gen) : config_{config}, gen_(gen) {}
+  Memory(std::mt19937& gen) : gen_(gen) {}
 
   constexpr auto size() -> size_t { return data_.size(); }
 
@@ -37,10 +36,11 @@ export class Memory {
     data_.emplace_back(feature, value, policy);
   }
 
-  auto sample_batch(std::size_t start) -> std::tuple<Feature, Value, Policy> {
+  auto sample_batch(std::size_t batch_size, std::size_t start)
+      -> std::tuple<Feature, Value, Policy> {
     auto guard = std::lock_guard(mutex_);
 
-    auto size = std::min(config_.batch_size, data_.size() - start);
+    auto size = std::min(batch_size, data_.size() - start);
 
     auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
 
@@ -62,16 +62,12 @@ export class Memory {
       policies.emplace_back(policy);
     }
 
-    auto device = config_.device;
-
-    return {torch::stack(features, 0).to(device),
-            torch::stack(values, 0).to(device),
-            torch::stack(policies, 0).to(device)};
+    return {torch::stack(features, 0), torch::stack(values, 0),
+            torch::stack(policies, 0)};
   }
 
  private:
   std::mutex mutex_;
-  Config config_;
   std::mt19937& gen_;
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };

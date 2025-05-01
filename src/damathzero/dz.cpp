@@ -11,9 +11,6 @@ import az;
 import std;
 
 namespace dz {
-
-export using Config = az::Config;
-
 export using Action = az::Action;
 export using Player = az::Player;
 export using GameOutcome = az::GameOutcome;
@@ -34,9 +31,14 @@ export auto load_model(std::string_view path, Model::Config config)
 }
 
 export struct Application {
+  struct Config {
+    int32_t num_simulations = 1000;
+    DeviceType device = DeviceType::CPU;
+  };
+
   Application(Config config, Model::Config model_config, std::string_view path,
               Game::State initial_state = Game::initial_state())
-      : mcts{config},
+      : mcts{{.num_simulations = config.num_simulations}},
         config{config},
         model{load_model(path, model_config)},
         state{initial_state},
@@ -64,8 +66,8 @@ export struct Application {
       auto action = legal_actions[i].item<int>();
       auto action_info = Game::decode_action(state, action);
 
-      auto [origin_x, origin_y] = action_info.original_position;
-      auto [new_x, new_y] = action_info.new_position;
+      auto [origin_x, origin_y] = action_info.original_position.value();
+      auto [new_x, new_y] = action_info.new_position.value();
 
       moveable_pieces[origin_x][origin_y] = true;
 
@@ -95,7 +97,7 @@ export struct Application {
   }
 
   auto let_ai_move() -> void {
-    auto probs = mcts.search(state, model, config.num_simulations);
+    auto probs = mcts.search(state, model);
     auto action = torch::argmax(probs).item<Action>();
     state = Game::apply_action(state, action);
     outcome = Game::get_outcome(state, action);
@@ -196,6 +198,7 @@ export struct Application {
 
   MCTS mcts;
   Config config;
+
   std::shared_ptr<Model> model;
 
   Game::State state;

@@ -6,7 +6,6 @@ export module az:storage;
 
 import std;
 
-import :config;
 import :game;
 import :node;
 

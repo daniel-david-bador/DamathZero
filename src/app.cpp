@@ -12,16 +12,11 @@ auto main(int argc, char* argv[]) -> int {
     return -1;
   }
 
-  auto app = dz::Application{dz::Config{
-                                 .num_iterations = 1,
+  auto app = dz::Application{{
                                  .num_simulations = 1000,
-                                 .num_self_play_iterations_per_actor = 10,
-                                 .num_actors = 5,
-                                 .num_model_evaluation_iterations = 5,
-                                 .num_model_evaluation_simulations = 100,
                                  .device = dz::DeviceType::CPU,
                              },
-                             dz::Model::Config{
+                             {
                                  .action_size = dz::Game::ActionSize,
                                  .num_blocks = 10,
                                  .num_attention_head = 4,
@@ -142,9 +137,11 @@ auto Render(const dz::Application& app) -> void {
 
   auto [score, ai_score] = app.state.scores;
   DrawTextCenter(GetFontDefault(), "Scores", 830, 100, 500, 100, 40, 3, WHITE);
-  DrawTextCenter(GetFontDefault(), std::format("You: {:7.2f}", score), 830, 200,
-                 250, 100, 20, 3, WHITE);
-  DrawTextCenter(GetFontDefault(), std::format("AI: {:7.2f}", ai_score), 1080,
+  DrawTextCenter(GetFontDefault(),
+                 std::format("You: {:7.2f}", static_cast<float>(score)), 830,
+                 200, 250, 100, 20, 3, WHITE);
+  DrawTextCenter(GetFontDefault(),
+                 std::format("AI: {:7.2f}", static_cast<float>(ai_score)), 1080,
                  200, 250, 100, 20, 3, WHITE);
 
   if (app.outcome.has_value()) {

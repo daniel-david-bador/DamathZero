@@ -2,6 +2,8 @@ module;
 
 #include <torch/torch.h>
 
+#include <cassert>
+
 export module dz:game;
 
 import :board;
@@ -11,25 +13,45 @@ import std;
 
 namespace dz {
 
+struct Position {
+  const static Position Empty;
+
+  uint8_t x : 3;
+  uint8_t y : 3;
+  uint8_t empty : 1;
+
+  constexpr Position(int8_t x, int8_t y, bool empty = false)
+      : x(x), y(y), empty(empty) {
+    assert(x >= 0 and x < 8);
+    assert(y >= 0 and y < 8);
+  }
+
+  constexpr auto operator==(const Position& other) const -> bool = default;
+
+  constexpr auto is_empty() const -> bool { return empty == 1; }
+
+  constexpr auto value() const -> std::pair<uint8_t, uint8_t> {
+    assert(not empty);
+    return {x, y};
+  }
+};
+static_assert(sizeof(Position) == 1);
+
+inline constexpr auto Position::Empty = Position{0, 0, true};
+
 export struct Game {
   using Action = az::Action;
   using Player = az::Player;
 
   static constexpr auto ActionSize = 8 * 8 * 4 * 7;
 
-  using Board = Board;
-
-  struct Position {
-    int8_t x;
-    int8_t y;
-  };
-
   struct State {
     Board board = Board{};
+    std::pair<float16_t, float16_t> scores{0.0, 0.0};
+    uint8_t draw_count = 0;
     Player player = Player::First;
-    std::pair<float32_t, float32_t> scores{0.0, 0.0};
-    int draw_count = 0;
-    std::optional<Position> eating_piece_position = std::nullopt;
+    Position eating_piece_position = Position::Empty;
+    Position eating_piece_previous_position = Position::Empty;
   };
 
   struct ActionInfo {
@@ -43,14 +65,13 @@ export struct Game {
 
     float32_t new_score;
 
-    std::optional<Position> eaten_enemy_position;
+    Position eaten_enemy_position = Position::Empty;
   };
 
   static constexpr auto initial_state() -> State {
+    static std::mt19937 gen{std::random_device{}()};
     return State{
-        .player = std::mt19937{std::random_device{}()}() % 2 == 0
-                      ? Player::First
-                      : Player::Second,
+        .player = gen() % 2 == 0 ? Player::First : Player::Second,
     };
   }
 
@@ -66,7 +87,7 @@ export struct Game {
     const int8_t new_x = origin_x + dx * distance;
     const int8_t new_y = origin_y + dy * distance;
 
-    std::optional<Position> eaten_enemy_position = std::nullopt;
+    auto eaten_enemy_position = Position::Empty;
 
     auto new_score =
         state.player.is_first() ? state.scores.first : state.scores.second;
@@ -129,8 +150,8 @@ export struct Game {
       -> std::pair<State, ActionInfo> {
     const auto action_info = decode_action(state, action);
 
-    const auto [origin_x, origin_y] = action_info.original_position;
-    const auto [new_x, new_y] = action_info.new_position;
+    const auto [origin_x, origin_y] = action_info.original_position.value();
+    const auto [new_x, new_y] = action_info.new_position.value();
 
     auto new_state = state;
     new_state.draw_count += 1;
@@ -140,8 +161,8 @@ export struct Game {
     new_state.board[origin_x, origin_y] = Board::EmptyCell;
 
     // If the action resulted to an piece being captured, register it.
-    if (auto eaten_enemy_position = action_info.eaten_enemy_position) {
-      auto [x, y] = *eaten_enemy_position;
+    if (not action_info.eaten_enemy_position.is_empty()) {
+      const auto [x, y] = action_info.eaten_enemy_position.value();
       new_state.board[x, y] = Board::EmptyCell;
 
       // Update the score if this move triggered an eat.
@@ -157,18 +178,20 @@ export struct Game {
     if (action_info.should_be_knighted)
       new_state.board[new_x, new_y].is_knighted = true;
 
-    const auto has_eaten = action_info.eaten_enemy_position.has_value();
+    const auto has_eaten = not action_info.eaten_enemy_position.is_empty();
     const auto can_eat_more =
         has_eaten and not action_info.should_be_knighted and
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
 
     if (can_eat_more) {
       new_state.eating_piece_position = action_info.new_position;
+      new_state.eating_piece_previous_position = action_info.original_position;
       return {new_state, action_info};
     }
 
     new_state.player = new_state.player.next();
-    new_state.eating_piece_position = std::nullopt;
+    new_state.eating_piece_position = Position::Empty;
+    new_state.eating_piece_previous_position = Position::Empty;
     return {new_state, action_info};
   }
 
@@ -188,8 +211,8 @@ export struct Game {
       max_height = std::max(height, max_height);
 
       auto [new_state, action_info] = inspect_and_apply_action(state, action);
-      if (new_state.eating_piece_position) {
-        auto [new_x, new_y] = action_info.new_position;
+      if (not new_state.eating_piece_position.is_empty()) {
+        auto [new_x, new_y] = action_info.new_position.value();
 
         for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
           stack.push_back({action, new_state, height + 1});
@@ -203,8 +226,8 @@ export struct Game {
     // If last piece moved is not empty, get positions of the pieces in the
     // board from the perspective of state.player.
     auto positions = std::vector<Position>{};
-    if (state.eating_piece_position) {
-      positions.push_back(*state.eating_piece_position);
+    if (not state.eating_piece_position.is_empty()) {
+      positions.push_back(state.eating_piece_position);
     } else {
       for (int8_t y = 0; y < 8; y++) {
         for (int8_t x = 0; x < 8; x++) {
@@ -260,8 +283,8 @@ export struct Game {
 
     auto jump_actions = std::vector<Action>{};
 
-    for (auto [x, y] : positions)
-      jump_actions.append_range(state.board.get_jump_actions(x, y));
+    for (auto pos : positions)
+      jump_actions.append_range(state.board.get_jump_actions(pos.x, pos.y));
 
     for (auto action : jump_actions)
       legal_actions[action] = 1.0;
@@ -271,12 +294,8 @@ export struct Game {
 
   static constexpr auto get_outcome(const State& state, Action action)
       -> std::optional<az::GameOutcome> {
-    if (state.draw_count >= 80)
-      return az::GameOutcome::Draw;
-
-    if (legal_actions(state).nonzero().numel() > 0) {
-      return {};
-    }
+    if (legal_actions(state).nonzero().numel() > 0 and state.draw_count < 80)
+      return std::nullopt;
 
     const int8_t distance = (action / (8 * 8 * 4)) + 1;
     const int8_t direction = (action % (8 * 8 * 4)) / (8 * 8);
@@ -315,7 +334,7 @@ export struct Game {
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros({32, 11}, torch::kFloat32);
+    auto encoded_state = torch::zeros({32, 24}, torch::kFloat32);
     constexpr auto operator_index = [](int8_t x, int8_t y) {
       switch (Board::operators[y][x]) {  // clang-format off
         case '+': return 0;
@@ -326,41 +345,57 @@ export struct Game {
       }  // clang-format on
     };
 
+    const auto current_player = state.player.is_first() ? 1 : -1;
+
     const auto [score1, score2] = state.scores;
+    const auto score =
+        state.player.is_first() ? score1 - score2 : score2 - score1;
+    const auto relative_score = 1 / (1 + std::exp(-score));
+
     auto i = 0;
     for (int8_t y = 0; y < 8; y += 1) {
       for (int8_t x = y % 2 == 0 ? 1 : 0; x < 8; x += 2) {
         auto cell = state.board[x, y];
+        // 0 encodes the current player
+        encoded_state[i][0] = current_player;
+
         if (const auto piece = cell; cell.is_occupied) {
-          // 0-11 is the one-hot encoding of each piece
-          encoded_state[i][0] = piece.value();
-          // 12 encodes the owner of the piece
-          encoded_state[i][1] = piece.is_owned_by_first_player ? 1 : 0;
-          // 13 encodes if the current player "owns" this piece
-          encoded_state[i][2] = piece.is_owned_by(state.player) ? 1 : 0;
+          // 1-13 is one-hot encoding of the piece
+          encoded_state[i][1 + piece.unsigned_value] = 1;
+
           // 14 encodes if this piece is promoted
-          encoded_state[i][3] = piece.is_knighted ? 1 : 0;
+          encoded_state[i][14] = piece.is_knighted ? 1 : 0;
 
-          const auto score = piece.is_owned_by_first_player ? score1 - score2
-                                                            : score2 - score1;
-          const auto relative_score = 1 / (1 + std::exp(-score));
-
-          // 15 encodes the relative score of the piece
-          encoded_state[i][4] = relative_score;
+          // 15 encodes the owner of the piece
+          encoded_state[i][15] = piece.is_owned_by_first_player ? 1 : -1;
         }
 
-        encoded_state[i][5] = state.draw_count / 80.0;
+        // 16 encodes the relative score of the current player
+        encoded_state[i][16] = relative_score;
 
-        // 16-19 is the one-hot encoding of each operator
-        encoded_state[i][6 + operator_index(x, y)] = 1.0;
+        // 17 encodes the draw count
+        encoded_state[i][17] = state.draw_count / 80.0;
+
+        // 18-21 is the one-hot encoding of each operator
+        encoded_state[i][18 + operator_index(x, y)] = 1.0;
+
         i++;
       }
     }
 
-    if (const auto pos = state.eating_piece_position) {
-      const auto [x, y] = *pos;
+    if (not state.eating_piece_position.is_empty()) {
+      assert(not state.eating_piece_previous_position.is_empty());
+      const auto [x, y] = state.eating_piece_position.value();
       const auto i = (4 * y) + (x / 2);
-      encoded_state[i][10] = 1;
+
+      // 22 encodes the position of the last eating piece
+      encoded_state[i][22] = 1;
+
+      const auto [prev_x, prev_y] = state.eating_piece_position.value();
+      const auto prev_i = (4 * prev_y) + (prev_x / 2);
+
+      // 23 encodes the previous position of the last eating piece
+      encoded_state[prev_i][23] = 1;
     }
 
     return encoded_state;

@@ -2,13 +2,16 @@ import dz;
 import std;
 
 auto main(int argc, char** argv) -> int {
-  auto damathzero = dz::DamathZero{dz::Config{
-      .num_iterations = 10,
-      .num_simulations = 60,
-      .num_self_play_iterations_per_actor = 100,
-      .num_actors = 5,
-      .num_model_evaluation_iterations = 5,
-      .num_model_evaluation_simulations = 100,
+  auto damathzero = dz::DamathZero{{
+      .batch_size = 64,
+      .num_training_epochs = 4,
+      .num_training_iterations = 10,
+      .num_self_play_actors = 6,
+      .num_self_play_iterations = 100,
+      .num_self_play_simulations = 60,
+      .num_evaluation_actors = 5,
+      .num_evaluation_iterations = 10,
+      .num_evaluation_simulations = 1000,
       .device = dz::DeviceType::CPU,
   }};
 

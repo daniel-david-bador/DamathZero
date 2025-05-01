@@ -6,7 +6,6 @@ module;
 export module az:mcts;
 
 import :model;
-import :config;
 import :node;
 import :storage;
 import :game;
@@ -18,6 +17,17 @@ namespace az {
 export template <concepts::Game Game, concepts::Model Model>
 class MCTS {
  public:
+  struct Config {
+    int32_t num_simulations = 100;
+
+    float32_t C = 2.0;
+
+    float32_t dirichlet_alpha = 0.3;
+    float32_t dirichlet_epsilon = 0.25;
+
+    float32_t temperature = 1.25;
+  };
+
   MCTS(Config config) : config_(config) {}
 
   constexpr auto search(Game::State original_state,
@@ -109,8 +119,8 @@ class MCTS {
                         std::shared_ptr<Model> model) -> double {
     torch::NoGradGuard no_grad;
 
-    auto feature = Game::encode_state(state).to(config_.device);
-    auto legal_actions = Game::legal_actions(state).to(config_.device);
+    auto feature = Game::encode_state(state);
+    auto legal_actions = Game::legal_actions(state);
 
     auto [wdl, policy] = model->forward(torch::unsqueeze(feature, 0));
     policy = torch::softmax(torch::squeeze(policy, 0), -1);
