@@ -31,7 +31,6 @@ target_sources(DamathZero PUBLIC FILE_SET CXX_MODULES FILES
   src/damathzero/dz.cpp
   src/damathzero/game.cpp
   src/damathzero/model.cpp
-  src/damathzero/vit.cpp
   src/damathzero/board.cpp)
 target_link_libraries(DamathZero PUBLIC AlphaZero)
 target_compile_features(DamathZero PUBLIC cxx_std_23)

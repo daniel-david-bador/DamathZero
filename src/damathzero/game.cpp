@@ -29,7 +29,7 @@ export struct Game {
     Player player = Player::First;
     std::pair<float32_t, float32_t> scores{0.0, 0.0};
     int draw_count = 0;
-    std::optional<Position> last_piece_moved = std::nullopt;
+    std::optional<Position> eating_piece_position = std::nullopt;
   };
 
   struct ActionInfo {
@@ -163,12 +163,12 @@ export struct Game {
         not new_state.board.get_eatable_actions(new_x, new_y).empty();
 
     if (can_eat_more) {
-      new_state.last_piece_moved = action_info.new_position;
+      new_state.eating_piece_position = action_info.new_position;
       return {new_state, action_info};
     }
 
     new_state.player = new_state.player.next();
-    new_state.last_piece_moved = std::nullopt;
+    new_state.eating_piece_position = std::nullopt;
     return {new_state, action_info};
   }
 
@@ -188,7 +188,7 @@ export struct Game {
       max_height = std::max(height, max_height);
 
       auto [new_state, action_info] = inspect_and_apply_action(state, action);
-      if (new_state.last_piece_moved) {
+      if (new_state.eating_piece_position) {
         auto [new_x, new_y] = action_info.new_position;
 
         for (auto action : new_state.board.get_eatable_actions(new_x, new_y)) {
@@ -203,8 +203,8 @@ export struct Game {
     // If last piece moved is not empty, get positions of the pieces in the
     // board from the perspective of state.player.
     auto positions = std::vector<Position>{};
-    if (state.last_piece_moved) {
-      positions.push_back(*state.last_piece_moved);
+    if (state.eating_piece_position) {
+      positions.push_back(*state.eating_piece_position);
     } else {
       for (int8_t y = 0; y < 8; y++) {
         for (int8_t x = 0; x < 8; x++) {
@@ -231,7 +231,7 @@ export struct Game {
     for (auto [position, action, max_eat] : eat_actions) {
       if (max_eat < best_eats)
         continue;
-      
+
       if (max_eat > best_eats) {
         best_eats = max_eat;
         dama_actions.clear();
@@ -315,50 +315,52 @@ export struct Game {
   }
 
   static auto encode_state(const State& state) -> torch::Tensor {
-    auto encoded_state = torch::zeros({8, 8, 10}, torch::kFloat32);
+    auto encoded_state = torch::zeros({32, 11}, torch::kFloat32);
+    constexpr auto operator_index = [](int8_t x, int8_t y) {
+      switch (Board::operators[y][x]) {  // clang-format off
+        case '+': return 0;
+        case '-': return 1;
+        case '*': return 2;
+        case '/': return 3;
+        default: std::unreachable();
+      }  // clang-format on
+    };
 
-    encoded_state.select(2, 0).fill_(state.player.is_first() ? 0.0 : 1.0);
-    encoded_state.select(2, 1).fill_(
-        state.player.is_first() ? (state.scores.first - state.scores.second)
-                                : (state.scores.second - state.scores.first));
-    encoded_state.select(2, 2).fill_(state.draw_count / 80.0);
+    const auto [score1, score2] = state.scores;
+    auto i = 0;
+    for (int8_t y = 0; y < 8; y += 1) {
+      for (int8_t x = y % 2 == 0 ? 1 : 0; x < 8; x += 2) {
+        auto cell = state.board[x, y];
+        if (const auto piece = cell; cell.is_occupied) {
+          // 0-11 is the one-hot encoding of each piece
+          encoded_state[i][0] = piece.value();
+          // 12 encodes the owner of the piece
+          encoded_state[i][1] = piece.is_owned_by_first_player ? 1 : 0;
+          // 13 encodes if the current player "owns" this piece
+          encoded_state[i][2] = piece.is_owned_by(state.player) ? 1 : 0;
+          // 14 encodes if this piece is promoted
+          encoded_state[i][3] = piece.is_knighted ? 1 : 0;
 
-    for (int x = 0; x < 8; x++) {
-      for (int y = 0; y < 8; y++) {
-        switch (state.board.operators[y][x]) {
-          case '+':
-            encoded_state[x][y][3] = 1.0;
-            break;
-          case '-':
-            encoded_state[x][y][3] = 2.0;
-            break;
-          case '*':
-            encoded_state[x][y][3] = 3.0;
-            break;
-          case '/':
-            encoded_state[x][y][3] = 4.0;
-            break;
-          default:
-            break;
+          const auto score = piece.is_owned_by_first_player ? score1 - score2
+                                                            : score2 - score1;
+          const auto relative_score = 1 / (1 + std::exp(-score));
+
+          // 15 encodes the relative score of the piece
+          encoded_state[i][4] = relative_score;
         }
 
-        if (state.board[x, y].is_occupied) {
-          const auto piece = state.board[x, y];
-          const auto value = piece.value();
+        encoded_state[i][5] = state.draw_count / 80.0;
 
-          if (piece.is_owned_by(state.player))
-            encoded_state[x][y][piece.is_knighted ? 5 : 4] = value;
-          else
-            encoded_state[x][y][piece.is_knighted ? 7 : 6] = value;
-        }
+        // 16-19 is the one-hot encoding of each operator
+        encoded_state[i][6 + operator_index(x, y)] = 1.0;
+        i++;
       }
     }
 
-    if (state.last_piece_moved) {
-      const auto [x, y] = *state.last_piece_moved;
-
-      encoded_state.select(2, 8).fill_(1.0);
-      encoded_state.select(2, 9).fill_(state.board[x, y].value());
+    if (const auto pos = state.eating_piece_position) {
+      const auto [x, y] = *pos;
+      const auto i = (4 * y) + (x / 2);
+      encoded_state[i][10] = 1;
     }
 
     return encoded_state;
