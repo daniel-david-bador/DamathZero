@@ -17,20 +17,18 @@ namespace concepts {
 
 export template <typename G>
 concept Game = requires(const G::State& state, Action action) {
-  typename G::State;
+  { state.player } -> std::same_as<const Player&>;
 
-  std::same_as<decltype(state.player), Player>;
-  std::same_as<decltype(G::ActionSize), int>;
+  { G::ActionSize } -> std::same_as<const int&>;
 
   { G::initial_state() } -> std::same_as<typename G::State>;
 
   { G::apply_action(state, action) } -> std::same_as<typename G::State>;
 
   { G::get_outcome(state, action) } -> std::same_as<std::optional<GameOutcome>>;
+
   { G::legal_actions(state) } -> std::same_as<torch::Tensor>;
 
-  // IMPORTANT: The encoded state should always be from the perspective of
-  // `state.player`.
   { G::encode_state(state) } -> std::same_as<torch::Tensor>;
 };
 

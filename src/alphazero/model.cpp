@@ -13,11 +13,9 @@ namespace concepts {
 export template <typename M>
 concept Model = std::is_base_of_v<torch::nn::Module, M> and
                 requires(M m, typename M::Config config, torch::Tensor x) {
-                  typename M::Config;
-
                   { M(config) } -> std::same_as<M>;
 
-                  std::same_as<decltype(m.config), typename M::Config>;
+                  { m.config } -> std::same_as<typename M::Config&>;
 
                   {
                     m.forward(x)
