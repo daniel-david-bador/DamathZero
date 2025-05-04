@@ -57,9 +57,9 @@ inline constexpr auto Player::Second = Player(false);
 
 export class GameOutcome {
  public:
-  const static GameOutcome Win;
-  const static GameOutcome Loss;
-  const static GameOutcome Draw;
+  static const GameOutcome Win;
+  static const GameOutcome Loss;
+  static const GameOutcome Draw;
 
   constexpr auto as_tensor() const -> torch::Tensor {
     if (value_ == 1) {
