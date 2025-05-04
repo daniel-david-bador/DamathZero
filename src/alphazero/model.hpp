@@ -1,16 +1,12 @@
-module;
+#pragma once
 
 #include <torch/torch.h>
-
-export module az:model;
-
-import std;
 
 namespace az {
 
 namespace concepts {
 
-export template <typename M>
+template <typename M>
 concept Model = std::is_base_of_v<torch::nn::Module, M> and
                 requires(M m, typename M::Config config, torch::Tensor x) {
                   { M(config) } -> std::same_as<M>;
@@ -25,7 +21,7 @@ concept Model = std::is_base_of_v<torch::nn::Module, M> and
 
 namespace utils {
 
-export template <concepts::Model Model>
+template <concepts::Model Model>
 auto clone_model(std::shared_ptr<Model> model) -> std::shared_ptr<Model> {
   auto cloned = std::make_shared<Model>(model->config);
   auto data = std::string();
@@ -50,7 +46,7 @@ auto clone_model(std::shared_ptr<Model> model) -> std::shared_ptr<Model> {
   return cloned;
 }
 
-export template <concepts::Model Model>
+template <concepts::Model Model>
 auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   torch::serialize::OutputArchive output_model_archive;
   model->to(torch::kCPU);
@@ -58,7 +54,7 @@ auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void {
   output_model_archive.save_to(std::string(path));
 };
 
-export template <concepts::Model Model>
+template <concepts::Model Model>
 auto load_model(std::string_view path, typename Model::Config config)
     -> std::shared_ptr<Model> {
   torch::serialize::InputArchive input_archive;

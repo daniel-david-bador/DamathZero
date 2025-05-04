@@ -1,7 +1,6 @@
 #include <raylib.h>
 
-import dz;
-import std;
+#include "damathzero/dz.hpp"
 
 auto Update(dz::Application&) -> void;
 auto Render(const dz::Application&) -> void;

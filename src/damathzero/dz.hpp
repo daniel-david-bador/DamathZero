@@ -1,14 +1,10 @@
 #include <torch/torch.h>
 
-#include <string_view>
-
 #include "alphazero/az.hpp"
-#include "alphazero/game.hpp"
 #include "damathzero/game.hpp"
 #include "damathzero/model.hpp"
 
 namespace dz {
-
 using Action = az::Action;
 using Player = az::Player;
 using GameOutcome = az::GameOutcome;

@@ -1,20 +1,19 @@
-module;
+#pragma once
 
 #include <assert.h>
 #include <torch/torch.h>
 
-export module az:mcts;
+#include <random>
+#include <ranges>
 
-import :model;
-import :node;
-import :storage;
-import :game;
-
-import std;
+#include "alphazero/game.hpp"
+#include "alphazero/model.hpp"
+#include "alphazero/node.hpp"
+#include "alphazero/storage.hpp"
 
 namespace az {
 
-export template <concepts::Game Game, concepts::Model Model>
+template <concepts::Game Game, concepts::Model Model>
 class MCTS {
  public:
   struct Config {

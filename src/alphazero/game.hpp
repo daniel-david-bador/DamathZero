@@ -1,21 +1,17 @@
-module;
+#pragma once
 
 #include <torch/torch.h>
 
-export module az:game;
-
-import std;
-
 namespace az {
 
-export using Action = int;
+using Action = int;
 
-export class GameOutcome;
-export class Player;
+class GameOutcome;
+class Player;
 
 namespace concepts {
 
-export template <typename G>
+template <typename G>
 concept Game = requires(const G::State& state, Action action) {
   { state.player } -> std::same_as<const Player&>;
 
@@ -34,7 +30,7 @@ concept Game = requires(const G::State& state, Action action) {
 
 }  // namespace concepts
 
-export class Player {
+class Player {
  public:
   static const Player First;
   static const Player Second;
@@ -52,10 +48,10 @@ export class Player {
   bool is_first_;
 };
 
-inline constexpr auto Player::First = Player(true);
-inline constexpr auto Player::Second = Player(false);
+inline constexpr Player Player::First = Player(true);
+inline constexpr Player Player::Second = Player(false);
 
-export class GameOutcome {
+class GameOutcome {
  public:
   static const GameOutcome Win;
   static const GameOutcome Loss;
@@ -87,8 +83,8 @@ export class GameOutcome {
   int8_t value_;
 };
 
-inline constexpr auto GameOutcome::Win = GameOutcome(1);
-inline constexpr auto GameOutcome::Loss = GameOutcome(-1);
-inline constexpr auto GameOutcome::Draw = GameOutcome(0);
+inline constexpr GameOutcome GameOutcome::Win = GameOutcome(1);
+inline constexpr GameOutcome GameOutcome::Loss = GameOutcome(-1);
+inline constexpr GameOutcome GameOutcome::Draw = GameOutcome(0);
 
 }  // namespace az

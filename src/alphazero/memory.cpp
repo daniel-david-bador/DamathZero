@@ -1,75 +1,58 @@
-module;
+#include "alphazero/memory.hpp"
 
 #include <torch/torch.h>
 
-export module az:memory;
-
-import std;
-
-import :game;
+#include <algorithm>
+#include <ranges>
 
 namespace az {
 
-export using Feature = torch::Tensor;
-export using Policy = torch::Tensor;
-export using Value = torch::Tensor;
+auto Memory::size() -> size_t { return data_.size(); }
 
-export class Memory {
- public:
-  Memory(std::mt19937& gen) : gen_(gen) {}
+auto Memory::pop() -> void {
+  auto guard = std::lock_guard(mutex_);
+  data_.pop_back();
+}
 
-  constexpr auto size() -> size_t { return data_.size(); }
+auto Memory::shuffle() -> void {
+  auto guard = std::lock_guard(mutex_);
+  std::ranges::shuffle(data_, gen_);
+}
 
-  constexpr auto pop() -> void {
-    auto guard = std::lock_guard(mutex_);
-    data_.pop_back();
+auto Memory::append(Feature feature, Value value, Policy policy) -> void {
+  auto guard = std::lock_guard(mutex_);
+
+  data_.emplace_back(feature, value, policy);
+}
+
+auto Memory::sample_batch(std::size_t batch_size, std::size_t start)
+    -> std::tuple<Feature, Value, Policy> {
+  auto guard = std::lock_guard(mutex_);
+
+  auto size = std::min(batch_size, data_.size() - start);
+
+  auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
+
+  // // TODO: investigate why this invariant is invalidated sometimes which
+  // causes the batch norm to throw an exception.
+  // assert(size > 1);
+
+  std::vector<Feature> features;
+  std::vector<Value> values;
+  std::vector<Policy> policies;
+
+  features.reserve(size);
+  values.reserve(size);
+  policies.reserve(size);
+
+  for (auto [feature, value, policy] : batch) {
+    features.emplace_back(feature);
+    values.emplace_back(value);
+    policies.emplace_back(policy);
   }
 
-  constexpr auto shuffle() -> void {
-    auto guard = std::lock_guard(mutex_);
-    std::ranges::shuffle(data_, gen_);
-  }
-
-  auto append(Feature feature, Value value, Policy policy) -> void {
-    auto guard = std::lock_guard(mutex_);
-
-    data_.emplace_back(feature, value, policy);
-  }
-
-  auto sample_batch(std::size_t batch_size, std::size_t start)
-      -> std::tuple<Feature, Value, Policy> {
-    auto guard = std::lock_guard(mutex_);
-
-    auto size = std::min(batch_size, data_.size() - start);
-
-    auto batch = std::span{data_.begin() + start, data_.begin() + start + size};
-
-    // // TODO: investigate why this invariant is invalidated sometimes which
-    // causes the batch norm to throw an exception.
-    // assert(size > 1);
-
-    std::vector<Feature> features;
-    std::vector<Value> values;
-    std::vector<Policy> policies;
-
-    features.reserve(size);
-    values.reserve(size);
-    policies.reserve(size);
-
-    for (auto [feature, value, policy] : batch) {
-      features.emplace_back(feature);
-      values.emplace_back(value);
-      policies.emplace_back(policy);
-    }
-
-    return {torch::stack(features, 0), torch::stack(values, 0),
-            torch::stack(policies, 0)};
-  }
-
- private:
-  std::mutex mutex_;
-  std::mt19937& gen_;
-  std::vector<std::tuple<Feature, Value, Policy>> data_;
-};
+  return {torch::stack(features, 0), torch::stack(values, 0),
+          torch::stack(policies, 0)};
+}
 
 }  // namespace az

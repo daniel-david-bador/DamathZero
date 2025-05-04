@@ -1,17 +1,12 @@
-module;
+#pragma once
 
 #include <assert.h>
 
-export module az:storage;
-
-import std;
-
-import :game;
-import :node;
+#include "alphazero/node.hpp"
 
 namespace az {
 
-export class NodeStorage {
+class NodeStorage {
   struct NodeRef {
     NodeStorage& storage;
     NodeId id;

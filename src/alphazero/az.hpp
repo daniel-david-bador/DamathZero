@@ -1,20 +1,18 @@
-module;
+#pragma once
 
 #include <torch/torch.h>
 
+#include <algorithm>
+#include <array>
 #include <indicators/dynamic_progress.hpp>
 #include <indicators/progress_bar.hpp>
+#include <random>
+#include <ranges>
 
-export module az;
-
-import std;
-
-export import :model;
-export import :game;
-export import :memory;
-export import :mcts;
-export import :node;
-export import :storage;
+#include "alphazero/game.hpp"
+#include "alphazero/mcts.hpp"
+#include "alphazero/memory.hpp"
+#include "alphazero/model.hpp"
 
 namespace F = torch::nn::functional;
 namespace opt = indicators::option;
@@ -28,7 +26,7 @@ static constexpr auto colors = std::array<indicators::Color, 8>{
 
 namespace az {
 
-export template <concepts::Game Game, concepts::Model Model>
+template <concepts::Game Game, concepts::Model Model>
 class AlphaZero {
   using State = Game::State;
 

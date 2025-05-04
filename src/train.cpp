@@ -1,5 +1,7 @@
-import dz;
-import std;
+#include <memory>
+#include <optional>
+
+#include "damathzero/dz.hpp"
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{{

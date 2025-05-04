@@ -1,16 +1,14 @@
-module;
+#pragma once
 
 #include <assert.h>
 
-export module az:node;
+#include <ranges>
 
-import std;
-
-import :game;
+#include "alphazero/game.hpp"
 
 namespace az {
 
-export struct NodeId {
+struct NodeId {
  public:
   static const NodeId Invalid;
 
@@ -31,7 +29,7 @@ export struct NodeId {
 
 inline constexpr auto NodeId::Invalid = NodeId(-1);
 
-export class Node {
+class Node {
  public:
   constexpr auto children() const {
     return std::views::iota(children_first.value(), children_last.value() + 1) |
