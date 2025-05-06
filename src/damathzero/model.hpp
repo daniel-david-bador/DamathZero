@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "alphazero/model.hpp"
+
 namespace dz {
 
 namespace nn = torch::nn;
@@ -70,7 +71,7 @@ struct Model : torch::nn::Module {
     int32_t embedding_dim;
     int32_t mlp_hidden_size;
     float32_t mlp_dropout_prob;
-    torch::Device device;
+    torch::DeviceType device;
   };
 
   Model(Config config);

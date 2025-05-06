@@ -6,7 +6,7 @@
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{{
       .batch_size = 1,
-      .num_iterations = 4,
+      .num_iterations = 10,
       .num_training_epochs = 10,
       .num_self_play_games = 4,
       .num_self_play_simulations = 100,

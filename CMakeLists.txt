@@ -25,8 +25,8 @@ target_include_directories(DamathZero PUBLIC src)
 target_link_libraries(DamathZero PUBLIC AlphaZero)
 target_compile_features(DamathZero PUBLIC cxx_std_23)
 
-# add_executable(DamathZeroApp "src/app.cpp")
-# target_link_libraries(DamathZeroApp PRIVATE raylib DamathZero)
+add_executable(DamathZeroApp "src/app.cpp")
+target_link_libraries(DamathZeroApp PRIVATE raylib DamathZero)
 
 add_executable(DamathZeroTrainer "src/train.cpp")
 target_link_libraries(DamathZeroTrainer PRIVATE DamathZero)

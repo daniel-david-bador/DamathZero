@@ -12,7 +12,7 @@ using GameOutcome = az::GameOutcome;
 using MCTS = az::MCTS<Game, Model>;
 using DamathZero = az::AlphaZero<Game, Model>;
 
-using DeviceType = at::DeviceType;
+using DeviceType = torch::DeviceType;
 
 auto save_model(std::shared_ptr<Model> model, std::string_view path) -> void;
 
