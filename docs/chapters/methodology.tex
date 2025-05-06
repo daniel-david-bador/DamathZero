@@ -2,33 +2,96 @@
 
 This paper is based on the ideas of the AlphaZero framework applied to the game of Damath. Damath is a two-player board game combining the Filipino Checkers ``Dama'' and Mathematics. Each piece has a corresponding number and every  white square on the board has a mathematical operation. The researchers implemented the AlphaZero framework as a cycle of three stages. The researchers first generates data through self-play using the modified Monte-Carlo Tree Search algorithm of AlphaZero. Afterwards, the model is trained on the data generated from self-play. Finally, the current version of the model is evaluated against the previous model through competition.
 
-\section{State Representation}
-
-The state of the current game is represented as an $8 \times 8 \times 6$ tensor where each plane represent a feature of the current game. The first layer of the tensor is an $8 \times 8$ matrix filled with the current score of the current player while the second layer represents is filled with the score of the opposing player. The third layer is an $8 \times 8$ matrix filled with the values of the normal pieces of the current player on their corresponding position in the board of the current game state. The fourth layer is an $8 \times 8$ matrix filled with the values of the dama pieces of the current player on their corresponding position in the board of the current game state. The fifth layer is an $8 \times 8$ matrix filled with the values of the normal pieces of the opposing player on their corresponding position in the board of the current game state. The sixth layer is an $8 \times 8$ matrix filled with the values of the dama pieces of the current player on their corresponding position in the board of the current game state.
-
-\section{Action Representation}
-
-An action is represented as an index to the action space of Damath. The action space of Damath is represented as a $12 \times 4 \times 7$ tensor as shown in Figure \ref{fig:action_space}.
-
-\begin{figure}[htb]
-    \centering
-    \includegraphics[width=0.7\linewidth]{images/action_space.png}
-    \caption{Action Space of Damath}
-    \label{fig:action_space}
-\end{figure}
-
-The first dimension of the action space with a size of 12 represents one of the 12 playable pieces of the current player taking an action. The second dimension of the action space with a size of 4 represents one of the four directions on which the current piece is moving towards to. The four directions are upper left, upper right, lower left, and lower right. The last dimension of the action space represents the number of tiles the current piece is jumping over.
-
 \section{Neural Network}
 
 The Neural Network $f_{\theta}$ in the original AlphaZero paper \cite{silver2017masteringchessshogiselfplay} takes as input a state $s$ and outputs a tuple $f_{\theta}(s) = (p, v)$, where $p$ is a probability distribution over possible actions (the policy vector) and $v \in [-1, 1]$ is a scalar value prediction estimating the expected outcome from state $s$.
 
-In our modification, inspired by \cite{czech2024representationmattersmasteringchess}, we replace the scalar value with a three-dimensional win-draw-loss (WDL) vector $v_{\text{WDL}} = (p_w, p_d, p_l)$, where each component represents the probability that the current position will result in a win, draw, or loss respectively, with $p_w + p_d + p_l = 1$. This representation provides the model with richer outcome information, allowing it to explicitly differentiate between winning, drawing, and losing probabilities rather than collapsing this information into a single scalar value. The MCTS implementation still requires a scalar value for backpropagation which is computed by $v = p_w - p_l$.
 
-Recent developments in the field of computer vision have shown that transformers are capable of beating Convolutional Neural Networks (\cite{dosovitskiy2021imageworth16x16words}) this is why we replaced the CNNs with the transformer architecture \cite{vaswani2023attentionneed}.
+\subsection{Architecture}
+
+In our modification, inspired by (\cite{czech2024representationmattersmasteringchess}), we replace the scalar value with a three-dimensional win-draw-loss (WDL) vector $v_{\text{WDL}} = (p_w, p_d, p_l)$, where each component represents the probability that the current position will result in a win, draw, or loss respectively, with $p_w + p_d + p_l = 1$. This representation provides the model with richer outcome information, allowing it to explicitly differentiate between winning, drawing, and losing probabilities rather than collapsing this information into a single scalar value. The MCTS implementation still requires a scalar value for backpropagation which is computed by $v = p_w - p_l$.
+
+Recent developments in the field of computer vision have shown that transformers are capable of beating Convolutional Neural Networks (\cite{dosovitskiy2021imageworth16x16words}) this is why we replaced the CNNs with the transformer architecture (\cite{vaswani2023attentionneed}).
+
+% TODO: Figure of the model
+
+\subsection{State Representation}
+
+% TODO: Figure of state representation
+
+\subsection{Action Representation}
+
+% TODO: Figure of action representation
 
 
-\subsection{Monte-Carlo Tree Search Algorithm}
+\section{Model Generation}
+
+The ultimate goal of the paper is to produce a model that can beat human players in the game of Damath, it has three phases the self-play data generation, model training and model evaluation. These three phases are repeated $n$ times, with each iteration producing a better model. The pseudocode below summarizes the entire process. 
+
+\begin{algorithm}[htb]
+    \begin{algorithmic}[1]
+        \Function{learn}{}
+          \State model $\gets$ initialize with random parameters
+          \State best\_model $\gets$ \Call{clone}{model}
+          \Repeat
+            \State dataset $\gets$ \Call{self\_play}{best\_model}
+            \State \Call{train}{model, dataset}
+            \State wins, draws, losses $\gets$ \Call{evaluate}{model, best\_model}
+            \If{$\text{wins} + \text{draws} \ge 0.7 \times \text{num\_evaluations}$} 
+                \State best\_model $\gets$ \Call{clone}{model}
+            \EndIf
+            \Until{$n = \text{num\_iterations}$}
+           \State \Return best\_model
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+
+\subsection{Self-Play Data Generation}
+
+The dataset needed for training the model is produced by pitting the best model against itself. It uses the monte-carlo tree search algorithm which is discussed in detail below.
+
+\begin{algorithm}[htb]
+    \begin{algorithmic}[1]
+        \Function{self\_play}{model}
+            \State history $\gets$ \{\}
+            \State $s$ $\gets$ game.initial\_state()
+            \Loop
+                \State $p$ $\gets$ \Call{search}{$s$, model}
+                \State history $\gets$ history $\cup$ ($s$, $p$)
+                \State action $\gets$ \Call{sample\_distribution}{$p$}
+                \State $s'$ $\gets$ game.apply\_action($s$, action)
+                \If{$s'$ is terminal}
+                    \State memory $\gets$ \{\}
+                    \ForAll{($s_i$, $p_i$) $\in$ history}
+                        \State outcome $\gets$ game.get\_outcome($s'$)
+
+                        \If{$s_i$ and $s$ have different players}
+                          \State flip outcome
+                        \EndIf
+
+                        \If{outcome is win}
+                          \State $v$ $\gets$ $[1, 0, 0]$
+                        \ElsIf{outcome is lose}
+                          \State $v$ $\gets$ $[0, 0, 1]$
+                        \ElsIf{outcome is draw}
+                          \State $v$ $\gets$ $[0, 1, 0]$
+                        \EndIf
+
+
+                        \State memory $\gets$ memory $\cup$ ($p_i$, $v$, $s_i$)
+                    \EndFor
+                    \State \Return memory
+                \EndIf
+                \State $s$ $\gets$ $s'$
+            \EndLoop
+        \EndFunction
+    \end{algorithmic}
+    \caption{Pseudocode for the Self-Play Data Generation Phase of the AlphaZero Framework}
+    \label{alg:data-generation}
+\end{algorithm}
+
+\subsubsection{Monte-Carlo Tree Search Algorithm}
 
 The MCTS Algorithm guides the model in making actions. It has three phases, the selection, expansion, and backpropagation.
 
@@ -36,10 +99,12 @@ The selection phase selects the node with the highest score. The score function 
 
 \begin{algorithm}[htb]
     \begin{algorithmic}[1]
-        \Function{select}{node}
+        \Function{select}{$s$, node}
             \While{node.is\_expanded()}
                 \State node $\gets$ \Call{select\_child}{node}
+                \State $s$ $\gets$ game.apply\_action($s$, node.action)
             \EndWhile
+            \State \Return $s$, node
         \EndFunction
         
         \Function{select\_child}{node}
@@ -67,29 +132,34 @@ The selection phase selects the node with the highest score. The score function 
 \end{algorithm}
 \begin{algorithm}[htb]
     \begin{algorithmic}[1]
-        \Function{search}{state, model, simulations}
-            \State root $\gets$ Node(state)
-            \ForAll{$n \in \{1, 2,3, \ldots, \text{simulations}\}$}
+        \Function{search}{$s$, model, simulations}
+            \State root $\gets$ Node($s$)
+            \Repeat
                 \State node $\gets$ root
-        
-                \Call{select}{node}
-        
-                \State optional\_terminal\_value $\gets$ game.terminal\_value(node.state, node.action)
-                
-                \If{optional\_terminal\_value.has\_value()}
-                    \State value $\gets$ optional\_terminal\_value.value()
+                \State $s'$, node $\gets$ \Call{select}{node}
+                \If{$s'$ is terminal}
+                    \If{$s$ and $s'$ have different players}
+                      \State flip outcome
+                    \EndIf
+                    \If{outcome is win}
+                      \State $v$ $\gets$ $1$
+                    \ElsIf{outcome is draw}
+                      \State $v$ $\gets$ $0$
+                    \ElsIf{outcome is loss}
+                      \State $v$ $\gets$ $-1$
+                    \EndIf
                 \Else
-                    \State value $\gets$ \Call{expand}{node, model}
+                    \State $v$ $\gets$ \Call{expand}{s, model}
                 \EndIf
         
-                \State \Call{backpropagate}{node, value}
-            \EndFor
+                \State \Call{backpropagate}{node, $v$}
+            \Until{$n > \text{simulations}$}
 
-            \State probs $\gets$ zero\_array(game.action\_size)
-            \ForAll{i, child $\in$ root.children}
-                \State probs[i] = child.visits
+            \State $p \gets \{\}$
+            \ForAll{child $\in$ root.children}
+            \State $p \gets p \cup \text{child.visits}$
             \EndFor
-            \State \Return probs / probs.sum()
+            \State \Return $p / \sum p$
         \EndFunction
     \end{algorithmic}
     \caption{Monte-Carlo Tree Search Algorithm}
@@ -102,20 +172,18 @@ If it encounters a non-terminal node, then this signifies an action that has not
 
 \begin{algorithm}[htb]
     \begin{algorithmic}[1]
-        \Function{expand}{parent, model}
-            \State legal\_actions $\gets$ game.legal\_actions(parent.state)
-            \State policy, wdl $\gets$ model(game.encode\_state(parent.state))
-            \State policy $\gets$ \Call{softmax}{policy}
-            \State policy $\gets$ \Call{filter}{legal\_actions, policy}
-            \State policy $\gets$ policy / policy.sum()
+        \Function{expand}{$s$, model}
+            \State $\text{legal\_actions} \gets \text{game.get\_legal\_actions(s)}$
+            \State $p, v \gets \text{model(s)}$
+            \State $p \gets \Call{softmax}{p}$
+            \State $p \gets \Call{filter}{\text{legal\_actions}, p}$
+            \State $p \gets p / \sum p$
         
-            \For{$i \in \{0, ..., \text{legal\_actions.size}\}$}
-                \State legal\_actions $\gets$ legal\_actions[i]
-                \State child\_state $\gets$ game.apply\_action(parent.state, action)
-                \State prior $\gets$ policy[i]
-                \State parent.children $\gets$ parent.children $\cup$ (Node(child\_state, action, prior))
+            \For{(action, prior) $\in$ (legal\_actions, policy)}
+                \State $s' \gets \text{game.apply\_action($s$, action)}$
+                \State parent.children $\gets$ parent.children $\cup$ Node($s'$, action, prior)
             \EndFor
-            \State $p_w, p_d, p_l \gets wdl$ 
+            \State $(p_w, p_d, p_l) \gets v$ 
             \State \Return $p_w - p_l$
         \EndFunction
     \end{algorithmic}
@@ -144,47 +212,73 @@ If it encounters a terminal node, then it backpropagates the outcome of the game
 \end{algorithm}
 
 
-\subsection{Self-Play}
+\subsection{Model Training}
 
-The model is trained using the policy and WDL vectors obtained from the MCTS search, the data needed for this is obtained from self-play generation. In this process, the model produces a dataset comprised of a tuple of policy, outcome and state, which is then used to train the model.
-
-\begin{algorithm}[htb]
-    \begin{algorithmic}[1]
-        \Function{self\_play}{model}
-            \State history $\gets$ \{\}
-            \State state $\gets$ game.initial\_state()
-            \Loop
-                \State policy $\gets$ \Call{search}{state, model}
-                \State history $\gets$ history $\cup$ (state, probs)
-                \State action $\gets$ \Call{sample\_distribution}{policy}
-                \State new\_state $\gets$ game.apply\_action(state, action)
-                \State outcome $\gets$ game.get\_outcome(new\_state)
-                \If{game ended}
-                    \State memory $\gets$ \{\}
-                    \ForAll{(hist\_state, hist\_probs) $\in$ history}
-                        \State outcome $\gets$ hist\_state.player == player ? outcome : outcome.flip()
-                        \State memory $\gets$ memory $\cup$ (policy, outcome, state))
-                    \EndFor
-                    \State \Return memory
-                \EndIf
-                \State state $\gets$ new\_state
-            \EndLoop
-        \EndFunction
-    \end{algorithmic}
-    \caption{Pseudocode for the Self-Play Data Generation Phase of the AlphaZero Framework}
-    \label{alg:data-generation}
-\end{algorithm}
-
-\subsection{Training}
-
-The model is then trained using the data generated from the \ref{alg:data-generation}. The dataset is comprised of a tuples of the form $(\pi, v, s)$, where $\pi$ is the computed policy by MCTS, $v$ is a one-hot encoding of the outcome of the game, $[1, 0, 0]$ for a win, $[0, 1, 0]$ for a draw and $[0, 0, 1]$ for a loss and $s$ is the state of the game.
+After the self-play generation, the model is then trained using the data generated from the \ref{alg:data-generation}. The dataset is comprised of a tuples of the form $(\pi, v, s)$, where $\pi$ is the computed policy by MCTS, $v$ is a one-hot encoding of the outcome of the game, $[1, 0, 0]$ for a win, $[0, 1, 0]$ for a draw and $[0, 0, 1]$ for a loss and $s$ is the state of the game.
 
 The loss $l$ is computed by the following equation,
-
 \begin{align}
-  \pi', v' &= f_{\theta}(s) \\
-  l &= \sum_{}^{} v_{i}\log(v_{i}') + \sum_{}^{}\pi_{i}\log(\pi_{i}')
+  p', v' &= f_{\theta}(s) \\
+  l &= \sum_{}^{} v_{i}\log(v_{i}') + \sum_{}^{}p_{i}\log(\p_{i}')
   \label{eq:loss}
 \end{align}
 
-The computed loss is then used by the optimizer for optimizing the parameters of the model. We use the Adam Optimizer \cite{kingma2017adammethodstochasticoptimization} as the optimizer. The process of generating self-play data followed by training is then repeated $n$ times, in each iteration the model is refined to output a similar probabilites and value generated by the MCTS algorithm.
+The computed loss is then used by the optimizer for optimizing the parameters of the model. We use the Adam Optimizer (\cite{kingma2017adammethodstochasticoptimization}) as the optimizer. 
+
+\subsection{Model Evaluation}
+
+After training, the newly trained model is pitted against the best model for 50 rounds of games. This is done by switching the model depending on the current player of the state $s$. If the player to move in $s$ is the first player, then the action probabilites $\pi$ is obtained from the first model, otherwise $\pi$ is obtained from the best model.
+
+The wins, draws and losses of the current model is recorded. If the current model achieves $70\%$ of the wins and draws out of the total number of games played, then it becomes the best model. 
+
+\begin{algorithm}[htb]
+    \begin{algorithmic}[1]
+        \Function{evaluate}{current\_model, best\_model}
+          \State wins $\gets$ 0
+          \State losses $\gets$ 0
+          \State draws $\gets$ 0
+          \Repeat
+            \State $s \gets \text{game.initial\_state()}$ 
+            \Loop
+
+                \If{$s$ is made by the first player}
+                  \State model $\gets$ current\_model
+                \Else
+                  \State model $\gets$ best\_model
+                \EndIf
+
+                \State $p$ $\gets$ \Call{search}{$s$, model}
+                \State action $\gets$ \Call{sample\_distribution}{$p$}
+                \State $s'$ $\gets$ game.apply\_action($s$, action)
+                \If{$s'$ is terminal}
+                    \State outcome $\gets$ game.get\_outcome($s'$)
+
+                    \If{$s'$ is made by the second player}
+                      \State flip outcome
+                    \EndIf
+
+                    \If{outcome is win}
+                      \State wins $\gets$ wins + 1
+                    \ElsIf{outcome is draw}
+                      \State draws $\gets$ draws + 1
+                    \ElsIf{outcome is loss}
+                      \State loss $\gets$ loss + 1
+                    \EndIf
+                    \State \textbf{end loop}
+                \EndIf
+                \State $s$ $\gets$ $s'$
+            \EndLoop
+          \Until{$n < \text{num\_rounds}$}
+          \State \Return wins, draws, losses
+        \EndFunction
+    \end{algorithmic}
+    \label{alg:evaluate}
+\end{algorithm}
+
+\section{Model Assessment}
+
+To assess the strength of the final model after all the iterations this model is pitted against the all the previous best models. We save the previous best models throughout all the iterations. The wins of the final model should trend downwards as it is pitted from the earliest to the latest previous best models.
+
+% TODO: finalize the number of games to play 
+We also employ the help of a National Damath Champion, to quantitively assess the strength of the model by playing a game of $8$ rounds against the best model. And also provide some analysis over the moves that the models made throughout the games.
+
