@@ -29,11 +29,10 @@ class MCTS {
 
   MCTS(Config config) : config_(config) {}
 
-  constexpr auto search(
-      std::span<const State> original_states,
-      std::shared_ptr<Model> model,
-      int num_simulations,
-      std::optional<std::mt19937*> noise_gen = std::nullopt) -> torch::Tensor {
+  constexpr auto search(std::span<const State> original_states,
+                        std::shared_ptr<Model> model, int num_simulations,
+                        std::optional<std::mt19937*> noise_gen = std::nullopt)
+      -> torch::Tensor {
     torch::NoGradGuard no_grad;
 
     auto device = model->parameters().begin()->device();
@@ -63,14 +62,16 @@ class MCTS {
 
     auto [_, policy] = model->forward(torch::stack(features).to(device));
     policy = torch::softmax(policy, 1).cpu();
-    policy = (1 - config_.dirichlet_epsilon) * policy +
-             config_.dirichlet_epsilon *
-                 gen_exploration_noise(policy.size(0), *noise_gen);
+
+    if (noise_gen) {
+      policy = (1 - config_.dirichlet_epsilon) * policy +
+               config_.dirichlet_epsilon *
+                   gen_exploration_noise(policy.size(0), *noise_gen);
+    }
 
     for (std::size_t i = 0; i < root_ids.size(); i++) {
-      auto priors = torch::mean(policy[i] * legal_actions[i])
-                        .contiguous()
-                        .template data_ptr<float>();
+      auto priors = policy[i] * legal_actions[i];
+      priors /= priors.sum(0);
       expand(root_ids[i], original_states[i], priors);
     }
 
@@ -95,21 +96,22 @@ class MCTS {
           auto& parent = nodes_.get(node->parent_id);
           backpropagate(node.id, outcome->as_scalar(), parent.player);
         } else {
-           node_ids.push_back(node.id);
-           states.emplace_back(state);
-           features.emplace_back(Game::encode_state(state));
-           legal_actions.emplace_back(Game::legal_actions(state));
+          node_ids.push_back(node.id);
+          states.emplace_back(state);
+          features.emplace_back(Game::encode_state(state));
+          legal_actions.emplace_back(Game::legal_actions(state));
         }
       }
 
       auto [wdl, policy] = model->forward(torch::stack(features).to(device));
-      policy = torch::softmax(policy, 1).cpu().contiguous();
+      policy = torch::softmax(policy, 1).cpu();
       wdl = wdl.cpu();
 
       for (std::size_t i = 0; i < node_ids.size(); i++) {
         auto node = nodes_.as_ref(node_ids[i]);
-        auto priors = torch::mean(policy[i] * legal_actions[i])
-                          .template data_ptr<float>();
+        auto priors = policy[i] * legal_actions[i];
+        priors /= priors.sum(0);
+
         expand(node.id, states[i], priors);
 
         auto value =
@@ -120,16 +122,19 @@ class MCTS {
 
     auto child_visits = torch::zeros(
         {static_cast<int>(num_games), Game::ActionSize}, torch::kFloat32);
-    for (auto root_id : root_ids) {
+
+    for (size_t i = 0; i < root_ids.size(); i += 1) {
+      const auto root_id = root_ids[i];
+
       for (auto child_id : nodes_.get(root_id).children()) {
         auto& child = nodes_.get(child_id);
-        child_visits[child.action] = auto(child.visits);
+        child_visits[i][child.action] = auto(child.visits);
       }
     }
 
     nodes_.clear();
 
-    return torch::mean(child_visits, 1);
+    return child_visits / child_visits.sum(1, /*keep_dims=*/true);
   }
 
  private:
@@ -163,10 +168,10 @@ class MCTS {
   };
 
   constexpr auto expand(NodeId parent_id, const Game::State& state,
-                        float* policy) -> void {
+                        torch::Tensor policy) -> void {
     auto parent = nodes_.as_ref(parent_id);
     for (std::size_t action = 0; action < Game::ActionSize; action++) {
-      if (auto prior = policy[action]; prior > 0) {
+      if (auto prior = policy[action].template item<float>(); prior > 0) {
         auto new_state = Game::apply_action(state, action);
         parent.create_child(new_state.player, action, prior);
       }
@@ -196,9 +201,11 @@ class MCTS {
         std::gamma_distribution<float32_t>(config_.dirichlet_alpha, 1.0);
 
     auto dirichlet_noise = torch::zeros({batch_size, Game::ActionSize});
-    for (auto batch = 0; batch < batch_size; batch++)
-      for (auto action = 0; action < Game::ActionSize; action++)
+    for (auto batch = 0; batch < batch_size; batch++) {
+      for (auto action = 0; action < Game::ActionSize; action++) {
         dirichlet_noise[batch][action] = gamma(*gen);
+      }
+    }
 
     return dirichlet_noise;
   }

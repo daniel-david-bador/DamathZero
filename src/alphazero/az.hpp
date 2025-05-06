@@ -41,8 +41,6 @@ class AlphaZero {
 
     int32_t num_evaluation_games = 64;
     int32_t num_evaluation_simulations = 1000;
-
-    torch::DeviceType device;
   };
 
  public:
@@ -111,10 +109,12 @@ class AlphaZero {
 
     auto mcts = MCTS<Game, Model>{{}};
     auto memory = Memory(gen_);
-    auto histories = std::vector<History>(config_.num_self_play_games, History{});
+    auto histories =
+        std::vector<History>(config_.num_self_play_games, History{});
 
-    auto on_game_end = [this, &histories, &memory, &bar_id](size_t game_index, GameOutcome outcome,
-                                      Player terminal_player) {
+    auto on_game_end = [this, &histories, &memory, &bar_id](
+                           size_t game_index, GameOutcome outcome,
+                           Player terminal_player) {
       for (const auto& [hist_state, hist_probs] : histories[game_index]) {
         auto hist_value = hist_state.player == terminal_player
                               ? outcome.as_tensor()
@@ -126,16 +126,17 @@ class AlphaZero {
     };
 
     auto on_game_move = [&histories](int32_t game_index, State state,
-                               torch::Tensor action_probs) {
+                                     torch::Tensor action_probs) {
       histories[game_index].emplace_back(state, action_probs);
     };
 
-    auto parallel_games = ParallelGames<Game>(config_.num_self_play_games, on_game_end, on_game_move);
+    auto parallel_games = ParallelGames<Game>(config_.num_self_play_games,
+                                              on_game_end, on_game_move);
 
     while (not parallel_games.all_terminated()) {
       auto states = parallel_games.get_non_terminal_states();
       auto action_probs =
-          mcts.search(states, model, config_.num_self_play_simulations);
+          mcts.search(states, model, config_.num_self_play_simulations, &gen_);
       parallel_games.apply_to_non_terminal_states(action_probs);
     }
 
@@ -200,7 +201,9 @@ class AlphaZero {
     int32_t draws = 0;
     int32_t losses = 0;
 
-    auto on_game_end = [this, &wins, &draws, &losses, &bar_id](size_t, GameOutcome outcome, Player terminal_player) {
+    auto on_game_end = [this, &wins, &draws, &losses, &bar_id](
+                           size_t, GameOutcome outcome,
+                           Player terminal_player) {
       // outcome from the perspective of the current model
       outcome = terminal_player.is_first() ? outcome : outcome.flip();
       if (outcome == GameOutcome::Win) {
@@ -214,22 +217,27 @@ class AlphaZero {
       bars_[bar_id].tick();
     };
 
-
-    auto parallel_games = ParallelGames<Game>(config_.num_evaluation_games, on_game_end);
+    auto parallel_games =
+        ParallelGames<Game>(config_.num_evaluation_games, on_game_end);
 
     while (not parallel_games.all_terminated()) {
       const auto states = parallel_games.get_non_terminal_states();
 
-      const auto action_probs_of_the_current_model = mcts.search(states, current_model, config_.num_self_play_simulations);
-      const auto action_probs_of_the_best_model = mcts.search(states, best_model, config_.num_self_play_simulations);
+      const auto action_probs_of_the_current_model =
+          mcts.search(states, current_model, config_.num_self_play_simulations);
+      const auto action_probs_of_the_best_model =
+          mcts.search(states, best_model, config_.num_self_play_simulations);
 
-      auto action_probs = torch::zeros({static_cast<int32_t>(states.size()), Game::ActionSize}, torch::kFloat);
-      for (const auto i : std::views::iota(0, static_cast<int32_t>(states.size()))) {
-          if (states[i].player.is_first()) {
-              action_probs[i] = action_probs_of_the_current_model[i];
-          } else {
-              action_probs[i] = action_probs_of_the_best_model[i];
-          }
+      auto action_probs =
+          torch::zeros({static_cast<int32_t>(states.size()), Game::ActionSize},
+                       torch::kFloat);
+      for (const auto i :
+           std::views::iota(0, static_cast<int32_t>(states.size()))) {
+        if (states[i].player.is_first()) {
+          action_probs[i] = action_probs_of_the_current_model[i];
+        } else {
+          action_probs[i] = action_probs_of_the_best_model[i];
+        }
       }
       parallel_games.apply_to_non_terminal_states(action_probs);
     }

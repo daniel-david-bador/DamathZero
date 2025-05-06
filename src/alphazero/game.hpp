@@ -99,16 +99,19 @@ struct ParallelGames {
   std::function<void(size_t, GameOutcome, Player)> on_game_end;
   std::function<void(size_t, State, torch::Tensor)> on_game_move;
 
-  ParallelGames(int32_t num_parallel_games,
+  ParallelGames(
+      int32_t num_parallel_games,
       std::function<void(int32_t, GameOutcome, Player)> on_game_end,
-      std::function<void(int32_t, State, torch::Tensor)> on_game_move = [](auto, auto, auto){}) :  on_game_end(on_game_end), on_game_move(on_game_move) {
+      std::function<void(int32_t, State, torch::Tensor)> on_game_move =
+          [](auto, auto, auto) {})
+      : on_game_end(on_game_end), on_game_move(on_game_move) {
+    states =
+        std::views::iota(0, num_parallel_games) |
+        std::views::transform([](auto _) { return Game::initial_state(); }) |
+        std::ranges::to<std::vector>();
 
-    states = std::views::iota(0, num_parallel_games)
-            | std::views::transform([](auto _) {return Game::initial_state(); })
-            | std::ranges::to<std::vector>();
-
-    non_terminal_state_indices =
-        std::views::iota(0, num_parallel_games) | std::ranges::to<std::vector>();
+    non_terminal_state_indices = std::views::iota(0, num_parallel_games) |
+                                 std::ranges::to<std::vector>();
   }
 
   auto all_terminated() const -> bool {
@@ -124,7 +127,8 @@ struct ParallelGames {
   auto apply_to_non_terminal_states(torch::Tensor action_probs) -> void {
     // action probs has a batch
     assert(action_probs.sizes().size() == 2);
-    assert(non_terminal_state_indices.size() == action_probs.size(0));
+    assert((static_cast<int32_t>(non_terminal_state_indices.size()) ==
+            action_probs.size(0)));
 
     auto i = 0;
     auto actions = torch::multinomial(action_probs, 1).squeeze(1);
