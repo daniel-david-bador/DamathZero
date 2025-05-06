@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstdint>
 #include <optional>
-#include <tuple>
 
 #include "alphazero/game.hpp"
 #include "damathzero/board.hpp"

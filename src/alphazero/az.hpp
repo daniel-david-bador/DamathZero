@@ -6,7 +6,6 @@
 #include <array>
 #include <indicators/dynamic_progress.hpp>
 #include <indicators/progress_bar.hpp>
-#include <iterator>
 #include <random>
 #include <ranges>
 
@@ -65,20 +64,24 @@ class AlphaZero {
           opt::ShowPercentage{true},
           opt::MaxProgress{config_.num_self_play_games +
                            config_.num_training_epochs +
-                           config_.num_evaluation_games},
+                           config_.num_evaluation_games + 4},
           opt::PrefixText{
               std::format("Iteration {}/{} ", i + 1, config_.num_iterations)},
+          opt::PostfixText{"Initializing..."},
           opt::FontStyles{
               std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
       auto bar_id = bars_.push_back(std::move(bar));
 
       bars_[bar_id].set_option(opt::PostfixText{"Generating Self-Play Data"});
+      bars_[bar_id].tick();
       auto memory = generate_self_play_data(best_model, bar_id);
 
       bars_[bar_id].set_option(opt::PostfixText{"Training Model"});
+      bars_[bar_id].tick();
       auto average_loss = train(memory, model, optimizer, bar_id);
 
       bars_[bar_id].set_option(opt::PostfixText{"Evaluating Model"});
+      bars_[bar_id].tick();
       auto [wins, draws, losses] = evaluate(model, best_model, bar_id);
 
       auto did_win = wins + draws >
@@ -95,7 +98,7 @@ class AlphaZero {
       bars_[bar_id].set_option(opt::PostfixText{std::format(
           "Average Loss: {:.6f} - Wins: {} - Draws: {} - Losses: {}",
           average_loss, wins, draws, losses)});
-
+      bars_[bar_id].tick();
       bars_[bar_id].mark_as_completed();
     }
 
@@ -124,6 +127,9 @@ class AlphaZero {
         memory.append(Game::encode_state(hist_state), hist_value, hist_probs);
       }
 
+      bars_[bar_id].set_option(opt::PostfixText{
+          std::format("Generating Self-Play Data | Games Played: {}/{}",
+                      histories.size(), config_.num_self_play_games)});
       bars_[bar_id].tick();
     };
 
@@ -141,8 +147,6 @@ class AlphaZero {
       auto action_probs =
           mcts.search(states, model, config_.num_self_play_simulations, &gen_);
       parallel_games.apply_to_non_terminal_states(action_probs);
-
-      std::println("{}", states.size());
     }
 
     return memory;
@@ -219,6 +223,9 @@ class AlphaZero {
         losses++;
       }
 
+      bars_[bar_id].set_option(opt::PostfixText{
+          std::format("Evaluating Model | Wins: {} - Draws: {} - Losses: {}",
+                      wins, draws, losses)});
       bars_[bar_id].tick();
     };
 

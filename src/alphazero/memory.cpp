@@ -3,19 +3,14 @@
 #include <torch/torch.h>
 
 #include <algorithm>
-#include <ranges>
 
 namespace az {
 
 auto Memory::size() -> size_t { return data_.size(); }
 
-auto Memory::pop() -> void {
-  data_.pop_back();
-}
+auto Memory::pop() -> void { data_.pop_back(); }
 
-auto Memory::shuffle() -> void {
-  std::ranges::shuffle(data_, gen_);
-}
+auto Memory::shuffle() -> void { std::ranges::shuffle(data_, gen_); }
 
 auto Memory::append(Feature feature, Value value, Policy policy) -> void {
   data_.emplace_back(feature, value, policy);

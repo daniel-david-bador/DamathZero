@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <random>
+#include <tuple>
 
 namespace dz {
 

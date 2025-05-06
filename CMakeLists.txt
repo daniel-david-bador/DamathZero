@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.0)
 project(DamathZero LANGUAGES CXX)
 
 find_package(Torch REQUIRED)
-# find_package(raylib REQUIRED)
+find_package(raylib REQUIRED)
 
 include(FetchContent)
 include(cmake/indicators.cmake)
@@ -17,6 +17,7 @@ target_compile_options(AlphaZero PUBLIC -Wall -Wextra -Werror -Wpedantic)
 
 add_library(DamathZero SHARED)
 target_sources(DamathZero PRIVATE
+  src/damathzero/dz.cpp
   src/damathzero/game.cpp
   src/damathzero/model.cpp
   src/damathzero/board.cpp)

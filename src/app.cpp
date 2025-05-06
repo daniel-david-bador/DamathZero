@@ -11,18 +11,14 @@ auto main(int argc, char* argv[]) -> int {
     return -1;
   }
 
-  auto app = dz::Application{{
-                                 .num_simulations = 1000,
-                                 .device = dz::DeviceType::CPU,
-                             },
-                             {
-                                 .action_size = dz::Game::ActionSize,
-                                 .num_blocks = 10,
-                                 .num_attention_head = 4,
-                                 .embedding_dim = 64,
-                                 .mlp_hidden_size = 128,
-                                 .mlp_dropout_prob = 0.1,
-                             },
+  auto app = dz::Application{{.num_simulations = 1000},
+                             {.action_size = dz::Game::ActionSize,
+                              .num_blocks = 10,
+                              .num_attention_head = 4,
+                              .embedding_dim = 64,
+                              .mlp_hidden_size = 128,
+                              .mlp_dropout_prob = 0.1,
+                              .device = dz::DeviceType::CPU},
                              argv[1]};
 
   InitWindow(1330, 830, "DamathZero");
