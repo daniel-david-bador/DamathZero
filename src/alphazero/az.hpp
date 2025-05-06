@@ -6,6 +6,7 @@
 #include <array>
 #include <indicators/dynamic_progress.hpp>
 #include <indicators/progress_bar.hpp>
+#include <iterator>
 #include <random>
 #include <ranges>
 
@@ -116,6 +117,7 @@ class AlphaZero {
                            size_t game_index, GameOutcome outcome,
                            Player terminal_player) {
       for (const auto& [hist_state, hist_probs] : histories[game_index]) {
+        assert(hist_probs.sizes().size() == 1);
         auto hist_value = hist_state.player == terminal_player
                               ? outcome.as_tensor()
                               : outcome.flip().as_tensor();
@@ -127,6 +129,7 @@ class AlphaZero {
 
     auto on_game_move = [&histories](int32_t game_index, State state,
                                      torch::Tensor action_probs) {
+      assert(action_probs.sizes().size() == 1);
       histories[game_index].emplace_back(state, action_probs);
     };
 
@@ -138,6 +141,8 @@ class AlphaZero {
       auto action_probs =
           mcts.search(states, model, config_.num_self_play_simulations, &gen_);
       parallel_games.apply_to_non_terminal_states(action_probs);
+
+      std::println("{}", states.size());
     }
 
     return memory;

@@ -34,6 +34,7 @@ class MCTS {
                         std::optional<std::mt19937*> noise_gen = std::nullopt)
       -> torch::Tensor {
     torch::NoGradGuard no_grad;
+    assert(original_states.size() > 0);
 
     auto device = model->parameters().begin()->device();
     auto num_games = original_states.size();
@@ -102,6 +103,9 @@ class MCTS {
           legal_actions.emplace_back(Game::legal_actions(state));
         }
       }
+
+      if (features.empty())
+        continue;
 
       auto [wdl, policy] = model->forward(torch::stack(features).to(device));
       policy = torch::softmax(policy, 1).cpu();

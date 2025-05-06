@@ -130,26 +130,26 @@ struct ParallelGames {
     assert((static_cast<int32_t>(non_terminal_state_indices.size()) ==
             action_probs.size(0)));
 
-    auto i = 0;
     auto actions = torch::multinomial(action_probs, 1).squeeze(1);
-    auto to_erase = std::vector<int32_t>();
-    for (auto game_index : non_terminal_state_indices) {
-      on_game_move(game_index, states[game_index], action_probs);
+    auto new_non_terminal_state_indices = std::vector<int32_t>();
+
+    for (auto i : std::views::iota(
+             0, static_cast<int32_t>(non_terminal_state_indices.size()))) {
+      auto game_index = non_terminal_state_indices[i];
+      on_game_move(game_index, states[game_index], action_probs[i]);
       const auto action = actions[i].template item<Action>();
       const auto new_state = Game::apply_action(states[game_index], action);
 
       if (const auto outcome = Game::get_outcome(new_state, action)) {
         on_game_end(game_index, *outcome, states[game_index].player);
-        to_erase.push_back(game_index);
+        continue;
       }
 
       states[game_index] = std::move(new_state);
-      i += 1;
+      new_non_terminal_state_indices.push_back(game_index);
     }
 
-    for (auto i : to_erase) {
-      non_terminal_state_indices.erase(non_terminal_state_indices.begin() + i);
-    }
+    non_terminal_state_indices = std::move(new_non_terminal_state_indices);
   }
 };
 
