@@ -76,7 +76,7 @@ class MCTS {
       expand(root_ids[i], original_states[i], priors);
     }
 
-    for (auto _ : std::views::iota(0, num_simulations)) {
+    for (auto i : std::views::iota(0, num_simulations)) {
       node_ids.clear();
       features.clear();
       states.clear();

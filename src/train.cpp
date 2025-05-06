@@ -8,6 +8,7 @@ auto main(int argc, char** argv) -> int {
       .batch_size = 64,
       .num_iterations = 10,
       .num_training_epochs = 10,
+      .num_self_play_actors = 8,
       .num_self_play_games = 10,
       .num_self_play_simulations = 100,
       .num_evaluation_games = 10,

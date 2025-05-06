@@ -6,6 +6,7 @@
 #include <array>
 #include <indicators/dynamic_progress.hpp>
 #include <indicators/progress_bar.hpp>
+#include <print>
 #include <random>
 #include <ranges>
 
@@ -36,6 +37,7 @@ class AlphaZero {
     int32_t num_iterations = 100;
     int32_t num_training_epochs = 10;
 
+    int32_t num_self_play_actors = 8;
     int32_t num_self_play_games = 512;
     int32_t num_self_play_simulations = 100;
 
@@ -62,9 +64,9 @@ class AlphaZero {
           opt::BarWidth{50}, opt::ForegroundColor{colors[i % 6]},
           opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
           opt::ShowPercentage{true},
-          opt::MaxProgress{config_.num_self_play_games +
-                           config_.num_training_epochs +
-                           config_.num_evaluation_games + 4},
+          opt::MaxProgress{
+              config_.num_self_play_games * config_.num_self_play_actors +
+              config_.num_training_epochs + config_.num_evaluation_games},
           opt::PrefixText{
               std::format("Iteration {}/{} ", i + 1, config_.num_iterations)},
           opt::PostfixText{"Initializing..."},
@@ -111,45 +113,61 @@ class AlphaZero {
     model->eval();
     using History = std::vector<std::tuple<State, torch::Tensor>>;
 
-    auto mcts = MCTS<Game, Model>{{}};
     auto memory = Memory(gen_);
-    auto histories =
-        std::vector<History>(config_.num_self_play_games, History{});
+    auto mutex = std::mutex{};
 
-    auto games_played = 0;
+    std::atomic_int32_t games_played = 0;
 
-    auto on_game_end = [this, &histories, &memory, &games_played, &bar_id](
-                           size_t game_index, GameOutcome outcome,
-                           Player terminal_player) {
-      for (const auto& [hist_state, hist_probs] : histories[game_index]) {
-        assert(hist_probs.sizes().size() == 1);
-        auto hist_value = hist_state.player == terminal_player
-                              ? outcome.as_tensor()
-                              : outcome.flip().as_tensor();
-        memory.append(Game::encode_state(hist_state), hist_value, hist_probs);
-      }
-      games_played++;
+    auto threads = std::vector<std::thread>();
 
-      bars_[bar_id].set_option(opt::PostfixText{
-          std::format("Generating Self-Play Data | Games Played: {}/{}",
-                      games_played, config_.num_self_play_games)});
-      bars_[bar_id].tick();
-    };
+    for (auto _ : std::views::iota(0, config_.num_self_play_actors)) {
+      threads.emplace_back([this, &memory, &games_played, &mutex, &bar_id,
+                            model] {
+        auto mcts = MCTS<Game, Model>{{}};
+        auto histories =
+            std::vector<History>(config_.num_self_play_games, History{});
 
-    auto on_game_move = [&histories](int32_t game_index, State state,
-                                     torch::Tensor action_probs) {
-      assert(action_probs.sizes().size() == 1);
-      histories[game_index].emplace_back(state, action_probs);
-    };
+        auto on_game_end = [this, &histories, &memory, &games_played, &bar_id,
+                            &mutex](size_t game_index, GameOutcome outcome,
+                                    Player terminal_player) {
+          mutex.lock();
+          for (const auto& [hist_state, hist_probs] : histories[game_index]) {
+            assert(hist_probs.sizes().size() == 1);
+            auto hist_value = hist_state.player == terminal_player
+                                  ? outcome.as_tensor()
+                                  : outcome.flip().as_tensor();
+            memory.append(Game::encode_state(hist_state), hist_value,
+                          hist_probs);
+          }
+          mutex.unlock();
 
-    auto parallel_games = ParallelGames<Game>(config_.num_self_play_games,
-                                              on_game_end, on_game_move);
+          games_played++;
+          bars_[bar_id].set_option(opt::PostfixText{
+              std::format("Generating Self-Play Data | Games Played: {}/{}",
+                          games_played.load(), config_.num_self_play_games)});
+          bars_[bar_id].tick();
+        };
 
-    while (not parallel_games.all_terminated()) {
-      auto states = parallel_games.get_non_terminal_states();
-      auto action_probs =
-          mcts.search(states, model, config_.num_self_play_simulations, &gen_);
-      parallel_games.apply_to_non_terminal_states(action_probs);
+        auto on_game_move = [&histories](int32_t game_index, State state,
+                                         torch::Tensor action_probs) {
+          assert(action_probs.sizes().size() == 1);
+          histories[game_index].emplace_back(state, action_probs);
+        };
+
+        auto parallel_games = ParallelGames<Game>(config_.num_self_play_games,
+                                                  on_game_end, on_game_move);
+
+        while (not parallel_games.all_terminated()) {
+          auto states = parallel_games.get_non_terminal_states();
+          auto action_probs = mcts.search(
+              states, model, config_.num_self_play_simulations, &gen_);
+          parallel_games.apply_to_non_terminal_states(action_probs);
+        }
+      });
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
     }
 
     return memory;
