@@ -20,7 +20,6 @@ Application::Application(Config config, Model::Config model_config,
                          std::string_view path, Game::State initial_state)
     : mcts{{}},
       config{config},
-      device{model_config.device},
       model{load_model(path, model_config)},
       state{initial_state},
       outcome{std::nullopt},
@@ -54,6 +53,8 @@ auto Application::update_valid_moves() -> void {
     next_moves[origin_x][origin_y].emplace_back(new_x, new_y);
     action_map[origin_x][origin_y][new_x][new_y] = action;
   }
+
+  auto device = model->parameters().begin()->device();
 
   auto [wdl, policy] =
       model->forward(Game::encode_state(state).unsqueeze(0).to(device));

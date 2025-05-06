@@ -13,8 +13,6 @@ concept Model = std::is_base_of_v<torch::nn::Module, M> and
 
                   { m.config } -> std::same_as<typename M::Config&>;
 
-                  { m.config.device } -> std::same_as<torch::DeviceType&>;
-
                   {
                     m.forward(x)
                   } -> std::same_as<std::tuple<torch::Tensor, torch::Tensor>>;

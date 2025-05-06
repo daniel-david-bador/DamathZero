@@ -43,8 +43,6 @@ struct Application {
   MCTS mcts;
   Config config;
 
-  DeviceType device = DeviceType::CPU;
-
   std::shared_ptr<Model> model;
 
   Game::State state;

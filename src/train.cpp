@@ -5,18 +5,18 @@
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{{
-      .batch_size = 1,
+      .batch_size = 64,
       .num_iterations = 10,
       .num_training_epochs = 10,
-      .num_self_play_games = 4,
+      .num_self_play_games = 10,
       .num_self_play_simulations = 100,
-      .num_evaluation_games = 4,
+      .num_evaluation_games = 10,
       .num_evaluation_simulations = 100,
   }};
 
   auto model_config = dz::Model::Config{
       .action_size = dz::Game::ActionSize,
-      .num_blocks = 2,
+      .num_blocks = 8,
       .num_attention_head = 4,
       .embedding_dim = 64,
       .mlp_hidden_size = 128,

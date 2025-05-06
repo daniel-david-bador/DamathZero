@@ -116,7 +116,9 @@ class AlphaZero {
     auto histories =
         std::vector<History>(config_.num_self_play_games, History{});
 
-    auto on_game_end = [this, &histories, &memory, &bar_id](
+    auto games_played = 0;
+
+    auto on_game_end = [this, &histories, &memory, &games_played, &bar_id](
                            size_t game_index, GameOutcome outcome,
                            Player terminal_player) {
       for (const auto& [hist_state, hist_probs] : histories[game_index]) {
@@ -126,10 +128,11 @@ class AlphaZero {
                               : outcome.flip().as_tensor();
         memory.append(Game::encode_state(hist_state), hist_value, hist_probs);
       }
+      games_played++;
 
       bars_[bar_id].set_option(opt::PostfixText{
           std::format("Generating Self-Play Data | Games Played: {}/{}",
-                      histories.size(), config_.num_self_play_games)});
+                      games_played, config_.num_self_play_games)});
       bars_[bar_id].tick();
     };
 
@@ -181,16 +184,15 @@ class AlphaZero {
         optimizer->step();
 
         epoch_loss += loss.template item<double>();
-
-        bars_[bar_id].set_option(opt::PostfixText{
-            std::format("Training Model | Epoch: {}/{} - Batch Loss: {:.6f} - "
-                        "Total Loss: {:.6f}",
-                        i + 1, config_.num_training_epochs,
-                        loss.template item<double>(), epoch_loss)});
-        bars_[bar_id].tick();
       }
-
       total_loss += epoch_loss;
+
+      bars_[bar_id].set_option(opt::PostfixText{std::format(
+          "Training Model | Epoch: {}/{} - Epoch Loss: {:.6f} - Average Loss: "
+          "{:.6f}",
+          i + 1, config_.num_training_epochs, epoch_loss,
+          total_loss / (i + 1))});
+      bars_[bar_id].tick();
     }
 
     return total_loss / static_cast<float32_t>(config_.num_training_epochs);
