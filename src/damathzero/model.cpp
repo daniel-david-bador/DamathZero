@@ -138,7 +138,7 @@ auto Encoder::forward(torch::Tensor x, bool output_attention)
 
 Model::Model(Config config) : config(config) {
   const auto feature_width = 32;
-  const auto feature_height = 24;
+  const auto feature_height = 25;
   const auto num_cls_tokens = 8;
 
   // assert(feature_width % patch_size == 0);

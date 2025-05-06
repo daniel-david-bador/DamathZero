@@ -274,7 +274,7 @@ auto Game::get_outcome(const State& state, Action action)
 }
 
 auto Game::encode_state(const State& state) -> torch::Tensor {
-  auto encoded_state = torch::zeros({32, 24}, torch::kFloat32);
+  auto encoded_state = torch::zeros({32, 25}, torch::kFloat32);
   constexpr auto operator_index = [](int8_t x, int8_t y) {
     switch (Board::operators[y][x]) {  // clang-format off
         case '+': return 0;
@@ -287,10 +287,10 @@ auto Game::encode_state(const State& state) -> torch::Tensor {
 
   const auto current_player = state.player.is_first() ? 1 : -1;
 
-  const auto [score1, score2] = state.scores;
-  const auto score =
-      state.player.is_first() ? score1 - score2 : score2 - score1;
-  const auto relative_score = 1 / (1 + std::exp(-score));
+  auto [score1, score2] = state.scores;
+  if (state.player.is_second()) {
+    std::swap(score1, score2);
+  }
 
   auto i = 0;
   for (int8_t y = 0; y < 8; y += 1) {
@@ -307,18 +307,19 @@ auto Game::encode_state(const State& state) -> torch::Tensor {
         encoded_state[i][14] = piece.is_knighted ? 1 : 0;
 
         // 15 encodes the owner of the piece
-        encoded_state[i][15] = piece.is_owned_by_first_player ? 1 : -1;
+        encoded_state[i][15] = piece.is_owned_by(state.player) ? 1 : -1;
       }
 
-      // 16 encodes the relative score of the current player
-      encoded_state[i][16] = relative_score;
+      // 16 encodes the score of the current player
+      encoded_state[i][16] = score1;
+      // 17 encodes the relative score of the other player
+      encoded_state[i][17] = score2;
 
-      // 17 encodes the draw count
-      encoded_state[i][17] = state.draw_count / 80.0;
+      // 18 encodes the draw count
+      encoded_state[i][18] = state.draw_count / 80.0;
 
-      // 18-21 is the one-hot encoding of each operator
-      encoded_state[i][18 + operator_index(x, y)] = 1.0;
-
+      // 19-22 is the one-hot encoding of each operator
+      encoded_state[i][19 + operator_index(x, y)] = 1.0;
       i++;
     }
   }
@@ -329,13 +330,13 @@ auto Game::encode_state(const State& state) -> torch::Tensor {
     const auto i = (4 * y) + (x / 2);
 
     // 22 encodes the position of the last eating piece
-    encoded_state[i][22] = 1;
+    encoded_state[i][23] = 1;
 
     const auto [prev_x, prev_y] = state.eating_piece_position.value();
     const auto prev_i = (4 * prev_y) + (prev_x / 2);
 
     // 23 encodes the previous position of the last eating piece
-    encoded_state[prev_i][23] = 1;
+    encoded_state[prev_i][24] = 1;
   }
 
   return encoded_state;
