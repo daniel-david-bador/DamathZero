@@ -5,16 +5,13 @@
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{{
-      .batch_size = 64,
-      .num_training_epochs = 4,
-      .num_training_iterations = 10,
-      .num_self_play_actors = 6,
-      .num_self_play_iterations = 100,
-      .num_self_play_simulations = 60,
-      .num_evaluation_actors = 5,
-      .num_evaluation_iterations = 10,
+      .batch_size = 512,
+      .num_iterations = 100,
+      .num_training_epochs = 10,
+      .num_self_play_games = 512,
+      .num_self_play_simulations = 100,
+      .num_evaluation_games = 64,
       .num_evaluation_simulations = 1000,
-      .device = dz::DeviceType::CPU,
   }};
 
   auto model_config = dz::Model::Config{
@@ -24,6 +21,7 @@ auto main(int argc, char** argv) -> int {
       .embedding_dim = 64,
       .mlp_hidden_size = 128,
       .mlp_dropout_prob = 0.1,
+      .device = dz::DeviceType::CPU,
   };
 
   std::optional<std::shared_ptr<dz::Model>> previous_model = std::nullopt;

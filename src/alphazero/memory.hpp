@@ -25,7 +25,6 @@ class Memory {
       -> std::tuple<Feature, Value, Policy>;
 
  private:
-  std::mutex mutex_;
   std::mt19937& gen_;
   std::vector<std::tuple<Feature, Value, Policy>> data_;
 };

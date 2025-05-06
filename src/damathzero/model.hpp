@@ -70,6 +70,7 @@ struct Model : torch::nn::Module {
     int32_t embedding_dim;
     int32_t mlp_hidden_size;
     float32_t mlp_dropout_prob;
+    torch::Device device;
   };
 
   Model(Config config);

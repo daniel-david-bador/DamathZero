@@ -31,20 +31,16 @@ class AlphaZero {
   using State = Game::State;
 
   struct Config {
-    size_t batch_size = 64;
+    size_t batch_size = 512;
 
-    int32_t num_training_epochs = 4;
-    int32_t num_training_iterations = 10;
+    int32_t num_iterations = 100;
+    int32_t num_training_epochs = 10;
 
-    int32_t num_self_play_actors = 6;
-    int32_t num_self_play_iterations = 100;
-    int32_t num_self_play_simulations = 60;
+    int32_t num_self_play_games = 512;
+    int32_t num_self_play_simulations = 100;
 
-    int32_t num_evaluation_actors = 5;
-    int32_t num_evaluation_iterations = 10;
+    int32_t num_evaluation_games = 64;
     int32_t num_evaluation_simulations = 1000;
-
-    float32_t random_playout_percentage = 0.2;
 
     torch::DeviceType device;
   };
@@ -61,31 +57,24 @@ class AlphaZero {
                                 : std::make_shared<Model>(model_config);
     auto best_model = utils::clone_model<Model>(model);
 
-    model->to(config_.device);
-    best_model->to(config_.device);
-
     auto optimizer = std::make_shared<torch::optim::AdamW>(model->parameters());
 
-    for (auto i : std::views::iota(0, config_.num_training_iterations)) {
+    for (auto i : std::views::iota(0, config_.num_iterations)) {
       auto bar = std::make_unique<indicators::ProgressBar>(
           opt::BarWidth{50}, opt::ForegroundColor{colors[i % 6]},
           opt::ShowElapsedTime{true}, opt::ShowRemainingTime{true},
           opt::ShowPercentage{true},
-          opt::MaxProgress{config_.num_self_play_iterations *
-                               config_.num_self_play_actors +
+          opt::MaxProgress{config_.num_self_play_games +
                            config_.num_training_epochs +
-                           config_.num_evaluation_iterations *
-                               config_.num_evaluation_actors},
-          opt::PrefixText{std::format("Iteration {}/{} ", i + 1,
-                                      config_.num_training_iterations)},
+                           config_.num_evaluation_games},
+          opt::PrefixText{
+              std::format("Iteration {}/{} ", i + 1, config_.num_iterations)},
           opt::FontStyles{
               std::vector<indicators::FontStyle>{indicators::FontStyle::bold}});
       auto bar_id = bars_.push_back(std::move(bar));
 
-      auto memory = Memory{gen_};
-
       bars_[bar_id].set_option(opt::PostfixText{"Generating Self-Play Data"});
-      generate_self_play_data(memory, best_model, bar_id);
+      auto memory = generate_self_play_data(best_model, bar_id);
 
       bars_[bar_id].set_option(opt::PostfixText{"Training Model"});
       auto average_loss = train(memory, model, optimizer, bar_id);
@@ -93,13 +82,11 @@ class AlphaZero {
       bars_[bar_id].set_option(opt::PostfixText{"Evaluating Model"});
       auto [wins, draws, losses] = evaluate(model, best_model, bar_id);
 
-      auto did_win =
-          wins + draws >
-          0.7 * static_cast<float32_t>(config_.num_evaluation_iterations);
+      auto did_win = wins + draws >
+                     0.7 * static_cast<float32_t>(config_.num_evaluation_games);
 
       if (did_win) {
         best_model = utils::clone_model(model);
-        best_model->to(config_.device);
         utils::save_model(model,
                           std::format("models/best_models/model_{}.pt", i));
       }
@@ -117,75 +104,42 @@ class AlphaZero {
   }
 
  private:
-  auto generate_self_play_data(Memory& memory, std::shared_ptr<Model> model,
-                               int32_t bar_id) -> void {
+  auto generate_self_play_data(std::shared_ptr<Model> model, int32_t bar_id)
+      -> Memory {
     model->eval();
+    using History = std::vector<std::tuple<State, torch::Tensor>>;
 
-    auto threads = std::vector<std::thread>();
-    for (auto _ : std::views::iota(0, config_.num_self_play_actors)) {
-      threads.emplace_back([this, &memory, model, bar_id] {
-        auto mcts = MCTS<Game, Model>{
-            {.num_simulations = config_.num_self_play_simulations}};
+    auto mcts = MCTS<Game, Model>{{}};
+    auto memory = Memory(gen_);
+    auto histories = std::vector<History>(config_.num_self_play_games, History{});
 
-        auto num_iterations = config_.num_self_play_iterations;
+    auto on_game_end = [this, &histories, &memory, &bar_id](size_t game_index, GameOutcome outcome,
+                                      Player terminal_player) {
+      for (const auto& [hist_state, hist_probs] : histories[game_index]) {
+        auto hist_value = hist_state.player == terminal_player
+                              ? outcome.as_tensor()
+                              : outcome.flip().as_tensor();
+        memory.append(Game::encode_state(hist_state), hist_value, hist_probs);
+      }
 
-        // Generate a list of indices that use random playout.
-        auto n = static_cast<int32_t>(config_.random_playout_percentage *
-                                      num_iterations);
-        auto random_playout_indices = torch::randint(num_iterations, {n});
+      bars_[bar_id].tick();
+    };
 
-        for (auto i : std::views::iota(0, num_iterations)) {
-          auto statistics = std::vector<std::tuple<State, torch::Tensor>>();
-          auto state = Game::initial_state();
-          while (true) {
-            auto is_not_random_playout =
-                not torch::isin(i, random_playout_indices)
-                        .template item<bool>();
+    auto on_game_move = [&histories](int32_t game_index, State state,
+                               torch::Tensor action_probs) {
+      histories[game_index].emplace_back(state, action_probs);
+    };
 
-            // If we're performing random playout we set `num_simulations`
-            // to be random on MCTS search.
-            auto num_simulations =
-                is_not_random_playout
-                    ? config_.num_self_play_simulations
-                    : torch::randint(1, config_.num_self_play_simulations, 1)
-                          .template item<int32_t>();
-            auto action_probs =
-                mcts.search(state, model, num_simulations,
-                            is_not_random_playout ? std::make_optional(&gen_)
-                                                  : std::nullopt);
+    auto parallel_games = ParallelGames<Game>(config_.num_self_play_games, on_game_end, on_game_move);
 
-            // If we're using random playout we don't include it in the
-            // dataset.
-            if (is_not_random_playout) {
-              statistics.emplace_back(state, action_probs);
-            }
-
-            auto action =
-                torch::multinomial(action_probs, 1).template item<Action>();
-
-            auto new_state = Game::apply_action(state, action);
-            if (auto outcome = Game::get_outcome(new_state, action)) {
-              for (auto& [hist_state, hist_probs] : statistics) {
-                auto hist_value = hist_state.player == state.player
-                                      ? outcome->as_tensor()
-                                      : outcome->flip().as_tensor();
-                memory.append(Game::encode_state(hist_state), hist_value,
-                              hist_probs);
-              }
-              break;
-            }
-
-            state = std::move(new_state);
-          }
-
-          bars_[bar_id].tick();
-        }
-      });
+    while (not parallel_games.all_terminated()) {
+      auto states = parallel_games.get_non_terminal_states();
+      auto action_probs =
+          mcts.search(states, model, config_.num_self_play_simulations);
+      parallel_games.apply_to_non_terminal_states(action_probs);
     }
 
-    for (auto& thread : threads) {
-      thread.join();
-    }
+    return memory;
   }
 
   auto train(Memory& memory, std::shared_ptr<Model> model,
@@ -197,6 +151,8 @@ class AlphaZero {
     model->train();
     memory.shuffle();
 
+    auto device = model->parameters().begin()->device();
+
     auto total_loss = 0.;
     for (auto i : std::views::iota(0, config_.num_training_epochs)) {
       auto epoch_loss = 0.;
@@ -205,7 +161,7 @@ class AlphaZero {
            start_index += config_.batch_size) {
         auto [feature, target_value, target_policy] =
             memory.sample_batch(config_.batch_size, start_index);
-        auto [out_value, out_policy] = model->forward(feature);
+        auto [out_value, out_policy] = model->forward(feature.to(device));
 
         auto loss = F::cross_entropy(out_value, target_value) +
                     F::cross_entropy(out_policy, target_policy);
@@ -217,7 +173,8 @@ class AlphaZero {
         epoch_loss += loss.template item<double>();
 
         bars_[bar_id].set_option(opt::PostfixText{
-            std::format("Epoch {}/{}: Batch Loss: {:.6f} - Total Loss: {:.6f}",
+            std::format("Training Model | Epoch: {}/{} - Batch Loss: {:.6f} - "
+                        "Total Loss: {:.6f}",
                         i + 1, config_.num_training_epochs,
                         loss.template item<double>(), epoch_loss)});
         bars_[bar_id].tick();
@@ -235,56 +192,46 @@ class AlphaZero {
     current_model->eval();
     best_model->eval();
 
-    std::atomic<int32_t> wins{0};
-    std::atomic<int32_t> draws{0};
-    std::atomic<int32_t> losses{0};
+    auto mcts = MCTS<Game, Model>{{}};
 
-    std::vector<std::thread> threads;
+    auto memory = Memory(gen_);
 
-    for (auto _ : std::views::iota(0, config_.num_evaluation_actors)) {
-      threads.emplace_back([this, &wins, &draws, &losses, current_model,
-                            best_model, &bar_id] {
-        for (auto _ : std::views::iota(0, config_.num_evaluation_iterations)) {
-          auto state = Game::initial_state();
-          auto mcts = MCTS<Game, Model>{
-              {.num_simulations = config_.num_evaluation_simulations}};
+    int32_t wins = 0;
+    int32_t draws = 0;
+    int32_t losses = 0;
 
-          while (true) {
-            auto model = state.player.is_first() ? current_model : best_model;
-            auto action_probs = mcts.search(state, model);
+    auto on_game_end = [this, &wins, &draws, &losses, &bar_id](size_t, GameOutcome outcome, Player terminal_player) {
+      // outcome from the perspective of the current model
+      outcome = terminal_player.is_first() ? outcome : outcome.flip();
+      if (outcome == GameOutcome::Win) {
+        wins++;
+      } else if (outcome == GameOutcome::Draw) {
+        draws++;
+      } else {
+        losses++;
+      }
 
-            auto action = torch::argmax(action_probs).template item<Action>();
+      bars_[bar_id].tick();
+    };
 
-            auto new_state = Game::apply_action(state, action);
 
-            if (auto outcome = Game::get_outcome(new_state, action)) {
-              auto flipped_outcome =
-                  state.player.is_first() ? *outcome : outcome->flip();
+    auto parallel_games = ParallelGames<Game>(config_.num_evaluation_games, on_game_end);
 
-              if (flipped_outcome == GameOutcome::Win) {
-                wins += 1;
-              } else if (flipped_outcome == GameOutcome::Draw) {
-                draws += 1;
-              } else if (flipped_outcome == GameOutcome::Loss) {
-                losses += 1;
-              }
+    while (not parallel_games.all_terminated()) {
+      const auto states = parallel_games.get_non_terminal_states();
 
-              bars_[bar_id].set_option(opt::PostfixText{std::format(
-                  "Evaluating Model: Wins: {} - Draws: {} - Losses: {}",
-                  wins.load(), draws.load(), losses.load())});
+      const auto action_probs_of_the_current_model = mcts.search(states, current_model, config_.num_self_play_simulations);
+      const auto action_probs_of_the_best_model = mcts.search(states, best_model, config_.num_self_play_simulations);
 
-              bars_[bar_id].tick();
-              break;
-            }
-
-            state = std::move(new_state);
+      auto action_probs = torch::zeros({static_cast<int32_t>(states.size()), Game::ActionSize}, torch::kFloat);
+      for (const auto i : std::views::iota(0, static_cast<int32_t>(states.size()))) {
+          if (states[i].player.is_first()) {
+              action_probs[i] = action_probs_of_the_current_model[i];
+          } else {
+              action_probs[i] = action_probs_of_the_best_model[i];
           }
-        }
-      });
-    }
-
-    for (auto& thread : threads) {
-      thread.join();
+      }
+      parallel_games.apply_to_non_terminal_states(action_probs);
     }
 
     return {wins, draws, losses};

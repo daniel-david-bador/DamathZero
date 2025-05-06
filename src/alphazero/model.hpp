@@ -40,7 +40,6 @@ auto clone_model(std::shared_ptr<Model> model) -> std::shared_ptr<Model> {
     torch::serialize::InputArchive in_archive;
     in_archive.load_from(iss);
     cloned->load(in_archive);
-    cloned->to(torch::kCPU);
   }
 
   return cloned;
@@ -61,7 +60,6 @@ auto load_model(std::string_view path, typename Model::Config config)
   input_archive.load_from(std::string(path));
   auto model = std::make_shared<Model>(config);
   model->load(input_archive);
-  model->to(torch::kCPU);
   return model;
 }
 

@@ -10,25 +10,19 @@ namespace az {
 auto Memory::size() -> size_t { return data_.size(); }
 
 auto Memory::pop() -> void {
-  auto guard = std::lock_guard(mutex_);
   data_.pop_back();
 }
 
 auto Memory::shuffle() -> void {
-  auto guard = std::lock_guard(mutex_);
   std::ranges::shuffle(data_, gen_);
 }
 
 auto Memory::append(Feature feature, Value value, Policy policy) -> void {
-  auto guard = std::lock_guard(mutex_);
-
   data_.emplace_back(feature, value, policy);
 }
 
 auto Memory::sample_batch(std::size_t batch_size, std::size_t start)
     -> std::tuple<Feature, Value, Policy> {
-  auto guard = std::lock_guard(mutex_);
-
   auto size = std::min(batch_size, data_.size() - start);
 
   auto batch = std::span{data_.begin() + start, data_.begin() + start + size};

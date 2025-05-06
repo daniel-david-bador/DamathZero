@@ -2,6 +2,8 @@
 
 #include <torch/torch.h>
 
+#include <ranges>
+
 namespace az {
 
 using Action = int;
@@ -86,5 +88,65 @@ class GameOutcome {
 inline constexpr GameOutcome GameOutcome::Win = GameOutcome(1);
 inline constexpr GameOutcome GameOutcome::Loss = GameOutcome(-1);
 inline constexpr GameOutcome GameOutcome::Draw = GameOutcome(0);
+
+template <concepts::Game Game>
+struct ParallelGames {
+  using State = Game::State;
+
+  std::vector<State> states;
+  std::vector<int32_t> non_terminal_state_indices;
+
+  std::function<void(size_t, GameOutcome, Player)> on_game_end;
+  std::function<void(size_t, State, torch::Tensor)> on_game_move;
+
+  ParallelGames(int32_t num_parallel_games,
+      std::function<void(int32_t, GameOutcome, Player)> on_game_end,
+      std::function<void(int32_t, State, torch::Tensor)> on_game_move = [](auto, auto, auto){}) :  on_game_end(on_game_end), on_game_move(on_game_move) {
+
+    states = std::views::iota(0, num_parallel_games)
+            | std::views::transform([](auto _) {return Game::initial_state(); })
+            | std::ranges::to<std::vector>();
+
+    non_terminal_state_indices =
+        std::views::iota(0, num_parallel_games) | std::ranges::to<std::vector>();
+  }
+
+  auto all_terminated() const -> bool {
+    return non_terminal_state_indices.size() == 0;
+  }
+
+  auto get_non_terminal_states() const -> std::vector<State> {
+    return non_terminal_state_indices |
+           std::views::transform([this](auto i) { return states[i]; }) |
+           std::ranges::to<std::vector>();
+  }
+
+  auto apply_to_non_terminal_states(torch::Tensor action_probs) -> void {
+    // action probs has a batch
+    assert(action_probs.sizes().size() == 2);
+    assert(non_terminal_state_indices.size() == action_probs.size(0));
+
+    auto i = 0;
+    auto actions = torch::multinomial(action_probs, 1).squeeze(1);
+    auto to_erase = std::vector<int32_t>();
+    for (auto game_index : non_terminal_state_indices) {
+      on_game_move(game_index, states[game_index], action_probs);
+      const auto action = actions[i].template item<Action>();
+      const auto new_state = Game::apply_action(states[game_index], action);
+
+      if (const auto outcome = Game::get_outcome(new_state, action)) {
+        on_game_end(game_index, *outcome, states[game_index].player);
+        to_erase.push_back(game_index);
+      }
+
+      states[game_index] = std::move(new_state);
+      i += 1;
+    }
+
+    for (auto i : to_erase) {
+      non_terminal_state_indices.erase(non_terminal_state_indices.begin() + i);
+    }
+  }
+};
 
 }  // namespace az

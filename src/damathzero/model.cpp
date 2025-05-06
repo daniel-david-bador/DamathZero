@@ -159,6 +159,8 @@ Model::Model(Config config) : config(config) {
   policy_head = register_module(
       "policy_head",
       nn::Linear(num_cls_tokens * config.embedding_dim, config.action_size));
+
+  to(config.device);
 }
 
 auto Model::forward(torch::Tensor x)
