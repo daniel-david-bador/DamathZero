@@ -17,6 +17,27 @@ Recent developments in the field of computer vision have shown that transformers
 
 \subsection{State Representation}
 
+The state of the game is encoded as a $32 \times 25$ matrix. Where each row in the matrix represents a placeable cell in the board. 
+
+\begin{table}[htb]
+  \centering
+  \begin{tabular}{|p{2cm} | p{2cm} | p{10cm} |}
+    \hline 
+    Dimension & Type & Description \\ \hline
+    0  &  boolean  & The color of the current player. \\ \hline
+    1-13  & boolean &  One-hot encoding of the weight of the piece. \\ \hline
+    14 & boolean & Whether the piece is knighted or not. \\ \hline
+    15 & boolean & Whether the current player owns this piece. \\ \hline
+    16 & float & The score of the current player. \\ \hline
+    17 & float & The score of the the opposing player. \\ \hline
+    18 & float & How close the game is to a forced ending. \\ \hline
+    19-22 & boolean & One-hot encoding of the operators in the board . \\ \hline
+    23 & boolean & Whether the current piece is forced to eat. \\ \hline
+    24 & boolean & The previous cell of the piece which is forced to eat. \\ \hline
+  \end{tabular}
+\end{table}
+
+
 % TODO: Figure of state representation
 
 \subsection{Action Representation}
