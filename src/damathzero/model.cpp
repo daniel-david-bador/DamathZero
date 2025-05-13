@@ -41,7 +41,7 @@ auto Embedding::forward(torch::Tensor x) -> torch::Tensor {
 
 MultilayerPerceptron::MultilayerPerceptron(int32_t embedding_dim,
                                            int32_t hidden_size,
-                                           float32_t dropout_prob) {
+                                           float dropout_prob) {
   layer1 = register_module("layer1", nn::Linear(embedding_dim, hidden_size));
   layer2 = register_module("layer2", nn::Linear(hidden_size, embedding_dim));
   dropout = register_module("dropout", nn::Dropout(dropout_prob));
@@ -56,7 +56,7 @@ auto MultilayerPerceptron::forward(torch::Tensor x) -> torch::Tensor {
 };
 
 Block::Block(int32_t embedding_dim, int32_t num_attention_heads,
-             int32_t mlp_hidden_size, float32_t mlp_dropout_prob) {
+             int32_t mlp_hidden_size, float mlp_dropout_prob) {
   auto attention_opts =
       nn::MultiheadAttentionOptions(embedding_dim, num_attention_heads);
   attention =
@@ -73,14 +73,16 @@ Block::Block(int32_t embedding_dim, int32_t num_attention_heads,
 
 auto Block::forward(torch::Tensor x, bool output_attention)
     -> std::tuple<torch::Tensor, std::optional<torch::Tensor>> {
+  auto res = x;
   x = layer_norm1->forward(x);
 
   auto [attention_out, attention_probs] = attention->forward(x, x, x);
-  x = x + attention_out;
+  x = res + attention_out;
 
+  res = x;
   x = layer_norm2->forward(x);
   auto mlp_out = mlp->forward(x);
-  x = x + mlp_out;
+  x = res + mlp_out;
 
   if (not output_attention) {
     return {x, std::nullopt};
@@ -91,7 +93,7 @@ auto Block::forward(torch::Tensor x, bool output_attention)
 
 Encoder::Encoder(int32_t num_cls_tokens, int32_t num_blocks,
                  int32_t embedding_dim, int32_t num_attention_heads,
-                 int32_t mlp_hidden_size, float32_t mlp_dropout_prob)
+                 int32_t mlp_hidden_size, float mlp_dropout_prob)
     : num_cls_tokens(num_cls_tokens) {
   assert(embedding_dim % num_attention_heads == 0);
 
@@ -117,7 +119,7 @@ auto Encoder::forward(torch::Tensor x, bool output_attention)
 
   for (auto& block : *blocks) {
     auto [out, attention] = block->as<Block>()->forward(x, output_attention);
-    x = std::move(out);
+    x = out;
     if (output_attention)
       attentions.push_back(*attention);
   }
@@ -138,7 +140,7 @@ auto Encoder::forward(torch::Tensor x, bool output_attention)
 
 Model::Model(Config config) : config(config) {
   const auto feature_width = 32;
-  const auto feature_height = 25;
+  const auto feature_height = 23;
   const auto num_cls_tokens = 8;
 
   // assert(feature_width % patch_size == 0);
@@ -159,8 +161,6 @@ Model::Model(Config config) : config(config) {
   policy_head = register_module(
       "policy_head",
       nn::Linear(num_cls_tokens * config.embedding_dim, config.action_size));
-
-  to(config.device);
 }
 
 auto Model::forward(torch::Tensor x)

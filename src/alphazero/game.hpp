@@ -72,8 +72,8 @@ class GameOutcome {
 
   constexpr auto flip() const -> GameOutcome { return GameOutcome(-value_); }
 
-  constexpr auto as_scalar() const -> float64_t {
-    return static_cast<float64_t>(value_);
+  constexpr auto as_scalar() const -> double {
+    return static_cast<double>(value_);
   }
 
   constexpr auto operator==(GameOutcome other) const -> bool {
@@ -107,7 +107,7 @@ struct ParallelGames {
       : on_game_end(on_game_end), on_game_move(on_game_move) {
     states =
         std::views::iota(0, num_parallel_games) |
-        std::views::transform([](auto _) { return Game::initial_state(); }) |
+        std::views::transform([](auto) { return Game::initial_state(); }) |
         std::ranges::to<std::vector>();
 
     non_terminal_state_indices = std::views::iota(0, num_parallel_games) |

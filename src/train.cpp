@@ -5,24 +5,25 @@
 
 auto main(int argc, char** argv) -> int {
   auto damathzero = dz::DamathZero{{
-      .batch_size = 64,
-      .num_iterations = 10,
+      .temperature = 1.25,
+      .batch_size = 1024,
+      .num_iterations = 20,
       .num_training_epochs = 10,
-      .num_self_play_actors = 8,
-      .num_self_play_games = 10,
+      .num_self_play_actors = 50,
+      .num_self_play_games = 100,
       .num_self_play_simulations = 100,
-      .num_evaluation_games = 10,
+      .num_evaluation_games = 100,
       .num_evaluation_simulations = 100,
+      .device = dz::DeviceType::CUDA,
   }};
 
   auto model_config = dz::Model::Config{
       .action_size = dz::Game::ActionSize,
-      .num_blocks = 8,
-      .num_attention_head = 4,
-      .embedding_dim = 64,
-      .mlp_hidden_size = 128,
+      .num_blocks = 16,
+      .num_attention_head = 16,
+      .embedding_dim = 256,
+      .mlp_hidden_size = 512,
       .mlp_dropout_prob = 0.1,
-      .device = dz::DeviceType::CPU,
   };
 
   std::optional<std::shared_ptr<dz::Model>> previous_model = std::nullopt;

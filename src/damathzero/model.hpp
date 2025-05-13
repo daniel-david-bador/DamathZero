@@ -26,7 +26,7 @@ struct Embedding : public nn::Module {
 
 struct MultilayerPerceptron : public nn::Module {
   MultilayerPerceptron(int32_t embedding_dim, int32_t hidden_size,
-                       float32_t dropout_prob);
+                       float dropout_prob);
   auto forward(torch::Tensor x) -> torch::Tensor;
 
   nn::Linear layer1{nullptr};
@@ -36,7 +36,7 @@ struct MultilayerPerceptron : public nn::Module {
 
 struct Block : public nn::Module {
   Block(int32_t embedding_dim, int32_t num_attention_heads,
-        int32_t mlp_hidden_size, float32_t mlp_dropout_prob);
+        int32_t mlp_hidden_size, float mlp_dropout_prob);
 
   auto forward(torch::Tensor x, bool output_attention = false)
       -> std::tuple<torch::Tensor, std::optional<torch::Tensor>>;
@@ -52,7 +52,7 @@ struct Block : public nn::Module {
 struct Encoder : public nn::Module {
   Encoder(int32_t num_cls_tokens, int32_t num_blocks, int32_t embedding_dim,
           int32_t num_attention_heads, int32_t mlp_hidden_size,
-          float32_t mlp_dropout_prob);
+          float mlp_dropout_prob);
 
   auto forward(torch::Tensor x, bool output_attention = false)
       -> std::tuple<torch::Tensor, std::optional<torch::Tensor>>;
@@ -70,8 +70,7 @@ struct Model : torch::nn::Module {
     int32_t num_attention_head;
     int32_t embedding_dim;
     int32_t mlp_hidden_size;
-    float32_t mlp_dropout_prob;
-    torch::DeviceType device;
+    float mlp_dropout_prob;
   };
 
   Model(Config config);

@@ -32,6 +32,7 @@ class AlphaZero {
   using State = Game::State;
 
   struct Config {
+    float temperature = 1.25;
     size_t batch_size = 512;
 
     int32_t num_iterations = 100;
@@ -43,6 +44,8 @@ class AlphaZero {
 
     int32_t num_evaluation_games = 64;
     int32_t num_evaluation_simulations = 1000;
+
+    torch::DeviceType device;
   };
 
  public:
@@ -53,8 +56,10 @@ class AlphaZero {
   auto learn(Model::Config model_config,
              std::optional<std::shared_ptr<Model>> previous_model =
                  std::nullopt) -> std::shared_ptr<Model> {
+
     auto model = previous_model ? *previous_model
                                 : std::make_shared<Model>(model_config);
+    model->to(config_.device);
     auto best_model = utils::clone_model<Model>(model);
 
     auto optimizer = std::make_shared<torch::optim::AdamW>(model->parameters());
@@ -86,8 +91,8 @@ class AlphaZero {
       bars_[bar_id].tick();
       auto [wins, draws, losses] = evaluate(model, best_model, bar_id);
 
-      auto did_win = wins + draws >
-                     0.7 * static_cast<float32_t>(config_.num_evaluation_games);
+      auto did_win = wins + draws >=
+                     0.6 * static_cast<float>(config_.num_evaluation_games);
 
       if (did_win) {
         best_model = utils::clone_model(model);
@@ -123,6 +128,8 @@ class AlphaZero {
     for (auto _ : std::views::iota(0, config_.num_self_play_actors)) {
       threads.emplace_back([this, &memory, &games_played, &mutex, &bar_id,
                             model] {
+        std::mt19937 gen{std::random_device{}()};
+
         auto mcts = MCTS<Game, Model>{{}};
         auto histories =
             std::vector<History>(config_.num_self_play_games, History{});
@@ -144,7 +151,7 @@ class AlphaZero {
           games_played++;
           bars_[bar_id].set_option(opt::PostfixText{
               std::format("Generating Self-Play Data | Games Played: {}/{}",
-                          games_played.load(), config_.num_self_play_games)});
+                          games_played.load(), config_.num_self_play_games * config_.num_self_play_actors)});
           bars_[bar_id].tick();
         };
 
@@ -159,9 +166,9 @@ class AlphaZero {
 
         while (not parallel_games.all_terminated()) {
           auto states = parallel_games.get_non_terminal_states();
-          auto action_probs = mcts.search(
-              states, model, config_.num_self_play_simulations, &gen_);
-          parallel_games.apply_to_non_terminal_states(action_probs);
+          auto action_probs = mcts.search(states, model, config_.num_self_play_simulations, &gen);
+          auto temperature_action_probs = torch::pow(action_probs, (1 / config_.temperature));
+          parallel_games.apply_to_non_terminal_states(temperature_action_probs);
         }
       });
     }
@@ -175,14 +182,13 @@ class AlphaZero {
 
   auto train(Memory& memory, std::shared_ptr<Model> model,
              std::shared_ptr<torch::optim::Optimizer> optimizer, int32_t bar_id)
-      -> float32_t {
+      -> float {
     if (memory.size() % config_.batch_size == 1)
       memory.pop();
 
     model->train();
+    model->to(config_.device);
     memory.shuffle();
-
-    auto device = model->parameters().begin()->device();
 
     auto total_loss = 0.;
     for (auto i : std::views::iota(0, config_.num_training_epochs)) {
@@ -191,8 +197,8 @@ class AlphaZero {
            start_index + config_.batch_size < memory.size();
            start_index += config_.batch_size) {
         auto [feature, target_value, target_policy] =
-            memory.sample_batch(config_.batch_size, start_index);
-        auto [out_value, out_policy] = model->forward(feature.to(device));
+            memory.sample_batch(config_.batch_size, start_index, config_.device);
+        auto [out_value, out_policy] = model->forward(feature);
 
         auto loss = F::cross_entropy(out_value, target_value) +
                     F::cross_entropy(out_policy, target_policy);
@@ -213,7 +219,7 @@ class AlphaZero {
       bars_[bar_id].tick();
     }
 
-    return total_loss / static_cast<float32_t>(config_.num_training_epochs);
+    return total_loss / static_cast<float>(config_.num_training_epochs);
   }
 
   auto evaluate(std::shared_ptr<Model> current_model,
@@ -221,6 +227,8 @@ class AlphaZero {
       -> std::tuple<int32_t, int32_t, int32_t> {
     current_model->eval();
     best_model->eval();
+    current_model->to(config_.device);
+    best_model->to(config_.device);
 
     auto mcts = MCTS<Game, Model>{{}};
 
@@ -260,9 +268,9 @@ class AlphaZero {
       const auto action_probs_of_the_best_model =
           mcts.search(states, best_model, config_.num_self_play_simulations);
 
+      auto opts = torch::TensorOptions().device(config_.device);
       auto action_probs =
-          torch::zeros({static_cast<int32_t>(states.size()), Game::ActionSize},
-                       torch::kFloat);
+          torch::zeros({static_cast<int32_t>(states.size()), Game::ActionSize}, opts);
       for (const auto i :
            std::views::iota(0, static_cast<int32_t>(states.size()))) {
         if (states[i].player.is_first()) {

@@ -22,6 +22,7 @@ auto load_model(std::string_view path, Model::Config config)
 struct Application {
   struct Config {
     int32_t num_simulations = 1000;
+    DeviceType device = DeviceType::CPU;
   };
 
   Application(Config config, Model::Config model_config, std::string_view path,

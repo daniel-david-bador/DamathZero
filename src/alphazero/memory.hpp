@@ -12,7 +12,7 @@ using Value = torch::Tensor;
 
 class Memory {
  public:
-  Memory(std::mt19937& gen) : gen_(gen) {};
+  Memory(std::mt19937& gen) : gen_(gen)  {};
 
   auto size() -> size_t;
   auto pop() -> void;
@@ -21,7 +21,7 @@ class Memory {
 
   auto append(Feature feature, Value value, Policy policy) -> void;
 
-  auto sample_batch(std::size_t batch_size, std::size_t start)
+  auto sample_batch(std::size_t batch_size, std::size_t start, torch::DeviceType device)
       -> std::tuple<Feature, Value, Policy>;
 
  private:

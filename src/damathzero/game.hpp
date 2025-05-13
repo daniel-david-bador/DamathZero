@@ -33,7 +33,7 @@ struct Position {
 };
 static_assert(sizeof(Position) == 1);
 
-inline constexpr auto Position::Empty = Position{0, 0, true};
+inline constexpr Position Position::Empty = Position{0, 0, true};
 
 struct Game {
   using Action = az::Action;
@@ -43,7 +43,7 @@ struct Game {
 
   struct State {
     Board board = Board{};
-    std::pair<float16_t, float16_t> scores{0.0, 0.0};
+    std::pair<float, float> scores{0.0, 0.0};
     uint8_t draw_count = 0;
     Player player = Player::First;
     Position eating_piece_position = Position::Empty;
@@ -59,7 +59,7 @@ struct Game {
 
     bool should_be_knighted;
 
-    float32_t new_score;
+    float new_score;
 
     Position eaten_enemy_position = Position::Empty;
   };

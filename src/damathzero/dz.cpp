@@ -25,6 +25,7 @@ Application::Application(Config config, Model::Config model_config,
       outcome{std::nullopt},
       history{initial_state} {
   model->eval();
+  model->to(config.device);
   update_valid_moves();
 }
 

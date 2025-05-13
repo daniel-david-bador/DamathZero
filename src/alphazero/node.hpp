@@ -27,7 +27,7 @@ struct NodeId {
   int value_ = -1;
 };
 
-inline constexpr auto NodeId::Invalid = NodeId(-1);
+inline constexpr NodeId NodeId::Invalid = NodeId(-1);
 
 class Node {
  public:

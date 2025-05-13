@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.11)
 project(DamathZero LANGUAGES CXX)
 
 find_package(Torch REQUIRED)
@@ -31,8 +31,11 @@ target_link_libraries(DamathZeroApp PRIVATE raylib DamathZero)
 add_executable(DamathZeroTrainer "src/train.cpp")
 target_link_libraries(DamathZeroTrainer PRIVATE DamathZero)
 
-# add_custom_command(
-#   OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf
-#   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs
-#   COMMAND TEXMF_OUTPUT_DIRECTORY=${PROJECT_BINARY_DIR} latexmk -pdf -bibtex -shell-escape --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex)
-# add_custom_target(DamathZeroPaper ALL DEPENDS ${PROJECT_BINARY_DIR}/thesis.pdf)
+add_executable(DamathZeroEval "src/eval.cpp")
+target_link_libraries(DamathZeroEval PRIVATE DamathZero)
+
+add_custom_command(
+  OUTPUT ${PROJECT_BINARY_DIR}/thesis.pdf
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs
+  COMMAND TEXMF_OUTPUT_DIRECTORY=${PROJECT_BINARY_DIR} latexmk -pdf -bibtex -shell-escape --output-directory=${PROJECT_BINARY_DIR} --aux-directory=${PROJECT_BINARY_DIR} thesis.tex)
+add_custom_target(DamathZeroPaper ALL DEPENDS ${PROJECT_BINARY_DIR}/thesis.pdf)

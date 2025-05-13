@@ -13,11 +13,11 @@ auto Memory::pop() -> void { data_.pop_back(); }
 
 auto Memory::shuffle() -> void { std::ranges::shuffle(data_, gen_); }
 
-auto Memory::append(Feature feature, Value value, Policy policy) -> void {
+auto Memory::append(torch::Tensor feature, torch::Tensor value, torch::Tensor policy) -> void {
   data_.emplace_back(feature, value, policy);
 }
 
-auto Memory::sample_batch(std::size_t batch_size, std::size_t start)
+auto Memory::sample_batch(std::size_t batch_size, std::size_t start, torch::DeviceType device)
     -> std::tuple<Feature, Value, Policy> {
   auto size = std::min(batch_size, data_.size() - start);
 
@@ -41,8 +41,8 @@ auto Memory::sample_batch(std::size_t batch_size, std::size_t start)
     policies.emplace_back(policy);
   }
 
-  return {torch::stack(features, 0), torch::stack(values, 0),
-          torch::stack(policies, 0)};
+  return {torch::stack(features, 0).to(device), torch::stack(values, 0).to(device),
+          torch::stack(policies, 0).to(device)};
 }
 
 }  // namespace az
