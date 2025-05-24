@@ -1,0 +1,400 @@
+Move: 0
+Win: 0.40441483, Draw: 4.7722786e-09, Loss: 0.5955851Score: 0, 0
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_1.png] File saved successfully
+INFO: FILEIO: [games/move_1.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 1
+Win: 0.4044, Draw: 0.0000, Loss: 0.5956Score: 0, 0
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_2.png] File saved successfully
+INFO: FILEIO: [games/move_2.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 2
+Win: 0.69178015, Draw: 1.5187436e-09, Loss: 0.30821985Score: 0, 0
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_3.png] File saved successfully
+INFO: FILEIO: [games/move_3.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 3
+Win: 0.6918, Draw: 0.0000, Loss: 0.3082Score: 0, -13
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_4.png] File saved successfully
+INFO: FILEIO: [games/move_4.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 4
+Win: 0.20489189, Draw: 1.5322269e-09, Loss: 0.7951081Score: -0.666667, -13
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_5.png] File saved successfully
+INFO: FILEIO: [games/move_5.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 5
+Win: 0.2049, Draw: 0.0000, Loss: 0.7951Score: -0.666667, -13
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_6.png] File saved successfully
+INFO: FILEIO: [games/move_6.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 6
+Win: 7.466081e-05, Draw: 1.0628678e-10, Loss: 0.9999254Score: -15.6667, -13
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_7.png] File saved successfully
+INFO: FILEIO: [games/move_7.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 7
+Win: 0.0001, Draw: 0.0000, Loss: 0.9999Score: -15.6667, -5
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_8.png] File saved successfully
+INFO: FILEIO: [games/move_8.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 8
+Win: 0.0001, Draw: 0.0000, Loss: 0.9999Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_9.png] File saved successfully
+INFO: FILEIO: [games/move_9.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 9
+Win: 0.5303068, Draw: 1.1676164e-09, Loss: 0.46969318Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_10.png] File saved successfully
+INFO: FILEIO: [games/move_10.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 10
+Win: 0.5303, Draw: 0.0000, Loss: 0.4697Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_11.png] File saved successfully
+INFO: FILEIO: [games/move_11.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 11
+Win: 0.022552317, Draw: 6.362197e-11, Loss: 0.9774476Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_12.png] File saved successfully
+INFO: FILEIO: [games/move_12.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 12
+Win: 0.0226, Draw: 0.0000, Loss: 0.9774Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_13.png] File saved successfully
+INFO: FILEIO: [games/move_13.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 13
+Win: 0.81796855, Draw: 9.3602986e-11, Loss: 0.18203147Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_14.png] File saved successfully
+INFO: FILEIO: [games/move_14.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 14
+Win: 0.8180, Draw: 0.0000, Loss: 0.1820Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_15.png] File saved successfully
+INFO: FILEIO: [games/move_15.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 15
+Win: 8.912694e-07, Draw: 5.6157017e-14, Loss: 0.99999917Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_16.png] File saved successfully
+INFO: FILEIO: [games/move_16.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 16
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_17.png] File saved successfully
+INFO: FILEIO: [games/move_17.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 17
+Win: 2.4679952e-07, Draw: 5.5756604e-14, Loss: 0.99999976Score: -15.6667, -5.16667
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_18.png] File saved successfully
+INFO: FILEIO: [games/move_18.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 18
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_19.png] File saved successfully
+INFO: FILEIO: [games/move_19.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 19
+Win: 9.852803e-05, Draw: 8.987556e-12, Loss: 0.9999014Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_20.png] File saved successfully
+INFO: FILEIO: [games/move_20.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 20
+Win: 0.0001, Draw: 0.0000, Loss: 0.9999Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_21.png] File saved successfully
+INFO: FILEIO: [games/move_21.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 21
+Win: 0.9874801, Draw: 1.6774128e-12, Loss: 0.012519852Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_22.png] File saved successfully
+INFO: FILEIO: [games/move_22.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 22
+Win: 0.9875, Draw: 0.0000, Loss: 0.0125Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_23.png] File saved successfully
+INFO: FILEIO: [games/move_23.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 23
+Win: 2.1084581e-06, Draw: 7.799841e-12, Loss: 0.99999785Score: -15.6667, 0.833333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_24.png] File saved successfully
+INFO: FILEIO: [games/move_24.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 24
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -15.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_25.png] File saved successfully
+INFO: FILEIO: [games/move_25.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 25
+Win: 0.00017730874, Draw: 5.7236032e-11, Loss: 0.9998227Score: -15.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_26.png] File saved successfully
+INFO: FILEIO: [games/move_26.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 26
+Win: 0.0002, Draw: 0.0000, Loss: 0.9998Score: -15.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_27.png] File saved successfully
+INFO: FILEIO: [games/move_27.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 27
+Win: 4.022576e-06, Draw: 1.6866535e-12, Loss: 0.99999595Score: -13.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_28.png] File saved successfully
+INFO: FILEIO: [games/move_28.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 28
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -13.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_29.png] File saved successfully
+INFO: FILEIO: [games/move_29.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 29
+Win: 0.3565565, Draw: 4.263522e-10, Loss: 0.64344347Score: -13.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_30.png] File saved successfully
+INFO: FILEIO: [games/move_30.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 30
+Win: 0.3566, Draw: 0.0000, Loss: 0.6434Score: -13.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_31.png] File saved successfully
+INFO: FILEIO: [games/move_31.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 31
+Win: 5.9071346e-07, Draw: 6.9310063e-13, Loss: 0.9999994Score: -13.6667, 0.333333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_32.png] File saved successfully
+INFO: FILEIO: [games/move_32.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 32
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -13.6667, 40.3333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_33.png] File saved successfully
+INFO: FILEIO: [games/move_33.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 33
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -13.6667, 33.3333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_34.png] File saved successfully
+INFO: FILEIO: [games/move_34.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 34
+Win: 8.9595045e-07, Draw: 2.549002e-12, Loss: 0.99999905Score: -13.6667, 33.3333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_35.png] File saved successfully
+INFO: FILEIO: [games/move_35.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 35
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -13.6667, 25.3333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_36.png] File saved successfully
+INFO: FILEIO: [games/move_36.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 36
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -13.6667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_37.png] File saved successfully
+INFO: FILEIO: [games/move_37.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 37
+Win: 8.742108e-16, Draw: 1.1296088e-16, Loss: 1Score: -7.66667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_38.png] File saved successfully
+INFO: FILEIO: [games/move_38.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 38
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -7.66667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_39.png] File saved successfully
+INFO: FILEIO: [games/move_39.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 39
+Win: 7.7751783e-10, Draw: 5.9944356e-13, Loss: 1Score: -7.66667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_40.png] File saved successfully
+INFO: FILEIO: [games/move_40.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 40
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -7.66667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_41.png] File saved successfully
+INFO: FILEIO: [games/move_41.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 41
+Win: 1.8910539e-08, Draw: 1.875265e-11, Loss: 1Score: -7.66667, 23.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_42.png] File saved successfully
+INFO: FILEIO: [games/move_42.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 42
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -7.66667, 13.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_43.png] File saved successfully
+INFO: FILEIO: [games/move_43.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+Move: 43
+Win: 0.0000, Draw: 0.0000, Loss: 1.0000Score: -7.66667, 14.7333
+INFO: TEXTURE: [ID 3] Texture loaded successfully (800x800 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: TEXTURE: [ID 3] Pixel data retrieved successfully
+INFO: FILEIO: [games/move_44.png] File saved successfully
+INFO: FILEIO: [games/move_44.png] Image exported successfully
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully

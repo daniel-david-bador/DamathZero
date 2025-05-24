@@ -1,0 +1,11 @@
+\chapter{Conclusion and Recommendations}
+
+The researchers were able to train a model based on the AlphaZero framework that learns how to play the game of Damath only through self-play. The model is only given the rules of the game without any ohter knowledge, strategies, and existing games between expert players of Damath.
+
+The researchers were able to produce 5 different versions of the model with the fifth and final version of best model being able to beat the previous versions of the model and also beat an expert player in the game of Damath.
+
+The researchers recommend having the model learn for a longer amount of time with increased model architecture configurations as the vision transformer architecture gets better the longer it trains and the deeper the network goes as shown by \cite{dosovitskiy2021imageworth16x16words}.
+
+The researchers recommend having the model learn through self-play data generated with random playout for the first initial moves as done by \cite{Popic_Boskovic_Brest_2021} to ensure that the model explores all possible opening moves.
+
+The researchers recommend having the model train with temperature tapering towards the end of the game as done by \cite{silver2017masteringchessshogiselfplay} to let the model explore other best moves randomly at the beginning of each games before playing deterministically towards the end of each game.

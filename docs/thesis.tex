@@ -4,19 +4,24 @@
 \usepackage{algpseudocodex}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage[toc,page]{appendix}
+\usepackage{blkarray}
+\usepackage{float}
 \usepackage{geometry}
 \usepackage{graphicx}
-\usepackage{listings}
+\usepackage{longtable}
+\usepackage{mathtools}
 \usepackage{natbib}
 \usepackage{parskip}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
 \usepackage{setspace}
 \usepackage{subcaption}
-\usepackage{minted}
 \usepackage{tikz}
 
 \usetikzlibrary{positioning}
 
-\title{Applying AlphaZero to Damath: An Exploration of Reinforcement Learning for Educational Game-Based Learning in Mathematics}
+\title{Applying AlphaZero to Damath: Learning How to Play Damath through Self-Play}
 
 \author{Daniel David N. Bador \\ Brymer Bernard R. Meneses}
 
@@ -26,26 +31,33 @@
 \begin{document}
 
 \maketitle
-% \input{abstract}
+
+\input{acknowledgements}
+\input{abstract}
 
 \tableofcontents
 
 \listoffigures
 \listoftables
-\listoflistings
 \listofalgorithms
 
-\setcounter{chapter}{0}
 \input{chapters/introduction}
-
-\setcounter{chapter}{1}
 \input{chapters/preliminaries}
-
-\setcounter{chapter}{2}
 \input{chapters/methodology}
+\input{chapters/results}
+\input{chapters/conclusion}
 
-\setcounter{chapter}{3}
-\input{chapters/methodology}
+% ADVISER COMMENT (DON'T DELETE):
+% 2025-05-21
+% General Comments:
+% -why did you only have 3 games against Mr. Basanes? it would be better to have more games to get a better gauge of the model's capabilities
+% -MAJOR CONCERN: does Mr. Basanes know how the model works? this might give him an unfair advantage against the model
+% -Methodology:
+% --need to define the variables and what their values are
+% -Results and Discussion
+% --need to add more discussion to the results. results are just being presented and not discussed. Ex: what was the exploit that Mr. Basanes used and why did it
+
+\input{appendix}
 
 \bibliographystyle{apalike}
 \bibliography{references}

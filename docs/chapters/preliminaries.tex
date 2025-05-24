@@ -1,6 +1,6 @@
 \chapter{Preliminaries}
 
-This chapter reviews the theoretical and empirical literature surrounding the core concepts of this research, namely AlphaZero, and its core components, the Monte-Carlo Tree Search, a deep neural network and reinforcement learning.
+This chapter reviews the theoretical and empirical literature surrounding the core concepts of this research, namely AlphaZero, and its core components, the Monte-Carlo Tree Search, deep neural networks and reinforcement learning.
 
 \section{Mathematical Concepts}
 
@@ -8,7 +8,7 @@ A set is a well-defined collection of objects (\cite{diestel2024graph}).
 
 A function $f: X \to Y$ is a subset of $X \times Y$ such that for each $x \in X$, there is a unique $y \in Y$ such that $(x, y) $ is in the subset (\cite{thielman1953definition}).
 
-The derivative of a function denoted by $f'(x)$ is defined by Equation \ref{eq:derivative} (\cite{kalanov2019definition}).
+The derivative of a function denoted by $f'(x)$ is defined by Equation \ref{eq:derivative} (\cite{leithold1972calculus}).
 
 \begin{equation}
     f'(x) = \frac{df}{dx} = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}
@@ -22,12 +22,15 @@ The partial derivative of a multivariable function $f(x_1, x_2, \ldots, x_n)$ wi
     \label{eq:partial-derivative}
 \end{equation}
 
-The gradient $\nabla$ of a multivariable function $f(x_1, x_2, \ldots, x_n)$ is defined by Equation \ref{eq:gradient} (\cite{calder2020calculus}). The gradient descent of a function $-\nabla f$ at point $p$ points to the direction for which $(p, f(p))$ has the highest descent.
+The gradient $\nabla$ of a multivariable function $f(x_1, x_2, \ldots, x_n)$ is defined by Equation \ref{eq:gradient} (\cite{calder2020calculus}). The gradient descent of a function $\nabla f$ at point $p$ points to the direction for which $(p, f(p))$ has the highest descent.
 
 \begin{equation}
     \nabla f = \left[\dfrac{\partial f}{\partial x_{1}}, \dfrac{\partial f}{\partial x_{2}}, \dfrac{\partial f}{\partial x_{3}}, \ldots, \dfrac{\partial f}{\partial x_{n}} \right]^T
     \label{eq:gradient}
 \end{equation}
+
+The probability of an event $E$, denoted by $P(E)$ is a value in the range $[0, 1]$ that indicates how likely that the $E$ will occu (\cite{probabilitydef}).
+
 
 A graph $G$ is a pair of two sets $(V, E)$ where $V$ is a set whose elements are called vertices, and $E$ is the set of unordered pairs $\{v_i, v_j\}$ for any connected vertices $v_i, v_j \in V$, whose elements are called edges (\cite{diestel2024graph}).
 
@@ -181,7 +184,37 @@ A two-dimensional convolution layer applies the \verb|Conv2D| function defined b
     \label{eq:2dconvolution}
 \end{equation}
 
-A batch normalization layer applies the \verb|BatchNormalization| function defined by Equation \ref{eq:batch-normalization} to the input where $\gamma$ and $\beta$ are learnable parameters and $\epsilon$ is a small number typically equal to $1\times 10^{-5}$ (\cite{chollet2015keras}).
+A softmax layer applies the \verb|Softmax| function defined by Equation \ref{eq:softmax} where $x$ is an input tensor. The softmax layer rescales the input tensor so that the elements of the output tensor lie in the range $[0, 1]$ and sum to $1$.
+
+\begin{equation}
+    \verb|Softmax|(x_i) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+    \label{eq:softmax}
+\end{equation}
+
+According to \cite{vaswani2017attention}, an attention function maps a query to a set of key-value pairs to an output, where the query, keys, values, and outputs are all vectors. The output is computed as a weighted sum of the values, where the weight assigned to each value is computed by a compatibility function of the query with the corresponding key.
+
+A scaled-dot product attention layer applies the \verb|Attention| function defined by Equation \ref{eq:attention} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector. The queries and keys are vectors of dimension $d_k$, and values are of dimension $d_v$.
+
+\begin{equation}
+    \verb|Attention|(Q, K, V) = \verb|softmax|\left(\frac{QK^T}{\sqrt{d_k}}\right) V
+    \label{eq:attention}
+\end{equation}
+
+A multi-head attention layer applies the \verb|MultiHead| function defined by Equation \ref{eq:multi-head} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector, $h$ is the number of heads, $d_k = d_v = d_{\text{model}}/h$, and the projection matrix $W^O \in \mathbb{R}^{hd_v \times d_\text{model}}$ is a learnable parameter. The queries, keys, and values are of the same dimension $d_{\text{model}}$.
+
+\begin{equation}
+    \verb|MultiHead|(Q, K, V) = \verb|Concat|(\verb|head|_1,\dots,\verb|head|_h)W^O
+    \label{eq:multi-head}
+\end{equation}
+
+A single head of the multi-head attention layer applies the function defined by Equation \ref{eq:single-head} where the projection matrices $W_i^Q \in \mathbb{R}^{d_\text{model} \times d_k}$, $W_i^K \in \mathbb{R}^{d_\text{model} \times d_k}$, and $W_i^V \in \mathbb{R}^{d_\text{model} \times d_v}$ are learnable parameters.
+
+\begin{equation}
+    \verb|head|_i = \verb|Attention|(QW_i^Q, KW_i^K, VW_i^V)
+    \label{eq:single-head}
+\end{equation}
+
+A batch normalization layer applies the \verb|BatchNormalization| function defined by Equation \ref{eq:batch-normalization} to the input where $\gamma$ and $\beta$ are learnable parameters and $\epsilon$ is a small number typically equal to $1\times 10^{-5}$ (\cite{bjorck2018understanding}).
 
 \begin{equation}
     \verb|BatchNormalization|(x) = \gamma \cdot \frac{x - \text{mean}{(x)}}{\sqrt{\text{variance}(x) + \epsilon}} + \beta
@@ -204,7 +237,7 @@ A leaky ReLU layer is a generalization of the ReLU layer. A leaky ReLU is a non-
     \label{eq:leakyrelu}
 \end{equation}
 
-A flatten layer takes an input $x$ of any dimension and transforms it into a 1-dimensional array (\cite{chollet2015keras}).
+A flatten layer takes an input $x$ of any dimension and transforms it into a 1-dimensional array (\cite{wilamowski2009neural}).
 
 % convolutional neural networks
 % Similar to the paper by \cite{silver2017masteringchessshogiselfplay}, the model of \cite{Popic_Boskovic_Brest_2021} is a deep convolutional neural network (CNN). A CNN is a type of neural network that specializes on image classification due to their ability to recognize patterns in images. The rationale is that the model can learn to evaluate the positions of the pieces on the board and make appropriate moves accordingly because it is a CNN. 
@@ -504,7 +537,7 @@ According to \cite{silver2017masteringchessshogiselfplay}, AlphaZero utilizes a 
 
 According to \cite{silver2017masteringchessshogiselfplay}, the parameters $\theta$ of the deep neural network in AlphaZero are trained by self-play reinforcement learning, starting from randomly initialized parameters $\theta$. Games are played by selecting moves for both players by MCTS, $a_t \sim \mathbf{\pi}_t$. At the end of the game, the terminal position $s_T$ is scored according to the rules of the game to compute the game outcome $z$: $-1$ for a loss, $0$ for a draw, and $+1$ for a win. The neural network parameters $\theta$ are updated so as to minimize the error between the predicted outcome $v_t$ and the game outcome $z$, and to maximize the similarity of the policy vector $\mathbf{p}_t$ to the search probabilities $\pi_t$. Specifically, the parameters $\theta$ are adjusted by gradient descent on a loss function $l$ than sums over mean-squared error and cross-entropy losses respectively,
 
-\begin{equation}\label{eq:loss}
+\begin{equation}\label{eq:loss-ref}
     (\mathbf{p}, v) = f_\theta(s), \qquad l = (z - v)^2 - \pi^\top \log \mathbf{p} + c\lVert\theta\rVert^2
 \end{equation}
 
@@ -512,7 +545,6 @@ where $c$ is a parameter controlling the level of $L_2$ weight regularisation. T
 
 \section{Deep Learning and the Game of Checkers}
 
-% paraphrase
 Based on a study conducted by \cite{Popic_Boskovic_Brest_2021}, they were able to train a deep convolutional neural network based on the AlphaZero framework that was able to learn how to play the game of German checkers defined in their paper through self-play with each new version representing a better player. \cite{Popic_Boskovic_Brest_2021} focused on the rules of German checkers in which the game is played on an $8 \times 8$ board with interchanging black and white squares. There are 12 white and 12 black playing figures that are coin like shaped. Each player has their figures arranged on black squares in first 3 rows closest to them as shown in Figure \ref{fig:checkers-start}. 
 
 \begin{figure}[htb]
@@ -532,15 +564,15 @@ Two player agents with their own game tree and neural network were used in \cite
     \centering
     \begin{tabular}{lll}
         \hline
-        Parameter & Value & Description \\ \hline
-        \verb!EPISODES! & 50 & number of self-play games for data creation \\
-        \verb!MCTS_SIMS! & 70 & number of MCTS iterations \\
-        \verb!TURNS_UNTIL_TAU0! & 25 & number of moves after the game is played deterministically \\
-        \verb!BATCH_SIZE! & 256 & batch size used for learning \\
-        \verb!LEARNING_RATE! & 0.1 & learning rate \\
-        \verb!MOMENTUM! & 0.9 & learning momentum \\
-        \verb!EVAL_EPISODES! & 20 & number of games played in validation phase \\
-        \verb!SCORING_THRESHOLD! & 1.3 & scoring factor in validation phase \\ \hline
+        Parameter                & Value & Description                                                \\ \hline
+        \verb!EPISODES!          & 50    & number of self-play games for data creation                \\
+        \verb!MCTS_SIMS!         & 70    & number of MCTS iterations                                  \\
+        \verb!TURNS_UNTIL_TAU0!  & 25    & number of moves after the game is played deterministically \\
+        \verb!BATCH_SIZE!        & 256   & batch size used for learning                               \\
+        \verb!LEARNING_RATE!     & 0.1   & learning rate                                              \\
+        \verb!MOMENTUM!          & 0.9   & learning momentum                                          \\
+        \verb!EVAL_EPISODES!     & 20    & number of games played in validation phase                 \\
+        \verb!SCORING_THRESHOLD! & 1.3   & scoring factor in validation phase                         \\ \hline
     \end{tabular}
     \caption{Algorithm Parameters in \cite{Popic_Boskovic_Brest_2021}}
     \label{tab:algo-params}
@@ -583,9 +615,7 @@ Each residual layer consists of 2 convolutions with 75 kernels of size $4 \times
 The neural network has 2 outputs. The first output is the result of a convolution layer, flattening layer and two dense layers which reduce the dimension to one value. This value represents value $V$ of the current board state. 
 The second output is achieved by a convolution layer, that is again followed by flattening, and a dense layer which reduces the dimension to a vector of size 64. This represents the probability for each position. This output probability vector is of size 64 corresponding to the unraveled $8 \times 8$ board. This vector represents the probability distribution over possible new board states, not specific move pairs.
 
-The neural network utilizes leaky ReLU activation function and stochastic gradient descend with momentum to adjust network weights and kernels.
-x
-The work in \cite{Popic_Boskovic_Brest_2021} consists of learning through self-play between two versions of the neural network. The general flow chart can be seen in Figure \ref{fig:self-play}. Data needed for learning is generated by playing a number of games provided by the \verb!EPISODES! parameter between an agent using the current neural network and an agent using the best neural network. Both neural networks are the same in the first iteration. During the data creation phase, every game is started by an agent that moves randomly, thus eliminating any advantage a starting player would have. After each game, the game states and normalized visit counts are saved from the MCTS algorithm.
+The neural network utilizes leaky ReLU activation function and stochastic gradient descend with momentum to adjust network weights and kernels. The work in \cite{Popic_Boskovic_Brest_2021} consists of learning through self-play between two versions of the neural network. The general flow chart can be seen in Figure \ref{fig:self-play}. Data needed for learning is generated by playing a number of games provided by the \verb!EPISODES! parameter between an agent using the current neural network and an agent using the best neural network. Both neural networks are the same in the first iteration. During the data creation phase, every game is started by an agent that moves randomly, thus eliminating any advantage a starting player would have. After each game, the game states and normalized visit counts are saved from the MCTS algorithm.
 
 \begin{figure}[htb]
     \centering
@@ -602,12 +632,13 @@ After the learning phase, a tournament is started between the agent using the ne
 
 \begin{table}[htb]
     \centering
-    \begin{tabular}{c|cccccccccc}
-        & v0 & v1 & v2 & v3 & v4 & v5 & v6 & v7 & v8 & v9 \\ \hline
-        W & 32 & 27 & 26 & 33 & 29 & 26 & 18 & 11 & 14 & 17 \\
-        D & 13 & 18 & 19 & 10 & 17 & 13 & 16 & 20 & 14 & 16 \\
-        L & 5 & 5 & 5 & 7 & 4 & 11 & 16 & 19 & 22 & 17 \\ \hline
-        S & 109 & 99 & 97 & 109 & 104 & 91 & 70 & 53 & 56 & 67
+    \begin{tabular}{ccccccccccc}
+        \hline
+          & v0  & v1 & v2 & v3  & v4  & v5 & v6 & v7 & v8 & v9 \\ \hline
+        W & 32  & 27 & 26 & 33  & 29  & 26 & 18 & 11 & 14 & 17 \\
+        D & 13  & 18 & 19 & 10  & 17  & 13 & 16 & 20 & 14 & 16 \\
+        L & 5   & 5  & 5  & 7   & 4   & 11 & 16 & 19 & 22 & 17 \\ \hline
+        S & 109 & 99 & 97 & 109 & 104 & 91 & 70 & 53 & 56 & 67 \\ \hline
     \end{tabular}
     \caption{Games of the Agent using the Ninth Version of the Neural Network Against All Other Versions of the Neural Network in \cite{Popic_Boskovic_Brest_2021}}
     \label{tab:v9_summary}
