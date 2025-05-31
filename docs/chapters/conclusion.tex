@@ -1,11 +1,31 @@
-\chapter{Conclusion and Recommendations}
+\chapter{Conclusions and Recommendations} % ADVISER COMMENT (DON'T DELETE,2025-05-30): should be renamed to "Conclusions and Recommendations"
 
-The researchers were able to train a model based on the AlphaZero framework that learns how to play the game of Damath only through self-play. The model is only given the rules of the game without any ohter knowledge, strategies, and existing games between expert players of Damath.
+% Summary
 
-The researchers were able to produce 5 different versions of the model with the fifth and final version of best model being able to beat the previous versions of the model and also beat an expert player in the game of Damath.
+The researchers were able to train a vision transformer model using the AlphaZero framework to learn how to play the game of Damath only through self-play. The model was able to learn and develop strategies without any prior knowledge and existing games between expert players, except for the rules of Damath.
 
-The researchers recommend having the model learn for a longer amount of time with increased model architecture configurations as the vision transformer architecture gets better the longer it trains and the deeper the network goes as shown by \cite{dosovitskiy2021imageworth16x16words}.
+The researchers were able to produce 5 different versions of the model, with the fifth and final version of the best model being able to beat the previous versions of the model and also beat an expert player in the game of Damath. 
 
-The researchers recommend having the model learn through self-play data generated with random playout for the first initial moves as done by \cite{Popic_Boskovic_Brest_2021} to ensure that the model explores all possible opening moves.
+After 100,000 games, the model rediscovered competent early game moves and discovered strategies that were discovered by Mr. Basanes. According to Mr. Basanes (\textit{personal communications}, May 23, 2025), the model was playing akin to a proficient player during the ten games that Mr. Basanes played against the model. The model demonstrates strong early game strategies but weak end-game moves throughout ten games.
 
-The researchers recommend having the model train with temperature tapering towards the end of the game as done by \cite{silver2017masteringchessshogiselfplay} to let the model explore other best moves randomly at the beginning of each games before playing deterministically towards the end of each game.
+% Findings
+
+The researchers noticed that for most of the mid-to-late game states, the model gives a losing WDL prediction for both players and makes moves that lead to the model losing the game. This reflects the assessment of Mr. Basanes, wherein he states that the model demonstrates strong early game but weak middle-to-late game competence.
+
+This shows that the model could not accurately predict the outcome and action probabilities of mid-to-late game states yet. This is more evident for earlier versions of the models, with WDL predictions and action priors becoming more accurate with newer versions of the model after a long amount of training time. This shows that a long amount of time is needed to train a model that can accurately predict the outcomes and action priors of various game states.
+
+The outcome and action priors for early game states are much easier to predict as they are readily explored by the MCTS algorithm with varied outcomes. However, specific mid-to-late game configurations that might appear in a regular game between human players are less likely to be explored by the MCTS algorithm due to the branching factor of the game and the exploitative term of the PUCT algorithm. A higher number of MCTS simulations is needed for the PUCT algorithm to be able to use its exploratory term, which increases with the number of visits.
+
+The model needs to train on more data of self-play games with a higher number of MCTS simulations to be able to accurately predict the outcome and action priors of various game states. With more data, the model will be able to generalize its predictions to all different kinds of game state that might appear on Damath. However, a relatively small amount of self-play game data is used for this study due to the limited computational resources compared to AlphaZero, where millions of self-play game data are used to beat a grandmaster in Chess and Go (\cite{silver2017masteringchessshogiselfplay}).
+
+% \section{Recommendations}
+
+Throughout this study, only 100,000 Damath games have been played in 20 iterations. However, the models by \cite{silver2017masteringchessshogiselfplay} were trained for 44 million games to master chess. The researchers recommend scaling the number of games during the generation of self-play data per iteration. Increasing the number of games produced per iteration should improve the model's competence in the game of Damath by allowing the model to learn through varied states of the game and their outcome, and thus having a more generalized understanding of the game.
+
+The researchers also recommend increasing the number of MCTS simulations for each move during the self-play data generation phase of each iteration. This will allow the MCTS algorithm to better explore the game tree and assess legal actions through more varied game outcomes. Having more samples of the game outcomes for each move should let the MCTS algorithm better assess the probability of choosing an action leading to a favorable outcome, and letting the model learn through this policy should increase its competence.
+
+The authors also recommend increasing parameters such as the number of transformer encoder blocks of the model as the vision transformer architecture improves the deeper the network goes, as shown by \cite{dosovitskiy2021imageworth16x16words}. Compared to convolutional neural networks that plateau as it trains longer, transformers keep on improving as it trains for the same amount of time. This is more evident for transformer with deeper encoder blocks. However, this would also increase the training time needed to minimize the training loss of the model.
+
+The researchers recommend that the model learns through self-play data generated with random playout for the first initial moves as done by \cite{Popic_Boskovic_Brest_2021}. This ensures that the model explores all possible opening moves without the PUCT algorithm exploiting the winning opening sequences it initially finds. This should let the model accurately predict the outcome and action priors of various early game states and the following mid-to-late game states that might arise from the random early game state.
+
+% The researchers recommend having the model train with temperature decreasing towards the end of the game as done by \cite{Popic_Boskovic_Brest_2021} to let the model explore other best moves randomly at the beginning of each game before playing deterministically towards the end of each game.

@@ -22,14 +22,27 @@ The partial derivative of a multivariable function $f(x_1, x_2, \ldots, x_n)$ wi
     \label{eq:partial-derivative}
 \end{equation}
 
-The gradient $\nabla$ of a multivariable function $f(x_1, x_2, \ldots, x_n)$ is defined by Equation \ref{eq:gradient} (\cite{calder2020calculus}). The gradient descent of a function $\nabla f$ at point $p$ points to the direction for which $(p, f(p))$ has the highest descent.
+The gradient $\nabla$ of a multivariable function $f(x_1, x_2, \ldots, x_n)$ is defined by Equation \ref{eq:gradient} (\cite{calder2020calculus}). The gradient of a function $\nabla f$ at point $p$ points to the direction for which $(p, f(p))$ has the highest descent.
 
 \begin{equation}
     \nabla f = \left[\dfrac{\partial f}{\partial x_{1}}, \dfrac{\partial f}{\partial x_{2}}, \dfrac{\partial f}{\partial x_{3}}, \ldots, \dfrac{\partial f}{\partial x_{n}} \right]^T
     \label{eq:gradient}
 \end{equation}
 
-The probability of an event $E$, denoted by $P(E)$ is a value in the range $[0, 1]$ that indicates how likely that the $E$ will occu (\cite{probabilitydef}).
+An indefinite integral of a function $f(x)$ is a function $F(x)$, wherein $\frac{\text{d}F}{\text{d}x} = f(x)$. Alternatively, we can denote this as,
+
+\begin{equation}
+    \int f(x)~\text{d}x = F(x) + C
+    \label{eq:integral}
+\end{equation}
+
+Whereas, a definite integral of a function $f(x)$ over the regin $[a,b]$ is defined as follows,
+\begin{equation}
+    \int_{a}^{b} f(x)~\text{d}x = F(b) - F(a)
+    \label{eq:definite-integral}
+\end{equation}
+
+The probability of an event $E$, denoted by $P(E)$ is a value in the range $[0, 1]$ that indicates how likely that the $E$ will occur (\cite{probabilitydef}).
 
 
 A graph $G$ is a pair of two sets $(V, E)$ where $V$ is a set whose elements are called vertices, and $E$ is the set of unordered pairs $\{v_i, v_j\}$ for any connected vertices $v_i, v_j \in V$, whose elements are called edges (\cite{diestel2024graph}).
@@ -164,9 +177,9 @@ An example of a neural network is an image classifier. An image classifier takes
 
 The image can be represented as a two-dimensional $28 \times 28$ matrix, where each element represents the luminosity of the pixel value. As shown in Figure \ref{fig:nn-function}, the function $f$ outputs a $1 \times 10$ probability vector where the zero-based index of the largest element represents what is the predicted value for the digit. In this case the highest value is at the $7^{th}$ position, then this means that the predicted value is the number $7$. 
 
-% Here the neural network trains from a set $D$ composed of tuples with the first element being an image of a number represented as a $28\times 28$ matrix and the second one being the one-hot encoding representation of that number.
+Here the neural network trains from a set $D$ composed of tuples with the first element being an image of a number represented as a $28 \times 28$ matrix and the second one being the one-hot encoding representation of that number. 
 
-% One-hot encoding refers to the 
+One-hot encoding transforms a set of categorical labels $l_1, l_2, \ldots, l_{n}$ into vectors $v_1, \ldots, v_{n}$, where $v_i$ is a zero vector except for it's $i$th element being $1$. For example, if we have the labels $\{\text{cat}, \text{dog}, \text{bird}\}$, then its one-hot encoding are the vectors $\{[1,0,0], [0, 1, 0], [0, 0, 1]\}$.
 
 Neural networks are made up of one or more layers. Each layer accepts an input from previous layers and applies a differentiable function.
 
@@ -177,13 +190,6 @@ A linear layer applies the \verb|Linear| function defined by Equation \ref{eq:li
     \label{eq:linear}
 \end{equation}
 
-A two-dimensional convolution layer applies the \verb|Conv2D| function defined by Equation \ref{eq:2dconvolution} where $x$ is the two-dimensional input represented as an $n \times m$ matrix, $b$ is the bias matrix, $(p_u, p_v)$ is the padding, and $W$ is the convolution matrix also known as the kernel with indexes from $-k_u$ to $k_u$ and $-k_v$ to $k_v$ for each dimension respectively. Both $W$ and $b$ are learnable parameters. The dimensions of the output of a two-dimensional convolution layer depends on the dimensions of $W$ which can be configured according to \cite{DBLP:journals/corr/OSheaN15}
-
-\begin{equation}
-    \verb|Conv2D|(x) = b + \sum_{u = p_u}^{n - p_u} \sum_{v = p_v}^{m - p_v} \sum_{\delta_u = -k_u}^{k_u} \sum_{\delta_v = -k_v}^{k_v} W(\delta_u, \delta_v) \cdot x(u + \delta_u, v + \delta_v)
-    \label{eq:2dconvolution}
-\end{equation}
-
 A softmax layer applies the \verb|Softmax| function defined by Equation \ref{eq:softmax} where $x$ is an input tensor. The softmax layer rescales the input tensor so that the elements of the output tensor lie in the range $[0, 1]$ and sum to $1$.
 
 \begin{equation}
@@ -191,50 +197,98 @@ A softmax layer applies the \verb|Softmax| function defined by Equation \ref{eq:
     \label{eq:softmax}
 \end{equation}
 
+% A dropout layer randomly zeroes some of the elements of the input tensor with probability $p$. The zeroed elements are chosen independently for each forward call and are sampled from the Bernoulli Distribution.
+
+A two-dimensional convolution layer applies the \verb|Conv2D| function defined by Equation \ref{eq:2dconvolution} where $x$ is the two-dimensional input represented as an $n \times m$ matrix, $b$ is the bias matrix, $(p_u, p_v)$ is the padding, and $W$ is the convolution matrix also known as the kernel with indexes from $-k_u$ to $k_u$ and $-k_v$ to $k_v$ for each dimension respectively. Both $W$ and $b$ are learnable parameters. The dimensions of the output of a two-dimensional convolution layer depends on the dimensions of $W$ which can be configured according to \cite{DBLP:journals/corr/OSheaN15}
+
+\begin{equation}
+    \verb|Conv2D|(x) = b + \sum_{u = p_u}^{n - p_u} \sum_{v = p_v}^{m - p_v} \sum_{\delta_u = -k_u}^{k_u} \sum_{\delta_v = -k_v}^{k_v} W(\delta_u, \delta_v) \cdot x(u + \delta_u, v + \delta_v)
+    \label{eq:2dconvolution}
+\end{equation}
+
 According to \cite{vaswani2017attention}, an attention function maps a query to a set of key-value pairs to an output, where the query, keys, values, and outputs are all vectors. The output is computed as a weighted sum of the values, where the weight assigned to each value is computed by a compatibility function of the query with the corresponding key.
 
-A scaled-dot product attention layer applies the \verb|Attention| function defined by Equation \ref{eq:attention} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector. The queries and keys are vectors of dimension $d_k$, and values are of dimension $d_v$.
+A scaled-dot product attention layer applies the \verb|Attention| function defined by Equation \ref{eq:attention} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector. The queries and keys are vectors of dimension $d_k$, and the values are of dimension $d_v$.
 
 \begin{equation}
     \verb|Attention|(Q, K, V) = \verb|softmax|\left(\frac{QK^T}{\sqrt{d_k}}\right) V
     \label{eq:attention}
 \end{equation}
 
-A multi-head attention layer applies the \verb|MultiHead| function defined by Equation \ref{eq:multi-head} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector, $h$ is the number of heads, $d_k = d_v = d_{\text{model}}/h$, and the projection matrix $W^O \in \mathbb{R}^{hd_v \times d_\text{model}}$ is a learnable parameter. The queries, keys, and values are of the same dimension $d_{\text{model}}$.
+A multihead attention layer applies the \verb|MultiHead| function defined by Equation \ref{eq:multi-head} where $Q$ is the query vector, $K$ is the key vector, and $V$ is the value vector, $h$ is the number of heads, $d_k = d_v = d_{\text{model}}/h$, and the projection matrix $W^O \in \mathbb{R}^{hd_v \times d_\text{model}}$ is a learnable parameter. The queries, keys, and values are of the same dimension $d_{\text{model}}$.
 
 \begin{equation}
     \verb|MultiHead|(Q, K, V) = \verb|Concat|(\verb|head|_1,\dots,\verb|head|_h)W^O
     \label{eq:multi-head}
 \end{equation}
 
-A single head of the multi-head attention layer applies the function defined by Equation \ref{eq:single-head} where the projection matrices $W_i^Q \in \mathbb{R}^{d_\text{model} \times d_k}$, $W_i^K \in \mathbb{R}^{d_\text{model} \times d_k}$, and $W_i^V \in \mathbb{R}^{d_\text{model} \times d_v}$ are learnable parameters.
+A single head of the multihead attention layer applies the function defined by Equation \ref{eq:single-head} where the projection matrices $W_i^Q \in \mathbb{R}^{d_\text{model} \times d_k}$, $W_i^K \in \mathbb{R}^{d_\text{model} \times d_k}$, and $W_i^V \in \mathbb{R}^{d_\text{model} \times d_v}$ are learnable parameters.
 
 \begin{equation}
     \verb|head|_i = \verb|Attention|(QW_i^Q, KW_i^K, VW_i^V)
     \label{eq:single-head}
 \end{equation}
 
-A batch normalization layer applies the \verb|BatchNormalization| function defined by Equation \ref{eq:batch-normalization} to the input where $\gamma$ and $\beta$ are learnable parameters and $\epsilon$ is a small number typically equal to $1\times 10^{-5}$ (\cite{bjorck2018understanding}).
+% A batch normalization layer applies the \verb|BatchNormalization| function defined by Equation \ref{eq:batch-normalization} to the input where $\gamma$ and $\beta$ are learnable parameters and $\epsilon$ is a small number typically equal to $1\times 10^{-5}$ (\cite{bjorck2018understanding}).
+
+% \begin{equation}
+%     \verb|BatchNormalization|(x) = \gamma \cdot \frac{x - \text{mean}{(x)}}{\sqrt{\text{variance}(x) + \epsilon}} + \beta
+%     \label{eq:batch-normalization}
+% \end{equation}
+
+The batch $B$ of given inputs $x$ in a mini-batch of size $N$ is given by $B = \{x_1, x_2,\ \ldots,\ x_N\}$. Each sample of the mini-batch $x_i \in B$ has $K$ elements where the flattened sample $x_i = \{x_{i, 1},\ x_{i, 2},\ \ldots,\ x_{i, K}\}$.
+
+A batch normalization layer computes the mean $\mu_B$ of the samples from the mini-batch using Equation \ref{eq:mean_batch} and the variance $\sigma^2_B$ of the samples from the mini-batch using Equation \ref{eq:variance_batch}.
+
+\begin{align}
+    \mu_B &= \frac{1}{N}\sum_{n=1}^{N}x_{n} \label{eq:mean_batch} \\
+    \sigma^2_B  &= \frac{1}{N}\sum_{n=1}^{N}(x_{n} - \mu_B)^2 \label{eq:variance_batch}
+\end{align}
+
+This layer produces tensors $\{y_1, y_2,\ \ldots,\ y_N\}$ with $x_i$ and $y_i$ of the same dimensions using Equation \ref{eq:batchnorm} where $\varepsilon$ is a small number for numerical stability and $\gamma$ and $\beta$ are learnable scalar parameters. 
 
 \begin{equation}
-    \verb|BatchNormalization|(x) = \gamma \cdot \frac{x - \text{mean}{(x)}}{\sqrt{\text{variance}(x) + \epsilon}} + \beta
-    \label{eq:batch-normalization}
+    y_i = \gamma \frac{x_i - \mu_B}{\sqrt{\sigma_{B}^2 + \varepsilon}} + \beta
+    \label{eq:batchnorm}
 \end{equation}
 
-Activation layers applies a function to each element of the input. Non-linear activation layers introduces non-linearity to neural networks. Non-linear activation layers allows the neural network to model non-linear data (\cite{activation}).
+% layer norm
 
-A rectified linear unit (ReLU) layer is a non-linear activation layer that applies the \verb|ReLU| function defined by Equation \ref{eq:relu} to each of the element of its input (\cite{activation}). 
+A layer normalization layer computes the mean $\mu_i$ of each sample in the mini-batch using Equation \ref{eq:mean_layer} and the variance of each sample in the mini-batch $\sigma^2_i$ using Equation \ref{eq:variance_layer}.
+
+\begin{align}
+    \mu_i &= \frac{1}{K}\sum_{k=1}^{K}x_{i,k} \label{eq:mean_layer} \\
+    \sigma^2_i  &= \frac{1}{K}\sum_{k=1}^{K}(x_{i,k} - \mu_i)^2 \label{eq:variance_layer}
+\end{align}
+
+This layer produces tensors $\{y_1, y_2,\ \ldots,\ y_N\}$ with $x_i$ and $y_i$ of the same dimension using Equation \ref{eq:layernorm} using the equation shown in Equation \ref{eq:layernorm}, where $\varepsilon$ is a small number for numerical stability and $\gamma$ and $\beta$ are learnable scalar parameters.
+
+\begin{equation}
+    y_{i,k} = \gamma \frac{x_{i,k} - \mu_i}{\sqrt{\sigma^2_i + \varepsilon}} + \beta
+    \label{eq:layernorm}
+\end{equation}
+
+Activation layers apply a function to each element of the input. Nonlinear activation layers introduce nonlinearity to neural networks. Nonlinear activation layers allow the neural network to model nonlinear data (\cite{activation}).
+
+A rectified linear unit (ReLU) layer is a nonlinear activation layer that applies the \verb|ReLU| function defined by Equation \ref{eq:relu} to each element of its input (\cite{activation}). 
 
 \begin{equation}
     \verb|ReLU|(x) =  \max\{0, x\}
     \label{eq:relu}
 \end{equation}
 
-A leaky ReLU layer is a generalization of the ReLU layer. A leaky ReLU is a non-linear activation layer that applies the \verb|LeakyReLU| function defined by Equation \ref{eq:leakyrelu} where $s$ is the slope of the values below $0$. When $s=0$, the leaky ReLU layer simplifies to the ReLU layer (\cite{activation}).
+A leaky ReLU layer is a generalization of the ReLU layer. A leaky ReLU is a nonlinear activation layer that applies the \verb|LeakyReLU| function defined by Equation \ref{eq:leakyrelu} where $s$ is the slope of the values below $0$. When $s=0$, the leaky ReLU layer simplifies to the ReLU layer (\cite{activation}).
 
 \begin{equation}
     \verb|LeakyReLU|(x) = \max{\{0, x\}} + s \cdot \min{\{0, x\}}
     \label{eq:leakyrelu}
+\end{equation}
+
+A Gaussian Error Linear Units (GeLU) layer is a nonlinear activation layer that applies the \verb|GeLU| function defined by Equation \ref{eq:gelu} to each of the elements of its input (\cite{hendrycks2016gaussian}). 
+
+\begin{equation}
+    \verb|GeLU|(x) =  \frac{x}{2}\left(1+\frac{2}{\sqrt{\pi}}\int_0^{\frac{x}{\sqrt{2}}}e^{-t^2}~\text{d}t\right)
+    \label{eq:gelu}
 \end{equation}
 
 A flatten layer takes an input $x$ of any dimension and transforms it into a 1-dimensional array (\cite{wilamowski2009neural}).
@@ -245,6 +299,34 @@ A flatten layer takes an input $x$ of any dimension and transforms it into a 1-d
 % The main component of a CNN is a convolution layer. It
 
 % As denoted in \cite{Popic_Boskovic_Brest_2021} the model contains convolution layers followed by normalization layers to stabilize the inputs and make the training faster and more stable. This layer is also called  called batch normalization as denoted by ``Normalization'' in Figure \ref{fig:popic-nn}.
+
+\section{Vision Transformers}
+
+The vision transformer is a neural network architecture of \cite{dosovitskiy2021imageworth16x16words} that takes patches of an input image and applies self-attention to perform image processing tasks. Image patching is done to avoid the quadratic cost of the self-attention mechanism on images because a naive method of having a pixel attending to every other pixel does not scale to a realistic input size of images having high dimensions. An overview of the vision transformer architecture is shown in Figure \ref{fig:original-vit}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=0.5\linewidth]{images/VisionTransformer.png}
+    \caption{Vision Transformer Architecture by \cite{dosovitskiy2021imageworth16x16words}}
+    \label{fig:original-vit}
+\end{figure}
+
+The embedding layer of the model takes the flattened patches of an image and passes them through a linear projection. Linear projection applies a linear layer to the image patches to turn them into their vector representations called patch embeddings of a lower embedding dimension. Patch embeddings encode semantic information learned by the embedding layer through training. The encoded semantic information learned by the network is in a format optimized for the self-attention mechanism for image processing tasks.
+
+Inspired by \cite{bert}, the authors of the vision transformer prepend a single learnable embedding called the classifier token (CLS) to the sequence of embedded patches before it passes to the transformer encoder. The CLS token is the input to the output head and is required to carry all the necessary global information from the entire sequence of image patches for image-processing tasks. Position embeddings are added to the patch embedding to retain positional information.
+
+The transformer encoder is made up of a number of encoder blocks which is composed of alternating multihead attention layers and multilayer perceptrons with layer normalization residual layers in between. The multihead attention layers allow the model to take self-attention to the different patches of the image along different positions with a number of attention heads. The Multilayer Perceptrons Layer (MLP) in the transformer encoder is made up of a linear layer that expands its input to have a dimension denoted as the MLP hidden size, followed by a GeLU activation function, and finally another linear layer that contracts the dimension back to the original dimension of its input.
+
+The transformer encoder allows the model to learn information regarding the patches of the images, to think about what it learns, and to summarize them into the CLS token on its final layer. The CLS token from the transformer encoder is then passed to another MLP called an output head. The MLP of the output head takes the CLS token as input and passes it to a linear layer that expands the number of dimensions to the output. This allows the model to make inferences about the image based on the information regarding the patches of the image learned by the CLS token.
+
+A further improvement by \cite{fuller2025simpler} replaces the single CLS token of the vision transformer with a jumbo CLS token by increasing its width. As shown in Figure \ref{fig:jumbo-cls}, the jumbo CLS token is split into a number of CLS tokens that are passed to the transformer encoder. The transformer encoder then concatenates the multiple CLS tokens into a single jumbo CLS token as output. The feed forward network (FFN) is just a multilayer perceptron. The jumbo CLS token increases the capacity of the CLS token to carry information. This allows the architecture to encode more information about the entire sequence of image patches.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/jumbo_cls.png}
+    \caption{Jumbo CLS Token passing to Layer of the Transformer Encoder by \cite{fuller2025simpler}}
+    \label{fig:jumbo-cls}
+\end{figure}
 
 \section{Training}
 
@@ -345,9 +427,35 @@ The Stochastic Gradient Descent (\verb|SGD|) with Momentum shown in Algorithm \r
     \Require The learning rate $\eta$, loss function $\mathcal{L}$, momentum $\rho$, and learnable parameters $\theta$ of each layers of the neural network.
     \State $\delta \gets \nabla \mathcal{L}$
     \Function{SGD}{$\eta$, $\mathcal{L}$, $\rho$, $\theta$}
-        \State $\delta  \gets \rho \delta - \eta\nabla\mathcal{L}$ 
-        \State $\theta \gets \theta - \delta $
+        \For{$t = 1, \ldots$}
+            \State $\delta  \gets \rho \delta - \eta\nabla\mathcal{L}$ 
+            \State $\theta \gets \theta - \delta $
+        \EndFor
     \EndFunction{}
+\end{algorithmic}
+\end{algorithm}
+
+The Adaptive Moment Estimation with Decoupled Weight Regularization (\verb|AdamW|) shown in Algorithm \ref{alg:adamw} is an optimizer that replaces the actual gradient of loss calculated from the entire set of data by an estimate calculated from a randomly selected subset of the data with adaptive momentum keeps track of the update to the parameters at each iteration and determines the next update as a linear combination of the gradient and the previous update.
+
+\begin{algorithm}[htb]
+\caption{Adaptive Moment Estimation with Decoupled Weight Regularization}
+\label{alg:adamw}
+\begin{algorithmic}
+    \Require The learning rate $\eta$, loss function $\mathcal{L}$,  and learnable parameters $\theta$ of each layers of the neural network.
+
+    \State $m_0 \gets 0$
+    \State $v_0 \gets 0$
+    \State $v_0^{\text{max}} \gets 0$
+    \Function{SGD}{$\eta$, $\mathcal{L}$, $\rho$, $\theta$}
+        \For{$t = 1, \ldots$}
+            \State $g_t \gets -\nabla f_t(\theta_{t-1})$
+            \State $\theta_t \gets \theta - \eta \lambda \theta_{t-1}$
+            \State $m_t \gets \beta_1 m_{t-1}  + (1- \beta_1) g_t^{2}$
+            \State $\hat{m_t} \gets \dfrac{m_t}{1-\beta_1^{t}}$
+            \State $\hat{v_t}\gets \dfrac{v_t}{1 - \beta_2^{t}}$
+            \State $\theta_t \gets \theta_t - \eta\dfrac{\hat{m_t}}{\sqrt{\hat{v_t} + \epsilon}}$
+        \EndFor
+    \EndFunction
 \end{algorithmic}
 \end{algorithm}
 
@@ -562,7 +670,7 @@ Two player agents with their own game tree and neural network were used in \cite
 
 \begin{table}[htb]
     \centering
-    \begin{tabular}{lll}
+    \begin{tabular}{llp{7cm}}
         \hline
         Parameter                & Value & Description                                                \\ \hline
         \verb!EPISODES!          & 50    & number of self-play games for data creation                \\
@@ -664,7 +772,7 @@ Damath is very similar to the game of Checkers, except that the checkerboard has
  
 If there is an opponent's figure in the path of the move and the square behind that figure is vacant, the player must capture the opponent's figure by jumping over it and removing it from the playing board. The capturing figure must perform a calculation based on the mathematical operator where the capturing figure lands. If multiple such successive captures exist, the player must perform them all in one move. The result of the calculation is added to the score of the player who captured the piece.
 
-If the player reaches opponent’s side of the board, the player's figure turns into a dama and hence has the ability to move diagonally forward and backward. Game is won if the opponent has no figures left on the board or is out of possible legal moves. The game ends in a draw if no pieces have been captured in the last 40 moves.
+If the player reaches opponent’s side of the board, the player's figure turns into a dama and hence has the ability to move diagonally forward and backward. Dama pieces that may successively capture enemy pieces must be the first to capture if a normal piece has the same number of successive captures. If a dama piece captures a normal piece or a normal piece capture a dama piece, the score to be added to the final score should be doubled. If a dama piece capture a dama piece, the score to be added to the final score should be quadrupled instead. Game is won if the opponent has no figures left on the board or is out of possible legal moves. The game ends in a draw if no pieces have been captured in the last 80 moves of both players.
  
 
 \section{Existing AI Models for Damath}

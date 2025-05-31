@@ -1,9 +1,9 @@
 \chapter{Methodology}
 
-This paper is based on the ideas of the AlphaZero framework applied to the game of Damath. Damath is a two-player board game combining the Filipino Checkers ``Dama'' and Mathematics. Each piece has a corresponding number and every  white square on the board has a mathematical operation. The researchers implemented the AlphaZero framework as a cycle of three stages. The researchers first generates data through self-play using the modified Monte-Carlo Tree Search algorithm of AlphaZero. Afterwards, the model is trained on the data generated from self-play. Finally, the current version of the model is evaluated against the previous model through competition.
+This paper is based on the ideas of the AlphaZero framework applied to the game of Damath. Damath is a two-player board game combining the Filipino Checkers ``Dama'' and Mathematics. Each piece has a corresponding number and every white square on the board has a mathematical operation. The researchers used the same architecture as a vision transformer and implemented the AlphaZero framework to train this model. The process in the AlphaZero framework is a cycle of three stages. The process first generates data through self-play using the modified Monte-Carlo Tree Search algorithm of AlphaZero. Afterwards, the model is trained on the data generated from self-play. Finally, the current version of the model is evaluated by pitting it against the previous model through competition.  After this process is completed, the final model is pitted against previous models and an expert Damath player for analysis of the model's competence.
 
 \section{State Representation}
-% ADVISER COMMENT (DON'T DELETE): add an example of the matrix
+% ADVISERwCOMMENT (DON'T DELETE): add an example of the matrix
 The state of the game is encoded as a $32 \times 23$ matrix where each row in the matrix represents a white cell on the board and each column represents a feature as shown in Table \ref{tab:state-representation-damath}. 
 
 % ADVISER COMMENT (DON'T DELETE): need to rewrite this sentence to make it clearer. what happened eo the columns of the matrix?
@@ -12,21 +12,21 @@ The state of the game is encoded as a $32 \times 23$ matrix where each row in th
   \centering
   \begin{tabular}{lll}
     \hline 
-    Dimension & Type    & Feature                                                  \\ \hline
-    0         & Boolean & Current Player of the Game                               \\
-    1-13      & Boolean & Value of the Piece on the Current Cell                   \\
-    14        & Boolean & Dama Status of Piece on the Current Cell                 \\
-    15        & Boolean & Owner of the Piece on the Current Cell                   \\
-    16        & Float   & Relative Score of the Current Player of the Game         \\
-    17        & Float   & Current Draw Count of the Game                           \\
-    18-21     & Boolean & Board Operator on the Current Cell                       \\
-    22        & Boolean & Multiple Capture Status of the Piece on the Current Cell \\ \hline
+    Column & Type    & Feature                                                  \\ \hline
+    1         & Boolean & Current Player of the Game                               \\
+    2-14      & Boolean & Value of the Piece on the Current Cell                   \\
+    15        & Boolean & Dama Status of Piece on the Current Cell                 \\
+    16        & Boolean & Owner of the Piece on the Current Cell                   \\
+    17        & Float   & Relative Score of the Current Player of the Game         \\
+    18        & Float   & Current Draw Count of the Game                           \\
+    19-22     & Boolean & Board Operator on the Current Cell                       \\
+    23        & Boolean & Multiple Capture Status of the Piece on the Current Cell \\ \hline
   \end{tabular}
   \caption{State Representation of Damath}
   \label{tab:state-representation-damath}
 \end{table}
 
-To understand this further, we provide the encoded state representation of a state with the 10 dama piece of the red player performing a multiple capture move as shown in Equation \ref{eq:example-state-representation} and the current red player having a relative score of 0.6.
+To understand this further, we provide the example state representation of a state with the 10 dama piece of the red player performing a multiple capture move as shown in Figure \ref{fig:example-state-representation} and the current red player having a relative score of 0.6.
 
 \newcommand{\gz}{\textcolor{black!10}{0}}
 \newcommand{\gs}{\textcolor{black!10}{0.6}}
@@ -36,8 +36,11 @@ To understand this further, we provide the encoded state representation of a sta
 \newcommand{\ro}{\textcolor{red}{1}}
 \setcounter{MaxMatrixCols}{23}
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+% ADVISER COMMENT (DON'T DELETE,2025-05-30): try to make the equation/image a bit larger. if necessary make this into an image instead of an equation. at the very least, make the image (example_state.png) larger
+
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \textcolor{black!60}{0.6} & \gz & 1   & \gz & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \textcolor{black!60}{0.6} & \gz & \gz & 1   & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \textcolor{black!60}{0.6} & \gz & \gz & \gz & \gz & 1   & \gz \\
@@ -71,13 +74,16 @@ To understand this further, we provide the encoded state representation of a sta
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \textcolor{black!60}{0.6} & \gz & \gz & 1   & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \textcolor{black!60}{0.6} & \gz & 1   & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation}
+    \label{fig:example-state-representation}
+\end{figure}
 
-The zeroth dimension represents whether the current player is a red player or a black player, as shown as the red cells in the example shown in Equation \ref{eq:example-state-representation-zero}. The values in this dimension are the same for all cells. This dimension is all zero when the current player of the game is the red player and all one when the current player of the game is the black player. This dimension tells whether the normal pieces of the current player move forward in the case of the red player or backward for the black player.
+The first column represents whether the current player is a red player or a black player, as shown as the red cells in the example shown in Figure \ref{fig:example-state-representation-first}. The values in this column are the same for all cells. This column is all zero when the current player of the game is the red player and all one when the current player of the game is the black player. This dimension tells whether the normal pieces of the current player are capable of moving forward in the case of the red player or backward for the black player.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \rz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz \\
             \rz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \rz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \gz & \gz & \go & \gz \\
@@ -111,13 +117,16 @@ The zeroth dimension represents whether the current player is a red player or a 
             \rz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \rz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-zero}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Current Player Highlighted}
+    \label{fig:example-state-representation-first}
+\end{figure}
 
-The first to thirteenth dimension represents the one-hot encoding of the value of the current piece in the cell as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-one-13}. The values of these dimensions are all zero if there is currently no piece in the cell. Twelve dimensions are used to represent one of the twelve different values a piece may have. The values of all of these dimensions are zero except for a single dimension that has a value of one if it corresponds to the value of the current piece on the cell.
+The second to fourteenth column represents the one-hot encoding of the value of the current piece in the cell as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-second-fourteenth}. The values of these columns are all zero if there is currently no piece in the cell. Twelve dimensions are used to represent one of the twelve different values a piece may have. The values of all of these dimensions are zero except for a single dimension that has a value of one if it corresponds to the value of the current piece on the cell.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz \\
             \gz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \gz & \gz & \gs & \gz & \gz & \gz & \gz & \go & \gz \\
@@ -151,13 +160,16 @@ The first to thirteenth dimension represents the one-hot encoding of the value o
             \gz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \rz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-one-13}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Current Piece Type Highlighted}
+    \label{fig:example-state-representation-second-fourteenth}
+\end{figure}
 
-The fourteenth dimension represents the dama status of the current piece in the cell as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-14}. The value of this dimension is zero if the current piece on the cell is a normal piece and one if the current piece on the cell is a dama piece. This dimension tells whether the current piece on the cell is a dama piece that can move in all four directions and move more than one distance at a time or not.
+The fifteenth column represents the dama status of the current piece in the cell as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-fifteenth}. The value of this column is zero if the current piece on the cell is a normal piece and one if the current piece on the cell is a dama piece. This column tells whether the current piece on the cell is a dama piece that can move in all four directions and move more than one distance at a time or not.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gz & \gs & \gz & \gz & \gz & \gz & \go & \gz \\
@@ -191,13 +203,16 @@ The fourteenth dimension represents the dama status of the current piece in the 
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-14}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Dama Status Highlighted}
+    \label{fig:example-state-representation-fifteenth}
+\end{figure}
 
-The 15th dimension represents the owner of the piece in the current cell as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-15}. The value of this dimension is one if the current player owns the piece in the current cell and zero if not. This dimension tells whether the current player owns the piece in the current cell and can make a valid move with it.
+The sixteenth column represents the owner of the piece in the current cell as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-sixteenth}. The value of this column is one if the current player owns the piece in the current cell and zero if not. This column tells whether the current player owns the piece in the current cell and can make a valid move with it.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gs & \gz & \go & \gz & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gs & \gz & \gz & \gz & \gz & \go & \gz \\
@@ -231,13 +246,16 @@ The 15th dimension represents the owner of the piece in the current cell as show
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rz & \gs & \gz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-15}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Piece Owner Highlighted}
+    \label{fig:example-state-representation-sixteenth}
+\end{figure}
 
-The sixteenth dimension represents the relative score of the current player as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-16}. This dimension is the same for all cells. A \verb|softmax| operation is applied first to the players' scores making them add up to one. The score of the current player after applying the \verb|softmax| operation is now relative to the sum of the player scores in the range of $0$ to $1$.
+The seventeenth column represents the relative score of the current player as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-seventeenth}. This column is the same for all cells. A \verb|softmax| operation is applied first to the players' scores making them add up to one. The score of the current player after applying the \verb|softmax| operation is now relative to the sum of the player scores in the range of $0$ to $1$.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rs & \gz & \go & \gz & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rs & \gz & \gz & \gz & \gz & \go & \gz \\
@@ -271,13 +289,16 @@ The sixteenth dimension represents the relative score of the current player as s
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rs & \gz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \rs & \gz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-16}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Relative Score Highlighted}
+    \label{fig:example-state-representation-seventeenth}
+\end{figure}
 
-The 17th dimension represents the current draw count of the game as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-17}. This dimension is the same for all cells. The value of this dimension is equal to the number of consecutive moves that have been played without any capture divided by 80 making it in the range of $0$ to $1$. The game ends when the value of this dimension reaches $1$.
+The eighteenth column represents the current draw count of the game as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-eighteenth}. This column is the same for all cells. The value of this column is equal to the number of consecutive moves that have been played without any capture divided by 80 making it in the range of $0$ to $1$. The game ends when the value of this column reaches $1$.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \rz & \go & \gz & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \rz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \rz & \gz & \gz & \gz & \go & \gz \\
@@ -311,13 +332,16 @@ The 17th dimension represents the current draw count of the game as shown as red
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \rz & \gz & \go & \gz & \gz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \rz & \go & \gz & \gz & \gz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-17}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Draw Count Highlighted}
+    \label{fig:example-state-representation-eighteenth}
+\end{figure}
 
-The 18th to 21st dimension represents the one-hot encoding of the board operator on the current cell as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-18-21}. Four dimensions are used to represent one of the four different operators a cell may have. The values of all of these dimensions are zero except for a single dimension that has a value of one if it corresponds to the board operator on the cell.
+The nineteenth to twenty-second column represents the one-hot encoding of the board operator on the current cell as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-nineteenth-twenty-second}. Four dimensions are used to represent one of the four different operators a cell may have. The values of all of these dimensions are zero except for a single dimension that has a value of one if it corresponds to the board operator on the cell.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \ro & \rz & \rz & \rz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \rz & \ro & \rz & \rz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \rz & \rz & \rz & \ro & \gz \\
@@ -351,13 +375,16 @@ The 18th to 21st dimension represents the one-hot encoding of the board operator
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \rz & \ro & \rz & \rz & \gz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \ro & \rz & \rz & \rz & \gz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-18-21}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Board Operator Highlighted}
+    \label{fig:example-state-representation-nineteenth-twenty-second}
+\end{figure}
 
-The 22nd dimension represents the multiple capture status of the piece in the current cell as shown as red cells in the example shown in Equation \ref{eq:example-state-representation-22}. The value of this dimension is one if the piece in the current cell is in the middle of a multiple capture and zero if not. This dimension tells whether the piece on the current cell is the only piece that may move for the current game and should continue the multiple capture move.
+The twenty-third dimension represents the multiple capture status of the piece in the current cell as shown as red cells in the example shown in Figure \ref{fig:example-state-representation-twenty-third}. The value of this dimension is one if the piece in the current cell is in the middle of a multiple capture and zero if not. This dimension tells whether the piece on the current cell is the only piece that may move for the current game and should continue the multiple capture move.
 
-\begin{equation}
-        \texttt{Encode}\left(\begin{gathered}\includegraphics[width=0.2\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.3\textwidth}{!}{$\begin{bmatrix}
+\begin{figure}[H]
+    \begin{equation*} 
+        \verb|Encode|\left(\begin{gathered}\includegraphics[width=0.4\linewidth]{images/example_state.png}\end{gathered}\right) = \resizebox{0.4\textwidth}{!}{$\begin{bmatrix}
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \rz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \rz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \gz & \gz & \go & \rz \\
@@ -391,8 +418,10 @@ The 22nd dimension represents the multiple capture status of the piece in the cu
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \gz & \go & \gz & \gz & \rz \\
             \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gz & \gs & \gz & \go & \gz & \gz & \gz & \rz
         \end{bmatrix}$}
-        \label{eq:example-state-representation-22}
-\end{equation}
+    \end{equation*}
+    \caption{Example State Representation with the Multiple Capture Status Highlighted}
+    \label{fig:example-state-representation-twenty-third}
+\end{figure}
 
 \section{Action Representation}
 
@@ -430,27 +459,30 @@ The position of the piece, the direction it takes and the distance it covers can
 
 \section{Model Architecture}
 
-The neural network $f_{\theta}$ in the original AlphaZero paper by \cite{silver2017masteringchessshogiselfplay} takes as input a state $s$ and produces a tuple $f_{\theta}(s) = (p, v)$, where $p$ is a probability distribution over legal actions, and $v \in [-1, 1]$ is a scalar value that estimates the expected outcome from state $s$.
+The neural network $f_{\theta}$ in the original AlphaZero paper by \cite{silver2017masteringchessshogiselfplay} takes an input state $s$ and produces a tuple $f_{\theta}(s) = (p, v)$ where $p$ is the policy vector which contains all the probabilities of all actions defined by the action space, and $v \in [-1, 1]$ is the value scalar that estimates the expected outcome of the current state of the game $s$. The input state $s$ used in this study is obtained by getting the encoded state of the current state of the game. The policy vector $p$ is masked against the legal actions of the current game before being used by the MCTS algorithm to prevent the model from assigning probabilities to illegal actions. The value scalar $v$ estimates that the outcome of the game is a loss when it is close to $-1$, a draw when it is close to zero and a win when it is close to $1$.
 
-According to \cite{dosovitskiy2021imageworth16x16words}, recent developments in the field of computer vision have shown that vision transformers are capable of beating convolutional neural networks in image recognition tasks. A further improvement by \cite{fuller2025simpler} replaces the single CLS token of the vision transformer with multiple CLS tokens concatenated into a single jumbo CLS token. This paper replaces the deep convolutional neural network architecture used by \cite{Popic_Boskovic_Brest_2021} and uses a vision transformer with a jumbo CLS token architecture. A summary of all the values used for the model architecture is shown in Table \ref{tab:model-configuration-summary}.
+% ADVISER COMMENT (DON'T DELETE): change "paper" to either study, research, or work
+This study replaced the value scalar with a three-dimensional win-draw-loss (WDL) vector $v_{\text{WDL}} = (p_w, p_d, p_l)$ inspired by \cite{czech2024representationmattersmasteringchess} where $v_{\text{WDL}}$ is the WDL vector, $p_w$ is the probability of winning, $p_d$ is the probability of having a draw, and $p_l$ is the probability of losing with $p_w + p_d + p_l = 1$. This representation provides the model with richer outcome information, allowing it to explicitly differentiate between winning, drawing, and losing probabilities rather than collapsing this information into a single scalar value. The MCTS implementation still requires a scalar value for backpropagation that is computed by $v = p_w - p_l$.
+
+According to \cite{dosovitskiy2021imageworth16x16words}, recent developments in the field of computer vision have shown that vision transformers are capable of beating Convolutional Neural Networks in image recognition tasks. This paper replaces the model architecture used by \cite{Popic_Boskovic_Brest_2021} from a deep Convolutional Neural Network architecture to a Vision Transformer with a jumbo CLS token architecture. The vision transformer with a jumbo CLS token model architecture would be used to infer the WDL probabilities and the action priors of a state of a game. A summary of all the values used for the model architecture is shown in Table \ref{tab:model-configuration-summary}.
 
 \begin{table}[H]
   \centering
   \begin{tabular}{llp{7.5cm}}
     \hline 
-    Configuration                  & Value & Description                                                         \\ \hline
-    \texttt{embedding\_dim}        & 256   & The embedding dimension of a piece.                                 \\
-    \texttt{num\_cls\_tokens}      & 8     & The size of the jumbo CLS tokens.                                   \\
-    \texttt{num\_blocks}           & 16    & The number of transformer encoder blocks.                           \\
-    \texttt{num\_attention\_heads} & 16    & The  number of attention heads of each multi-head attention layers. \\
-    \texttt{mlp\_hidden\_size}     & 512   & The hidden size of the linear layer of the multilayer perceptron.   \\
-    \texttt{mlp\_dropout\_ratio}   & 0.1   & The dropout ratio of the multilayer perceptron.                     \\ \hline
+    Configuration              & Value & Description                                                         \\ \hline
+    \verb|embedding_dim|       & 256   & The embedding dimension of a piece.                                 \\
+    \verb|num_cls_tokens|      & 8     & The size of the jumbo CLS tokens.                                   \\
+    \verb|num_blocks|          & 16    & The number of transformer encoder blocks.                           \\
+    \verb|num_attention_heads| & 16    & The  number of attention heads of each multi-head attention layers. \\
+    \verb|mlp_hidden_size|     & 512   & The hidden size of the linear layer of the multilayer perceptron.   \\
+    \verb|mlp_dropout_ratio|   & 0.1   & The dropout ratio of the multilayer perceptron.                     \\ \hline
   \end{tabular}
   \caption{Summary of All of the Values Used for the Model Architecture}
   \label{tab:model-configuration-summary}
 \end{table}
 
-The architecture shown in Figure \ref{fig:jumbo-vit} takes the $32 \times 23$ matrix representation of the current state of the game as input to the model. The input then passes to an embedding layer that outputs a jumbo CLS token and the input embedding concatenated together. The jumbo CLS token and input embedding concatenated together then passes to a transformer encoder. After passing through the transformer encoder, the rest of the output besides the jumbo CLS token is discarded. The output of the jumbo CLS token is flattened and passed to the WDL and Policy head of the model.
+The architecture shown in Figure \ref{fig:jumbo-vit} takes the $32 \times 23$ matrix representation of the current state of the game as input to the model. The input then passes to an embedding layer that outputs a jumbo CLS token and the input embedding concatenated together. The jumbo CLS token and input embedding concatenated together then passes to a transformer encoder. After passing through the transformer encoder, the output of the jumbo CLS token is flattened and passed to the WDL and Policy head of the model.
 
 \begin{figure}[H]
     \centering
@@ -460,9 +492,17 @@ The architecture shown in Figure \ref{fig:jumbo-vit} takes the $32 \times 23$ ma
 \end{figure}
 
 % ADVISER COMMENT (DON'T DELETE): need to define what the variable represent and what the values are
-The input to the embedding layer used in the model first passes to a linear layer with a $23 \times \verb|embedding_dim|$ weight matrix and the output of this layer is the input embedding. A $\verb|num_cls_tokens| \times \verb|embedding_dim|$ jumbo CLS token is concatenated to the beginning of the input embedding before passing through a layer normalization layer. A learnable positional embedding of size $\verb|num_cls_tokens| + 32 \times \verb|embedding_dim|$ is then added to the jumbo CLS token and the input embedding concatenated together.
+% ADVISER COMMENT (DON'T DELETE,2025-05-30): still need to define what the variables represent and if possible what the values are. EX: what is "num_cls_tokens"? what does it represent? what is the value used for this?
 
-The transformer encoder used in the model architecture as shown in Figure \ref{fig:transformer-encoder} is made up of \verb|num_blocks| blocks followed by a layer normalization layer. The input to a transformer encoder block is first stored in a residual layer. The input then passes to a layer normalization layer. The output then passes to a multi-head attention layer with \verb|num_attention_heads| heads. The residual layer is added back to the output. The output is stored in a new residual layer. The output then passes through another layer normalization layer. The output then passes through a multilayer perceptron. The residual layer is added back to the output. 
+% RESEARCHER'S REPLY (2025-05-31): we added a new section to the preliminaries explaining the various parts of a vision transformer. each variable shown in the table has description matching those that are found in the preliminary. additionally, we also added explanation to each variables every time they show up in the methodology.
+
+The input to the embedding layer used in the model first passes to a linear layer with a $23 \times \verb|embedding_dim|$ weight matrix and the output of this layer is the input embedding. The \verb|embedding_dim| is the number of dimensions of the embedding vector of a cell. Each dimension of the embedding vector encodes a learned feature of the cell that the model learns during the training phase. These learned features are the model's understanding of a specific cell in the board. An example of a feature of a cell that the model might learn is the specific numeric value of the piece that the cell currently contains.
+
+% The internal representation of the state used by the model is the embedding vector obtained by applying the embedding layer to the encoded game state. By increasing the number of \verb|embedding_dim|, the model will be able to encode and learn more information about the cell and its features. This learned embedding captures the semantic meaning of each cell's state in a format optimized for the transformer's attention mechanisms to process spatial and strategic relationships across the Damath board.
+
+The researchers prepend multiple learnable embeddings to the input embedding before passing through a layer normalization layer. These learnable embeddings concatenated into a single vector is the jumbo CLS token with a width of $\verb|num_cls_tokens|$. The jumbo CLS token carries all the necessary global information from the entire sequence of board cells. A $\verb|num_cls_tokens| + 32 \times \verb|embedding_dim|$ learnable positional embedding is added to the input embedding to retain positional information.
+
+The transformer encoder used in the model architecture as shown in Figure \ref{fig:transformer-encoder} is made up of \verb|num_blocks| blocks followed by a layer normalization layer. The variable \verb|num_blocks| denotes the number of blocks as defined in Figure \ref{fig:transformer-encoder}, it also controls how deep the model is. A deeper model would let the model think and learn more about the game at the expense of longer training time.
 
 \begin{figure}[H]
     \centering
@@ -471,7 +511,11 @@ The transformer encoder used in the model architecture as shown in Figure \ref{f
     \label{fig:transformer-encoder}
 \end{figure}
 
-The multilayer perceptron used inside a transformer encoder block is shown in Figure \ref{fig:encoder-mlp}. The input to the multilayer perceptron first passes through a linear layer with a $\verb|embedding_dim| \times \verb|mlp_hidden_size|$ weight matrix. The Gaussian linear error units function is then applied to the output. The output is then passed to another linear layer with a $\verb|mlp_hidden_size| \times \verb|embedding_dim|$ weight matrix. The output then finally passes to a dropout layer with a \verb|mlp_dropout_prob| probability of an element to be zeroed.
+The input to a transformer encoder block is first stored in a residual layer. The input then passes to a layer normalization layer. The output then passes to a multi-head attention layer with \verb|num_attention_heads| heads. This variable indicates the number of attention heads as defined in Equation \ref{eq:single-head}. The residual layer is added back to the output. The output is stored in a new residual layer. The output then passes through another layer normalization layer. The output then passes through a multilayer perceptron. The residual layer is added back to the output. 
+
+The multilayer perceptron layer (MLP) used inside a transformer encoder block is shown in Figure \ref{fig:encoder-mlp}. The input to the MLP first passes through a linear layer with a weight matrix $\verb|embedding_dim| \times \verb|mlp_hidden_size|$. The Gaussian linear error units function is then applied to the output. The output is then passed to another linear layer with a $\verb|mlp_hidden_size| \times \verb|embedding_dim|$ weight matrix. The \verb|mlp_hidden_size| indicates the dimension of the hidden layer as defined in Figure \ref{fig:original-vit}.
+
+The output then finally passes to a dropout layer with a \verb|mlp_dropout_prob| probability of an element to be zeroed. The dropout layer turns off some parameters of the model by turning them into zero based on the \verb|mlp_dropout_prob| probability. This reduces the overfitting of the model, where it performs well on training data but fails massively on new data. This prevents backpropagation of the loss in the zeroed parameters, forcing other parameters of the layer to assume more or less responsibility by taking a probabilistic approach. 
 
 \begin{figure}[H]
     \centering
@@ -480,7 +524,7 @@ The multilayer perceptron used inside a transformer encoder block is shown in Fi
     \label{fig:encoder-mlp}
 \end{figure}
 
-The WDL head shown in Figure \ref{fig:wdl-head} first passes the flattened output of the jumbo CLS tokens through a linear layer with a $\verb|num_cls_tokens| * \verb|embedding_dim| \times 3$ weight matrix followed by a \verb|softmax| layer. The policy shown in Figure \ref{fig:policy-head} just passes the flattened output of the jumbo CLS tokens through a linear layer with a $\verb|num_cls_tokens| * \verb|embedding_dim| \times 8 * 8 * 4 * 7$ weight matrix. 
+The WDL head shown in Figure \ref{fig:wdl-head} first passes the flattened output of the jumbo CLS tokens through a linear layer with a weight matrix of size $\verb|num_cls_tokens| \times \verb|embedding_dim| \times 3$ followed by a \verb|softmax| layer. The policy head shown in Figure \ref{fig:policy-head} just passes the flattened output of the jumbo CLS tokens through a linear layer with a weight matrix of size $\verb|num_cls_tokens| \times \verb|embedding_dim| \times 8 \times 8 \times  4 \times 7$.
 
 \begin{figure}[H]
     \centering
@@ -501,9 +545,6 @@ The WDL head shown in Figure \ref{fig:wdl-head} first passes the flattened outpu
     \label{fig:model-output}
 \end{figure}
 
-This study % ADVISER COMMENT (DON'T DELETE): change "paper" to either study, research, or work
-replaced the scalar value output with a three-dimensional win-draw-loss (WDL) vector $v_{\text{WDL}} = (p_w, p_d, p_l)$ inspired by \cite{czech2024representationmattersmasteringchess} where $v_{\text{WDL}}$ is the WDL vector, $p_w$ is the probability of winning, $p_d$ is the probability of having a draw, and $p_l$ is the probability of losing with $p_w + p_d + p_l = 1$. This representation provides the model with richer outcome information, allowing it to explicitly differentiate between winning, drawing, and losing probabilities rather than collapsing this information into a single scalar value. The MCTS implementation still requires a scalar value for backpropagation which is computed by $v = p_w - p_l$.
-
 \section{Model Generation}
 
 The ultimate goal of the paper is to produce a model that can beat human players in the game of Damath, it has three phases the self-play data generation, model training and model evaluation. These three phases are repeated \verb|num_iterations| times, with each iteration producing a better model. A summary of all the parameters used in model generation is shown in Table \ref{tab:configuration-summary}.
@@ -512,16 +553,16 @@ The ultimate goal of the paper is to produce a model that can beat human players
   \centering
   \begin{tabular}{llp{7.5cm}}
     \hline 
-    Parameter                             & Value              & Description                                                                  \\ \hline
-    \texttt{num\_iterations}              & 20                 & The number of learning iterations.                                           \\
-    \texttt{num\_self\_play\_games}       & $1 \times 10^4$    & The number of self-play games per learning iteration.                        \\
-    \texttt{num\_self\_play\_simulations} & 100                & The number of simulations performed for self-play data generation.           \\
-    \texttt{num\_training\_epochs}        & 10                 & The number of training epochs.                                               \\
-    \texttt{num\_evaluation\_games}       & 100                & The number of games for evaluating the best model against the current model. \\
-    \texttt{num\_evaluation\_simulations} & 100                & The number of simulations made for each rounds of evaluation.                \\
-    \texttt{learning\_rate}               & $1 \times 10^{-3}$ & The learning rate used for training the model.                               \\
-    \texttt{batch\_size}                  & 1024               & The batch size used for training.                                            \\
-    \texttt{temperature}                  & 1.25               & The temperature value used in self play.                                     \\ \hline
+    Parameter                         & Value              & Description                                                                  \\ \hline
+    \verb|num_iterations|             & 20                 & The number of learning iterations.                                           \\
+    \verb|num_self_play_games|        & $5000$             & The number of self-play games per learning iteration.                         \\
+    \verb|num_self_play_simulations|  & 100                & The number of MCTS simulations performed for each move for game during the self-play data generation phase.           \\
+    \verb|num_training_epochs|        & 10                 & The number of training epochs. This refers to the number of size the model is exposed through the whole dataset made throughout the self-play data generation phase.                                              \\
+    \verb|num_evaluation_games|       & 100                & The number of games for evaluating the best model against the current model. \\
+    \verb|num_evaluation_simulations| & 100                & The number of simulations made for each rounds of evaluation.                \\
+    \verb|learning_rate|              & $1 \times 10^{-3}$ & The learning rate used for training the model. The learning rate controls the step size made by the optimizer during its training phase.  \\
+    \verb|batch_size|                 & 1024               & The batch size used for training.                                            \\
+    \verb|temperature|                & 1.25               & The temperature value used in self play.                                     \\ \hline
   \end{tabular}
   \caption{Summary of All of the Parameters Used in Model Generation}
   \label{tab:configuration-summary}
@@ -539,7 +580,7 @@ The algorithm first initializes a model with random parameters. The current best
             \State dataset $\gets$ \Call{self\_play}{best\_model}
             \State \Call{train}{model, dataset}
             \State wins, draws, losses $\gets$ \Call{evaluate}{model, best\_model}
-            \If{$\text{wins} + \text{draws} \ge 0.6 \times \texttt{num\_evaluations\_games}$} 
+            \If{$\text{wins} + \text{draws} \ge 0.6 \times \text{num\_evaluations\_games}$} 
                 \State best\_model $\gets$ \Call{clone}{model}
             \EndIf
             \Until{$n = \text{num\_iterations}$}
@@ -550,14 +591,15 @@ The algorithm first initializes a model with random parameters. The current best
     \label{alg:model-generation}
 \end{algorithm}
 
-The model is then trained from this dataset. After the training phase, the model is then evaluated by pitting it against the best model. If the wins and draws of the model exceeds $60\%$ of the total number of evaluations, the current model is then assigned as the best model. This process is repeated \texttt{num\_iterations} times.
+The model is then trained from this dataset. After the training phase, the model is then evaluated by pitting it against the best model. If the wins and draws of the model exceeds $60\%$ of the total number of evaluations, the current model is then assigned as the best model. This process is repeated \verb|num_iterations| times.
 
 % ADVISER COMMENT (DON'T DELETE): need to add also the list of software and/or programs used and what versions were used
-The researchers used C++ 23 and LibTorch 2.7 for the model generation algorithm shown in Algorithm \ref{alg:model-generation}.  The model generation is ran on the cloud with a computer that has 515673MiB of RAM, an AMD Ryzen Threadripper PRO 3975WX CPU with 32-Cores at 3.5000 GHz clock speed, and an NVIDIA GeForce RTX 4090 GPU on an Ubuntu 25.04 Linux Virtual Machine.
+The researchers used C++23 and LibTorch 2.7 for the model generation algorithm shown in Algorithm \ref{alg:model-generation}.  The model generation is ran on the cloud using \cite{vastai} % ADVISER COMMENT (DON'T DELETE,2025-05-30): need to cite website/service
+with a computer that has 515673MiB of RAM, an AMD Ryzen Threadripper PRO 3975WX CPU with 32-Cores at 3.5000 GHz clock speed, and an NVIDIA GeForce RTX 4090 GPU on an Ubuntu 25.04 Linux Virtual Machine.
 
 \subsection{Self-Play Data Generation}
 
-The dataset needed for training the model is produced by pitting the best model against itself. The self-play data generation as shown in Algorithm \ref{alg:data-generation} starts with assigning $s$ to the initial state of the game, and while $s$ is not a terminal state, it calls the Monte-Carlo Tree Search procedure outlined in Algorithm \ref{alg:mcts}, to produce a policy vector $p$ which contains the probabilities of each action that the model should take in that state $s$. The tuple $(s, p)$ is then recorded, the action is produced by sampling from the distribution vector $p^{1/\texttt{temperature}}$. 
+The dataset needed for training the model is produced by pitting the best model against itself. The self-play data generation as shown in Algorithm \ref{alg:data-generation} starts with assigning $s$ to the initial state of the game, and while $s$ is not a terminal state, it calls the Monte-Carlo Tree Search procedure outlined in Algorithm \ref{alg:mcts}, to produce a policy vector $p$ which contains the probabilities of each action that the model should take in that state $s$. The tuple $(s, p)$ is then recorded, the action is produced by sampling from $p^{1/\verb|temperature|}$. 
 
 \begin{algorithm}[H]
     \begin{algorithmic}[1]
@@ -569,7 +611,7 @@ The dataset needed for training the model is produced by pitting the best model 
             \Loop
                 \State $p$ $\gets$ \Call{search}{$s$, model}
                 \State history $\gets$ history $\cup$ ($s$, $p$)
-                \State action $\gets$ \Call{sample\_distribution}{$p^{1/\texttt{temperature}}$}
+                \State action $\gets$ \Call{sample\_distribution}{$p^{1/\text{temperature}}$}
                 \State $s'$ $\gets$ game.apply\_action($s$, action)
                 \If{$s'$ is terminal}
                     \ForAll{($s_i$, $p_i$) $\in$ history}
@@ -592,7 +634,7 @@ The dataset needed for training the model is produced by pitting the best model 
                 \EndIf
                 \State $s$ $\gets$ $s'$
             \EndLoop
-            \Until{$n = \texttt{num\_self\_play\_games}$}
+            \Until{$n = \text{num\_self\_play\_games}$}
         \State \Return{dataset}
         \EndFunction
     \end{algorithmic}
@@ -600,9 +642,9 @@ The dataset needed for training the model is produced by pitting the best model 
     \label{alg:data-generation}
 \end{algorithm}
 
-By raising the elements of $p$ by $1/\texttt{temperature}$, the model is encouraged to explore actions that have low-probability. The next state $s'$ is then derived from applying the action to the state $s$. 
+By raising the each element of $p$ by $1/\verb|temperature|$, the model is encouraged to explore actions that have low-probability. The next state $s'$ is then derived from applying the action to the state $s$. 
 
-If $s'$ is not a terminal state the previous state $s$ is assigned to $s'$, otherwise if $s'$ is a terminal state, then the algorithm loops through all the tuples $(s_i, p_i) \in \text{history}$, if $s_i$ and the previous state $s$ have different players the perspective of the outcome is flipped, and the value $v_i$ is recorded as the one-hot encoding of the outcome. Finally, the tuple $(p_i, v_i, s_i)$ is appended to the dataset. After all the elements in \texttt{history} are looped then the inner loop is terminated. This process is repeated for \texttt{num\_self\_play\_games} times.
+If $s'$ is not a terminal state the previous state $s$ is assigned to $s'$, otherwise if $s'$ is a terminal state, then the algorithm loops through all the tuples $(s_i, p_i) \in \text{history}$, if $s_i$ and the previous state $s$ have different players the perspective of the outcome is flipped, and the value $v_i$ is recorded as the one-hot encoding of the outcome. Finally, the tuple $(p_i, v_i, s_i)$ is appended to the dataset. After all the elements in \verb|history| are looped then the inner loop is terminated. This process is repeated for \verb|num_self_play_games| times.
 
 The MCTS Algorithm guides the model in making actions. It has three phases, the selection, expansion, and backpropagation as shown in Algorithm \ref{alg:mcts}.
 
@@ -735,7 +777,7 @@ The loss $l$ is computed by the following equation,
   \label{eq:loss}
 \end{align}
 
-The computed loss is then used by the optimizer for optimizing the parameters of the model. We use the Adam Optimizer by \cite{kingma2017adammethodstochasticoptimization} as the optimizer. The model is trained from this dataset \texttt{num\_training\_epoch} times.
+The computed loss is then used by the optimizer to optimize the model parameters. We use the AdamW Optimizer as the optimizer. The model is trained from this dataset \verb|num_training_epoch| times.
 
 \subsection{Model Evaluation}
 
@@ -778,7 +820,7 @@ The wins, draws and losses of the current model is evaluated as shown in Algorit
                 \EndIf
                 \State $s$ $\gets$ $s'$
             \EndLoop
-          \Until{$n = \texttt{num\_evaluation\_games}$}
+          \Until{$n = \text{num\_evaluation\_games}$}
           \State \Return wins, draws, losses
         \EndFunction
     \end{algorithmic}

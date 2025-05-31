@@ -1,4 +1,4 @@
-\documentclass{report}
+\documentclass[12pt]{report}
 
 \usepackage{algorithm}
 \usepackage{algpseudocodex}
@@ -7,8 +7,9 @@
 \usepackage[toc,page]{appendix}
 \usepackage{blkarray}
 \usepackage{float}
-\usepackage{geometry}
+\usepackage[total={6.25in, 8.50in}]{geometry}
 \usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
 \usepackage{longtable}
 \usepackage{mathtools}
 \usepackage{natbib}
@@ -19,9 +20,11 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 
+\pgfplotsset{compat=1.18}
+
 \usetikzlibrary{positioning}
 
-\title{Applying AlphaZero to Damath: Learning How to Play Damath through Self-Play}
+\title{DamathZero: Learning How to Play Damath through Self-Play}
 
 \author{Daniel David N. Bador \\ Brymer Bernard R. Meneses}
 
@@ -57,9 +60,9 @@
 % -Results and Discussion
 % --need to add more discussion to the results. results are just being presented and not discussed. Ex: what was the exploit that Mr. Basanes used and why did it
 
-\input{appendix}
-
 \bibliographystyle{apalike}
 \bibliography{references}
+
+\input{appendix}
 
 \end{document}
